@@ -119,7 +119,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .page {
   min-height: 100vh;
   padding: 20rpx 20rpx 170rpx;
@@ -272,14 +272,14 @@ export default {
   height: 112rpx;
   border-radius: 12rpx;
   background: linear-gradient(135deg, #ffb45a, #ffd7a4);
+}
 
-  &.green {
-    background: linear-gradient(135deg, #a5ce7c, #e7f3cc);
-  }
+.cover.green {
+  background: linear-gradient(135deg, #a5ce7c, #e7f3cc);
+}
 
-  &.blue {
-    background: linear-gradient(135deg, #80b5e7, #e5f1fb);
-  }
+.cover.blue {
+  background: linear-gradient(135deg, #80b5e7, #e5f1fb);
 }
 
 .content-title {
@@ -363,26 +363,26 @@ export default {
 .avatar-card {
   position: relative;
   background: #fff;
+}
 
-  text {
-    position: absolute;
-    left: 12rpx;
-    top: 12rpx;
-    color: #fff;
-    font-size: 20rpx;
-    font-weight: 700;
-  }
+.avatar-card text {
+  position: absolute;
+  left: 12rpx;
+  top: 12rpx;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 700;
 }
 
 .avatar-face {
   height: 100%;
   background: radial-gradient(circle at 50% 35%, #ffe0c9 0 26rpx, transparent 27rpx),
     linear-gradient(135deg, #815138, #e7b190);
+}
 
-  &.cool {
-    background: radial-gradient(circle at 50% 35%, #ffe0c9 0 26rpx, transparent 27rpx),
-      linear-gradient(135deg, #273851, #7aa3c8);
-  }
+.avatar-face.cool {
+  background: radial-gradient(circle at 50% 35%, #ffe0c9 0 26rpx, transparent 27rpx),
+    linear-gradient(135deg, #273851, #7aa3c8);
 }
 
 .creation-card {
@@ -393,21 +393,21 @@ export default {
   border-radius: 28rpx;
   background: linear-gradient(135deg, #54514e, #151515);
   color: #fff;
+}
 
-  text {
-    font-size: 24rpx;
-  }
+.creation-card text {
+  font-size: 24rpx;
+}
 
-  button {
-    height: 48rpx;
-    padding: 0 28rpx;
-    border: 2rpx solid rgba(255, 255, 255, 0.7);
-    border-radius: 28rpx;
-    background: transparent;
-    color: #fff;
-    font-size: 22rpx;
-    line-height: 44rpx;
-  }
+.creation-card button {
+  height: 48rpx;
+  padding: 0 28rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.7);
+  border-radius: 28rpx;
+  background: transparent;
+  color: #fff;
+  font-size: 22rpx;
+  line-height: 44rpx;
 }
 
 .tool-grid {
@@ -426,17 +426,17 @@ export default {
   border-radius: 24rpx;
   background: #fff;
   box-shadow: 0 10rpx 24rpx rgba(0, 0, 0, 0.04);
+}
 
-  text:first-child {
-    color: #4b4b4b;
-    font-size: 24rpx;
-    font-weight: 700;
-  }
+.tool-card text:first-child {
+  color: #4b4b4b;
+  font-size: 24rpx;
+  font-weight: 700;
+}
 
-  text:last-child {
-    margin-top: 8rpx;
-    color: #bbb;
-    font-size: 16rpx;
-  }
+.tool-card text:last-child {
+  margin-top: 8rpx;
+  color: #bbb;
+  font-size: 16rpx;
 }
 </style>

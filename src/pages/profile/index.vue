@@ -15,7 +15,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .page-shell {
   min-height: 100vh;
   background: #f7f7f7;

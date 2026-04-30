@@ -13,6 +13,12 @@ npm install
 npm run dev:h5
 ```
 
+## 构建
+
+```bash
+npm run build:h5
+```
+
 ## 关键文件
 
 - `src/components/YokeTabBar.vue`：底部自定义 tabBar

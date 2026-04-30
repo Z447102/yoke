@@ -8,7 +8,7 @@ export default {
 }
 </script>
 
-<style lang="scss">
+<style>
 page {
   background: #f7f7f7;
 }

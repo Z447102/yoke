@@ -24,7 +24,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .section-title {
   display: flex;
   align-items: center;

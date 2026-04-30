@@ -5,7 +5,7 @@
         v-for="item in sideTabs"
         :key="item.key"
         class="tabbar-item"
-        :class="{ 'is-active': activeKey === item.key }"
+        :class="{ 'is-active': resolvedActiveKey === item.key }"
         @tap="handleTap(item)"
       >
         <view class="tabbar-icon" :class="['icon-' + item.icon]">
@@ -25,7 +25,7 @@
       </view>
 
       <view class="tabbar-center-wrap" @tap="handleTap(centerTab)">
-        <view class="tabbar-center" :class="{ 'is-active': activeKey === centerTab.key }">
+        <view class="tabbar-center" :class="{ 'is-active': resolvedActiveKey === centerTab.key }">
           <view class="center-figure">
             <view class="figure-head"></view>
             <view class="figure-body"></view>
@@ -77,6 +77,11 @@ export default {
       }
     }
   },
+  computed: {
+    resolvedActiveKey() {
+      return this.current || this.activeKey
+    }
+  },
   methods: {
     handleTap(item) {
       this.$emit('change', item)
@@ -93,11 +98,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
-$orange: #ff9d3d;
-$orange-light: #ffc15a;
-$muted: #c8c8c8;
-
+<style scoped>
 .yoke-tabbar {
   position: fixed;
   right: 0;
@@ -125,7 +126,7 @@ $muted: #c8c8c8;
   height: 98rpx;
   align-items: center;
   justify-content: center;
-  color: $muted;
+  color: #c8c8c8;
 }
 
 .tabbar-item:first-child {
@@ -151,7 +152,7 @@ $muted: #c8c8c8;
 }
 
 .icon-home {
-  color: $orange;
+  color: #ff9d3d;
 }
 
 .home-roof {
@@ -186,7 +187,7 @@ $muted: #c8c8c8;
 }
 
 .icon-profile {
-  color: $muted;
+  color: #c8c8c8;
 }
 
 .profile-head,

@@ -20,7 +20,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .page {
   min-height: 100vh;
   padding: 80rpx 32rpx 180rpx;
