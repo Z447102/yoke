@@ -33,7 +33,7 @@
         <text class="label">请选择您的主营业务</text>
         <text class="required">*</text>
         <view class="select-pill wide" @tap="goToBusiness">
-          <text>主营业务</text>
+          <text>{{ businessText || '主营业务' }}</text>
           <text class="select-arrow">⌄</text>
         </view>
       </view>
@@ -147,13 +147,20 @@ const selectedIndustry = ref('')
 const tempIndustry = ref('')
 const showIndustryPopup = ref(false)
 const locationText = ref('')
+const businessText = ref('')
 
 onShow(() => {
   const selectedLocation = uni.getStorageSync('create:selected-location')
-  if (!selectedLocation) return
+  if (selectedLocation) {
+    locationText.value = selectedLocation.name || selectedLocation.address || ''
+    uni.removeStorageSync('create:selected-location')
+  }
 
-  locationText.value = selectedLocation.name || selectedLocation.address || ''
-  uni.removeStorageSync('create:selected-location')
+  const selectedBusiness = uni.getStorageSync('create:selected-business')
+  if (selectedBusiness) {
+    businessText.value = selectedBusiness.displayName || ''
+    uni.removeStorageSync('create:selected-business')
+  }
 })
 
 function goBack() {

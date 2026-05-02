@@ -124,6 +124,14 @@ function confirmSelection() {
     return
   }
 
+  uni.setStorageSync('create:selected-business', {
+    industry: industry.value,
+    displayName: selectedPath.value.map((item) => item.name).join(' / '),
+    path: selectedPath.value.map((item) => ({
+      id: item.id,
+      name: item.name
+    }))
+  })
   uni.showToast({
     title: '已选择主营业务',
     icon: 'none'
