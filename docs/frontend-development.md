@@ -1072,6 +1072,7 @@ export function getHomeTools() {
 | 作品分类 Tabs | `MineWorkTabs` | 视频作品、我的形象、图片作品、文案作品切换 |
 | 作品概览 | `MineWorkSummary` | 展示“您已创作 xxx 条视频作品”和管理按钮 |
 | 作品列表 | `MineWorkGrid` | 三列作品卡片，展示封面、播放按钮、时长和日期 |
+| 我的设置 | `MineSettings` | 展示账号与安全、退出登录等设置项，退出登录入口统一放在此区域 |
 | 底部导航 | `HomeTabBar` 或公共 `AppTabBar` | 首页、创作、我的三个入口，我的入口高亮 |
 
 目录建议：
@@ -1087,7 +1088,8 @@ src
 │           ├── MineBenefitCards.vue
 │           ├── MineWorkTabs.vue
 │           ├── MineWorkSummary.vue
-│           └── MineWorkGrid.vue
+│           ├── MineWorkGrid.vue
+│           └── MineSettings.vue
 ├── api
 │   └── mine.js
 └── stores
@@ -1110,6 +1112,7 @@ src
 | `activeWorkType` | `String` | 当前选中的作品分类 |
 | `workSummary` | `Object` | 当前分类作品数量和管理权限 |
 | `works` | `Array` | 当前分类作品列表 |
+| `settings` | `Array` | 我的设置项，例如账号与安全、退出登录 |
 | `pagination` | `Object` | 页码、分页大小、是否还有更多 |
 | `loading` | `Boolean` | 页面或列表加载状态 |
 
@@ -1137,6 +1140,18 @@ export const useMineStore = defineStore('mine', {
       unit: '条视频作品'
     },
     works: [],
+    settings: [
+      {
+        key: 'account',
+        name: '账号与安全',
+        desc: '手机号、登录状态与账号资料'
+      },
+      {
+        key: 'logout',
+        name: '退出登录',
+        desc: '退出当前账号并清理本地登录态'
+      }
+    ],
     pagination: {
       page: 1,
       pageSize: 12,
@@ -1254,6 +1269,10 @@ export function getMineWorks(params) {
 - 作品分类切换时只刷新作品列表和作品概览，不重置顶部用户信息。
 - 作品管理按钮进入批量管理模式，支持选择、删除、移动分类等后续能力。
 - 作品卡片点击进入作品详情；视频作品需要展示播放图标、时长和日期。
+- 退出登录入口统一放在“我的设置”区域，不放在首页、启动弹窗、广告位或高频业务入口中。
+- 点击退出登录时先展示确认弹窗，用户确认后调用后端退出接口；即使后端退出接口失败，也应清理本地登录态。
+- 本地退出时调用 `userStore.clearLoginState()`，同时清理与账号强相关的 `mine`、`order`、`cart` 等模块缓存。
+- 退出登录成功后给轻提示，并根据业务需要跳转登录页或在当前页面展示未登录状态。
 - 下拉刷新重新获取用户资产、会员权益和当前作品列表。
 - 上拉加载更多只请求当前 `activeWorkType` 的下一页作品。
 
@@ -1265,6 +1284,7 @@ export function getMineWorks(params) {
 - 作品分类 tab 使用横向均分布局，选中态使用橙色文字和短横线。
 - 作品列表使用三列网格，封面比例建议接近设计图的竖向卡片比例。
 - 作品卡片底部信息使用半透明黑色蒙层，保证白色文字在不同封面上可读。
+- 我的设置区域使用独立白色卡片，设置项之间使用浅色分割线，退出登录文字可使用主色或警示色弱提示。
 - 底部导航需要预留安全区高度，避免遮挡最后一行作品。
 
 ### 10.7 验收要点
@@ -1273,6 +1293,7 @@ export function getMineWorks(params) {
 - 会员兑换码、我的点数、帮助中心、会员中心、点数中心均可点击并有明确跳转或提示。
 - 视频作品 tab 默认选中，作品数量、封面、播放按钮、时长和日期展示正确。
 - 切换“我的形象 / 图片作品 / 文案作品”时列表能刷新，空数据时展示空态。
+- 退出登录入口位于我的设置区域，点击后出现确认弹窗，确认后清理登录态并更新页面状态。
 - 下拉刷新和上拉加载更多逻辑正常，弱网或接口失败时保留已有数据并给轻提示。
 - 真机验证顶部安全区、底部导航、安全区和作品网格滚动表现正常。
 
