@@ -32,7 +32,7 @@
       <view class="form-row">
         <text class="label">请选择您的主营业务</text>
         <text class="required">*</text>
-        <view class="select-pill wide">
+        <view class="select-pill wide" @tap="goToBusiness">
           <text>主营业务</text>
           <text class="select-arrow">⌄</text>
         </view>
@@ -175,6 +175,12 @@ function selectIndustry(industry) {
 function confirmIndustry() {
   selectedIndustry.value = tempIndustry.value
   closeIndustryPopup()
+}
+
+function goToBusiness() {
+  uni.navigateTo({
+    url: `/pages/create/business/index?industry=${encodeURIComponent(selectedIndustry.value || '餐饮')}`
+  })
 }
 </script>
 

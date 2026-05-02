@@ -1067,7 +1067,7 @@ AI 一键成片页面以设计图为准，用于在生成视频前收集商户�
 | 自定义导航 | `CreateHeader` | 返回按钮、页面标题、微信胶囊占位 |
 | 欢迎说明 | `CreateWelcome` | 展示欢迎文案和说明文字 |
 | 行业选择 | `CreateIndustryPopup` | 必填，点击后展示底部弹出层行业网格 |
-| 主营业务选择 | `CreateSelectField` | 必填，下拉选择主营业务 |
+| 主营业务选择 | `CreateBusinessPage` | 必填，点击后跳转主营业务选择页 |
 | 主营业务范围 | `CreateTextareaField` | 多行输入，右下角清空按钮 |
 | 店铺/公司名称 | `CreateInputField` | 必填，输入店铺或公司名称 |
 | 位置信息 | `CreateLocationField` | 必填，支持地图选点 |
@@ -1080,10 +1080,13 @@ src
 ├── pages
 │   └── create
 │       ├── index.vue
+│       ├── business
+│       │   └── index.vue
 │       └── components
 │           ├── CreateHeader.vue
 │           ├── CreateWelcome.vue
 │           ├── CreateIndustryPopup.vue
+│           ├── CreateBusinessPage.vue
 │           ├── CreateSelectField.vue
 │           ├── CreateTextareaField.vue
 │           ├── CreateInputField.vue
@@ -1126,7 +1129,9 @@ const form = reactive({
 - 行业选择使用底部弹出层，遮罩覆盖当前页面，弹层内按四列网格展示行业选项。
 - 行业选项点击后只更新弹层内临时选中态，点击“确定”后再回填到表单。
 - 点击遮罩关闭弹层时不提交临时选择，保留原行业值。
-- 主营业务使用选择器或弹层选择，选中后回填按钮文案。
+- 主营业务点击后跳转 `pages/create/business/index`，由独立页面完成核心品类选择。
+- 主营业务选择页顶部展示返回按钮、标题“主营业务”和当前行业；主体展示“核心品类”标签列表，底部固定“确定”按钮。
+- 主营业务标签点击后切换选中态，确认后返回上一页；后续接入状态共享时通过 Pinia 或页面事件回填 `businessType`。
 - 主营业务范围支持清空按钮；清空仅清除当前输入内容。
 - 地图选点按钮调用位置授权和地图选点能力，失败时给轻提示。
 - “下一步”点击时校验必填项，缺失字段需要提示具体项。
@@ -1153,6 +1158,7 @@ export function saveBusinessProfile(data) {
 - 首页点击“AI 一键成片”能进入一键成片页面。
 - 页面顶部、欢迎文案、表单区域和底部按钮布局与设计图一致。
 - 点击行业按钮后出现底部弹出层，选项按四列网格展示，选中项高亮，点击“确定”后回填行业。
+- 点击主营业务按钮能进入主营业务选择页，核心品类标签展示正确，选中态和确定按钮符合设计图。
 - 必填项未填写时点击“下一步”有明确提示。
 - 清空主营业务范围按钮可正常清空输入。
 - 地图选点入口有点击反馈，未授权或失败时有提示。

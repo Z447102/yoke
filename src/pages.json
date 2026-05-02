@@ -16,6 +16,13 @@
       }
     },
     {
+      "path": "pages/create/business/index",
+      "style": {
+        "navigationBarTitleText": "主营业务",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/mine/index",
       "style": {
         "navigationBarTitleText": "我的",
