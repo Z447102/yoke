@@ -591,21 +591,185 @@ export function ensureLogin() {
 }
 ```
 
-## 9. 样式规范
+## 9. 分包策略
+
+分包用于控制小程序主包体积、提升首屏加载速度，并按业务模块拆分页面资源。主体项目建议主包只保留首页、核心 tabBar 页面、登录页和公共能力，非首屏业务页面放入分包。
+
+### 9.1 适用场景
+
+建议使用分包的模块：
+
+- 订单、报名、活动详情等非首屏业务模块。
+- 页面数量较多、资源较重的独立业务。
+- 使用频率较低但功能完整的模块，例如设置、帮助中心、协议说明。
+- 后续可能独立迭代的业务域。
+
+不建议放入分包的内容：
+
+- 首页、tabBar 页面和登录页。
+- 全局组件、全局样式、Pinia store、请求封装等公共基础能力。
+- 多个分包都依赖的大型公共资源。
+
+### 9.2 推荐目录结构
+
+```text
+src
+├── pages                       # 主包页面
+│   ├── home
+│   ├── category
+│   ├── mine
+│   └── login
+├── pages-sub                   # 分包页面统一目录
+│   ├── order
+│   │   ├── list.vue
+│   │   └── detail.vue
+│   ├── activity
+│   │   ├── list.vue
+│   │   └── detail.vue
+│   └── settings
+│       └── index.vue
+└── static
+    ├── tabbar
+    └── sub                    # 分包可复用静态资源
+```
+
+分包目录命名建议：
+
+- 统一使用 `pages-sub/<module>` 或 `subpackages/<module>`，项目内保持一种风格。
+- 分包模块名使用语义化英文，例如 `order`、`activity`、`settings`。
+- 分包内页面文件可按 `list.vue`、`detail.vue`、`index.vue` 命名。
+
+### 9.3 pages.json 配置
+
+`src/pages.json` 中通过 `subPackages` 声明分包。示例：
+
+```json
+{
+  "pages": [
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/category/index",
+      "style": {
+        "navigationBarTitleText": "分类"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    }
+  ],
+  "subPackages": [
+    {
+      "root": "pages-sub/order",
+      "pages": [
+        {
+          "path": "list",
+          "style": {
+            "navigationBarTitleText": "订单列表"
+          }
+        },
+        {
+          "path": "detail",
+          "style": {
+            "navigationBarTitleText": "订单详情"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages-sub/activity",
+      "pages": [
+        {
+          "path": "list",
+          "style": {
+            "navigationBarTitleText": "活动列表"
+          }
+        },
+        {
+          "path": "detail",
+          "style": {
+            "navigationBarTitleText": "活动详情"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+分包页面跳转示例：
+
+```js
+uni.navigateTo({
+  url: '/pages-sub/order/detail?id=123'
+})
+```
+
+### 9.4 主包与分包边界
+
+- 主包只放启动必需页面、tabBar 页面、登录页和公共基础代码。
+- 分包页面可以依赖主包中的 `api`、`stores`、`utils`、`components` 等公共模块。
+- 分包之间不要直接相互依赖业务组件或页面逻辑，公共能力应上移到主包公共目录。
+- 分包资源优先放在对应业务目录或 `static/sub/<module>`，避免把低频资源放入主包。
+- tabBar 页面必须在主包中声明，不能作为分包页面。
+
+### 9.5 分包预下载
+
+对用户进入概率较高的分包，可使用 `preloadRule` 做预下载。示例：
+
+```json
+{
+  "preloadRule": {
+    "pages/home/index": {
+      "network": "wifi",
+      "packages": ["pages-sub/order"]
+    }
+  }
+}
+```
+
+使用建议：
+
+- 只预下载高频路径对应的分包，避免增加无效流量。
+- 优先在 Wi-Fi 下预下载资源较大的分包。
+- 预下载规则应结合埋点数据和真实入口路径调整。
+
+### 9.6 注意事项
+
+- 分包路径、页面跳转路径和 `pages.json` 声明必须保持一致。
+- 分包新增页面后，需要在微信开发者工具中验证首次进入加载是否正常。
+- 公共代码过多会继续进入主包，分包不能替代基础包体积治理。
+- 大图、视频等资源优先使用 CDN，不建议随分包提交到仓库。
+- 后续接入 CI 时，可增加主包和分包体积检查。
+
+## 10. 样式规范
 
 - 小程序页面尺寸优先使用 `rpx`。
 - 全局变量放在 `src/uni.scss` 或 `src/styles/variables.scss`。
 - 通用样式放在 `src/styles`，页面私有样式写在页面内并使用 `scoped`。
 - 颜色、间距、字号应尽量使用设计变量，避免散落魔法值。
 
-## 10. 静态资源规范
+## 11. 静态资源规范
 
 - 小图标和本地图片可放在 `src/static`。
 - 业务图片优先使用 CDN 或后端返回地址。
 - 图片命名使用语义化英文，例如 `icon-user-default.png`。
 - 避免提交未压缩的大体积图片。
 
-## 11. 开发流程
+## 12. 开发流程
 
 1. 从目标基础分支创建功能分支。
 2. 根据页面或模块拆分开发任务。
@@ -614,7 +778,7 @@ export function ensureLogin() {
 5. 使用微信开发者工具进行页面、授权、网络和真机验证。
 6. 提交前检查格式、构建结果和核心流程。
 
-## 12. 提交与分支约定
+## 13. 提交与分支约定
 
 推荐分支命名：
 
@@ -628,14 +792,13 @@ export function ensureLogin() {
 - `fix: handle login expired state`
 - `docs: update frontend development guide`
 
-## 13. 后续待补充内容
+## 14. 后续待补充内容
 
 后续可继续扩展以下章节：
 
 - 业务页面清单
 - 接口字段说明
 - 登录模块接口字段细化
-- 分包策略
 - 权限与隐私弹窗
 - 错误码与异常处理
 - 埋点规范
