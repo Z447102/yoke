@@ -101,6 +101,7 @@ function confirmLocation() {
     return
   }
 
+  uni.setStorageSync('create:selected-location', selectedPoi.value)
   uni.showToast({
     title: '已选择位置',
     icon: 'none'

@@ -72,6 +72,7 @@
           </view>
         </view>
         <input
+          v-model="locationText"
           class="input"
           placeholder="请输入您的店铺/公司位置"
           placeholder-class="placeholder"
@@ -109,6 +110,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 
 const industryOptions = [
   '餐饮',
@@ -144,6 +146,15 @@ const industryOptions = [
 const selectedIndustry = ref('')
 const tempIndustry = ref('')
 const showIndustryPopup = ref(false)
+const locationText = ref('')
+
+onShow(() => {
+  const selectedLocation = uni.getStorageSync('create:selected-location')
+  if (!selectedLocation) return
+
+  locationText.value = selectedLocation.name || selectedLocation.address || ''
+  uni.removeStorageSync('create:selected-location')
+})
 
 function goBack() {
   const pages = getCurrentPages()
