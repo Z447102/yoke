@@ -2,7 +2,7 @@
   <view class="section">
     <view class="section__header">
       <view class="section__title">
-        <text class="section__flame">今</text>
+        <text class="section__flame">♨</text>
         <text>今日爆款内容</text>
       </view>
       <view class="section__more" @tap="$emit('refresh')">
@@ -12,8 +12,10 @@
     </view>
     <scroll-view scroll-x class="hot-scroll" :show-scrollbar="false">
       <view class="hot-list">
-        <view v-for="item in items" :key="item.id" class="hot-card">
-          <image class="hot-card__image" :src="item.image" mode="aspectFill" />
+        <view v-for="item in list" :key="item.id" class="hot-card">
+          <view class="hot-card__image-wrap">
+            <image class="hot-card__image" :src="item.image" mode="aspectFill" />
+          </view>
           <view class="hot-card__body">
             <text class="hot-card__title">{{ item.title }}</text>
             <text class="hot-card__desc">{{ item.desc }}</text>
@@ -30,7 +32,7 @@
 
 <script setup>
 defineProps({
-  items: {
+  list: {
     type: Array,
     default: () => []
   }
@@ -41,35 +43,36 @@ defineEmits(['refresh'])
 
 <style lang="scss" scoped>
 .section {
-  margin-top: 20rpx;
+  margin-top: 18rpx;
 }
 
 .section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18rpx;
-  margin-bottom: 14rpx;
+  padding: 0 4rpx;
+  margin-bottom: 12rpx;
 }
 
 .section__title {
   display: flex;
   align-items: center;
   color: #553214;
-  font-size: 28rpx;
+  font-size: 27rpx;
   font-weight: 700;
 }
 
 .section__flame {
   color: #ff982d;
-  margin-right: 6rpx;
+  margin-right: 8rpx;
+  font-size: 26rpx;
 }
 
 .section__more {
   display: flex;
   align-items: center;
   color: #8f8f8f;
-  font-size: 22rpx;
+  font-size: 21rpx;
 }
 
 .section__reload {
@@ -83,34 +86,40 @@ defineEmits(['refresh'])
 
 .hot-list {
   display: inline-flex;
-  gap: 12rpx;
-  padding: 0 18rpx 4rpx;
+  gap: 14rpx;
+  padding: 0 4rpx 6rpx;
 }
 
 .hot-card {
   overflow: hidden;
-  width: 214rpx;
+  width: 218rpx;
   background: #ffffff;
   border-radius: 18rpx;
   box-shadow: 0 8rpx 20rpx rgba(255, 137, 30, 0.14);
 }
 
-.hot-card__image {
-  display: block;
-  width: 214rpx;
+.hot-card__image-wrap {
+  overflow: hidden;
+  width: 218rpx;
   height: 132rpx;
   background: #ffe1b7;
 }
 
+.hot-card__image {
+  display: block;
+  width: 218rpx;
+  height: 132rpx;
+}
+
 .hot-card__body {
-  padding: 10rpx;
+  padding: 9rpx 10rpx 10rpx;
 }
 
 .hot-card__title {
   display: block;
   overflow: hidden;
   color: #3d3d3d;
-  font-size: 22rpx;
+  font-size: 21rpx;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -121,7 +130,7 @@ defineEmits(['refresh'])
   overflow: hidden;
   margin-top: 4rpx;
   color: #777777;
-  font-size: 18rpx;
+  font-size: 17rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -130,13 +139,13 @@ defineEmits(['refresh'])
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10rpx;
+  margin-top: 9rpx;
 }
 
 .hot-card__tag {
-  padding: 3rpx 8rpx;
+  padding: 3rpx 9rpx;
   color: #ff8b1f;
-  font-size: 16rpx;
+  font-size: 15rpx;
   background: #fff1dc;
   border-radius: 6rpx;
 }
