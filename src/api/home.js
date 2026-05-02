@@ -69,3 +69,9 @@ const mockHomeDashboard = {
 export function getHomeDashboard() {
   return Promise.resolve(mockHomeDashboard)
 }
+
+export function getHotContents() {
+  return Promise.resolve({
+    list: mockHomeDashboard.hotContents
+  })
+}
