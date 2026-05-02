@@ -23,8 +23,8 @@
       <view class="form-row">
         <text class="label">请选择您的行业</text>
         <text class="required">*</text>
-        <view class="select-pill">
-          <text>行业</text>
+        <view class="select-pill" @tap="openIndustryPopup">
+          <text>{{ selectedIndustry || '行业' }}</text>
           <text class="select-arrow">⌄</text>
         </view>
       </view>
@@ -79,10 +79,68 @@
       <button class="next-btn">下一步</button>
       <text class="tip">◎ 后续可在【我的 - 主营业务】内修改</text>
     </view>
+
+    <view v-if="showIndustryPopup" class="popup-mask" @tap="closeIndustryPopup">
+      <view class="industry-popup" @tap.stop>
+        <view class="popup-handle"></view>
+        <view class="popup-title">选择行业</view>
+
+        <view class="industry-grid">
+          <view
+            v-for="industry in industryOptions"
+            :key="industry"
+            class="industry-item"
+            :class="{ active: tempIndustry === industry }"
+            @tap="selectIndustry(industry)"
+          >
+            {{ industry }}
+          </view>
+        </view>
+
+        <button class="confirm-btn" @tap="confirmIndustry">确定</button>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
+import { ref } from 'vue'
+
+const industryOptions = [
+  '餐饮',
+  '美业',
+  '健身',
+  '医疗',
+  '医美',
+  '大健康',
+  '教育',
+  '宠物',
+  '母婴',
+  '设计',
+  '零售',
+  '娱乐',
+  '酒店',
+  '旅游',
+  '摄影',
+  '策划',
+  '创意',
+  '自媒体',
+  '金融',
+  '保险',
+  '装修业',
+  '家居',
+  '建材',
+  '地产',
+  '制造业',
+  '互联网',
+  '服务类',
+  '生活类'
+]
+
+const selectedIndustry = ref('')
+const tempIndustry = ref('')
+const showIndustryPopup = ref(false)
+
 function goBack() {
   const pages = getCurrentPages()
 
@@ -99,6 +157,24 @@ function goBack() {
       })
     }
   })
+}
+
+function openIndustryPopup() {
+  tempIndustry.value = selectedIndustry.value || '餐饮'
+  showIndustryPopup.value = true
+}
+
+function closeIndustryPopup() {
+  showIndustryPopup.value = false
+}
+
+function selectIndustry(industry) {
+  tempIndustry.value = industry
+}
+
+function confirmIndustry() {
+  selectedIndustry.value = tempIndustry.value
+  closeIndustryPopup()
 }
 </script>
 
@@ -347,5 +423,79 @@ function goBack() {
   margin-top: 14rpx;
   color: #a4abb5;
   font-size: 22rpx;
+}
+
+.popup-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.54);
+  display: flex;
+  align-items: flex-end;
+}
+
+.industry-popup {
+  width: 100%;
+  padding: 18rpx 30rpx calc(46rpx + env(safe-area-inset-bottom));
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.popup-handle {
+  width: 52rpx;
+  height: 8rpx;
+  margin: 0 auto 30rpx;
+  border-radius: 999rpx;
+  background: #d8d8d8;
+}
+
+.popup-title {
+  color: #1f2933;
+  font-size: 30rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.industry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24rpx 28rpx;
+  margin-top: 36rpx;
+}
+
+.industry-item {
+  height: 68rpx;
+  border: 1rpx solid #e3e5ea;
+  border-radius: 14rpx;
+  color: #a4abb5;
+  font-size: 26rpx;
+  line-height: 68rpx;
+  text-align: center;
+  background: #ffffff;
+}
+
+.industry-item.active {
+  border-color: #ff8e24;
+  color: #ff8e24;
+  background: #fff6ed;
+  font-weight: 700;
+}
+
+.confirm-btn {
+  width: 510rpx;
+  height: 108rpx;
+  margin: 48rpx auto 0;
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #ffbd72 0%, #ff963a 100%);
+  color: #ffffff;
+  font-size: 32rpx;
+  line-height: 108rpx;
+}
+
+.confirm-btn::after {
+  border: 0;
 }
 </style>
