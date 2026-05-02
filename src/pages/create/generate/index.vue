@@ -21,8 +21,8 @@
       </view>
       <view class="filter-group">
         <text class="filter-label">平台</text>
-        <view class="filter-pill">
-          <text>抖音</text>
+        <view class="filter-pill" @tap="openPlatformPopup">
+          <text>{{ currentPlatform.name }}</text>
           <text class="arrow">⌄</text>
         </view>
       </view>
@@ -166,6 +166,27 @@
         <button class="popup-confirm" @tap="confirmBusiness">确定</button>
       </view>
     </view>
+
+    <view v-if="showPlatformPopup" class="popup-mask" @tap="closePlatformPopup">
+      <view class="platform-popup" @tap.stop>
+        <view class="popup-handle"></view>
+        <view class="popup-title">选择平台</view>
+
+        <view class="platform-list">
+          <view
+            v-for="platform in platformOptions"
+            :key="platform.id"
+            class="platform-option"
+            :class="{ active: tempPlatform === platform.id }"
+            @tap="selectPlatform(platform.id)"
+          >
+            {{ platform.name }}
+          </view>
+        </view>
+
+        <button class="popup-confirm" @tap="confirmPlatform">确定</button>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -237,12 +258,22 @@ const businessOptions = [
     path: '餐饮-正餐(家常菜 / 酒楼)...'
   }
 ]
+const platformOptions = [
+  { id: 'douyin', name: '抖音' },
+  { id: 'kuaishou', name: '快手' },
+  { id: 'shipinhao', name: '视频号' },
+  { id: 'xiaohongshu', name: '小红书' }
+]
 const selectedBusiness = ref('business1')
 const tempBusiness = ref('business1')
 const showBusinessPopup = ref(false)
+const selectedPlatform = ref('douyin')
+const tempPlatform = ref('douyin')
+const showPlatformPopup = ref(false)
 const copywriting = ref('重庆老火锅，这味道太顶了！兄弟们，这家重庆老火锅我真的要安利一下。锅底一上来就开始翻滚，那个牛油香味直接冲上来。你看这个毛肚，七上八下，脆到不行。还有这个肥牛，一口下去全是香味。')
 
 const currentBusiness = computed(() => businessOptions.find((item) => item.id === selectedBusiness.value) || businessOptions[0])
+const currentPlatform = computed(() => platformOptions.find((item) => item.id === selectedPlatform.value) || platformOptions[0])
 
 function goBack() {
   uni.navigateBack()
@@ -264,6 +295,24 @@ function selectBusiness(id) {
 function confirmBusiness() {
   selectedBusiness.value = tempBusiness.value
   closeBusinessPopup()
+}
+
+function openPlatformPopup() {
+  tempPlatform.value = selectedPlatform.value
+  showPlatformPopup.value = true
+}
+
+function closePlatformPopup() {
+  showPlatformPopup.value = false
+}
+
+function selectPlatform(id) {
+  tempPlatform.value = id
+}
+
+function confirmPlatform() {
+  selectedPlatform.value = tempPlatform.value
+  closePlatformPopup()
 }
 
 function generateVideo() {
