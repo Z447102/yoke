@@ -17,73 +17,108 @@
     </view>
 
     <view class="category-section">
-      <view class="category-title">
-        <text>核心品类</text>
-        <text class="required">*</text>
-      </view>
+      <view
+        v-for="(level, levelIndex) in visibleLevels"
+        :key="levelIndex"
+        class="level-block"
+      >
+        <view class="category-title">
+          <text>{{ level.title }}</text>
+          <text class="required">*</text>
+        </view>
 
-      <view class="tag-list">
-        <view
-          v-for="category in categories"
-          :key="category"
-          class="category-tag"
-          :class="{ active: selectedCategories.includes(category) }"
-          @tap="toggleCategory(category)"
-        >
-          <text>+ {{ category }}</text>
+        <view class="tag-list">
+          <view
+            v-for="category in level.options"
+            :key="category.id"
+            class="category-tag"
+            :class="{ active: selectedPath[levelIndex]?.id === category.id }"
+            @tap="selectCategory(levelIndex, category)"
+          >
+            <text>+ {{ category.name }}</text>
+          </view>
         </view>
       </view>
     </view>
 
     <view class="bottom-action">
-      <button class="confirm-btn" @tap="confirmSelection">确定</button>
+      <button
+        class="confirm-btn"
+        :class="{ active: canConfirm }"
+        :disabled="!canConfirm"
+        @tap="confirmSelection"
+      >
+        确定
+      </button>
       <text class="tip">◎ 后续可在【我的 - 商业信息】内修改</text>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { getBusinessCategories } from '@/api/create'
 
 const industry = ref('餐饮')
-const categories = [
-  '火锅',
-  '烧烤',
-  '快餐（面 / 饭）',
-  '小吃',
-  '海鲜',
-  '烤肉',
-  '正餐（家常菜 / 酒楼）',
-  '西餐 / 异国料理',
-  '饮品',
-  '甜品烘焙'
-]
-const selectedCategories = ref([])
+const categoryTree = ref([])
+const selectedPath = ref([])
+
+const visibleLevels = computed(() => {
+  const levels = []
+  let options = categoryTree.value
+  let levelIndex = 0
+
+  while (options && options.length) {
+    levels.push({
+      title: levelIndex === 0 ? '核心品类' : `${levelIndex + 1}级品类`,
+      options
+    })
+
+    const selected = selectedPath.value[levelIndex]
+    if (!selected || !selected.children?.length) {
+      break
+    }
+
+    options = selected.children
+    levelIndex += 1
+  }
+
+  return levels
+})
+
+const canConfirm = computed(() => {
+  if (!selectedPath.value.length) return false
+  const lastSelected = selectedPath.value[selectedPath.value.length - 1]
+  return Boolean(lastSelected && !lastSelected.children?.length)
+})
 
 onLoad((query = {}) => {
   if (query.industry) {
     industry.value = decodeURIComponent(query.industry)
   }
+  fetchCategoryTree()
 })
 
 function goBack() {
   uni.navigateBack()
 }
 
-function toggleCategory(category) {
-  if (selectedCategories.value.includes(category)) {
-    selectedCategories.value = selectedCategories.value.filter((item) => item !== category)
-    return
-  }
+async function fetchCategoryTree() {
+  const data = await getBusinessCategories(industry.value)
+  categoryTree.value = data.levels || []
+  selectedPath.value = []
+}
 
-  selectedCategories.value = [...selectedCategories.value, category]
+function selectCategory(levelIndex, category) {
+  selectedPath.value = selectedPath.value.slice(0, levelIndex)
+  selectedPath.value[levelIndex] = category
 }
 
 function confirmSelection() {
-  if (!selectedCategories.value.length) {
+  if (!canConfirm.value) {
     uni.showToast({
-      title: '请选择核心品类',
+      title: '请完成主营业务选择',
       icon: 'none'
     })
     return
@@ -174,6 +209,10 @@ function confirmSelection() {
   padding: 34rpx 20rpx;
 }
 
+.level-block + .level-block {
+  margin-top: 32rpx;
+}
+
 .category-title {
   color: #1f2933;
   font-size: 28rpx;
@@ -228,10 +267,14 @@ function confirmSelection() {
   width: 510rpx;
   height: 108rpx;
   border-radius: 999rpx;
-  background: linear-gradient(180deg, #ffc98f 0%, #ff9835 100%);
+  background: #f6c99d;
   color: #ffffff;
   font-size: 32rpx;
   line-height: 108rpx;
+}
+
+.confirm-btn.active {
+  background: linear-gradient(180deg, #ffc98f 0%, #ff9835 100%);
 }
 
 .confirm-btn::after {
