@@ -14,8 +14,8 @@
     <view class="filter-bar">
       <view class="filter-group">
         <text class="filter-label">主营业务</text>
-        <view class="filter-pill">
-          <text>主营业务1</text>
+        <view class="filter-pill" @tap="openBusinessPopup">
+          <text>{{ currentBusiness.name }}</text>
           <text class="arrow">⌄</text>
         </view>
       </view>
@@ -136,11 +136,41 @@
       </button>
       <text class="ai-tip">◎ 内容由AI生成，禁止利用功能从事违法活动</text>
     </view>
+
+    <view v-if="showBusinessPopup" class="popup-mask" @tap="closeBusinessPopup">
+      <view class="business-popup" @tap.stop>
+        <view class="popup-handle"></view>
+        <view class="popup-title">选择主营业务</view>
+
+        <view class="business-list">
+          <view
+            v-for="business in businessOptions"
+            :key="business.id"
+            class="business-option"
+            :class="{ active: tempBusiness === business.id }"
+            @tap="selectBusiness(business.id)"
+          >
+            <view class="business-info">
+              <text class="business-name">{{ business.name }}</text>
+              <text class="business-desc">{{ business.desc }}</text>
+            </view>
+            <view class="business-edit">
+              <text>⌁</text>
+              <text>编辑</text>
+              <text>›</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="business-add">＋ 新增主营业务</view>
+        <button class="popup-confirm" @tap="confirmBusiness">确定</button>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const businessTags = ['新派粤菜', '家宴', '客家菜', '活鲜', '粤菜', '融合菜']
 const templates = [
@@ -195,10 +225,45 @@ const avatars = [
 
 const selectedTemplate = ref('store')
 const selectedAvatar = ref('script')
+const businessOptions = [
+  {
+    id: 'business1',
+    name: '主营业务1',
+    path: '餐饮-火锅'
+  },
+  {
+    id: 'business2',
+    name: '主营业务2',
+    path: '餐饮-正餐(家常菜 / 酒楼)...'
+  }
+]
+const selectedBusiness = ref('business1')
+const tempBusiness = ref('business1')
+const showBusinessPopup = ref(false)
 const copywriting = ref('重庆老火锅，这味道太顶了！兄弟们，这家重庆老火锅我真的要安利一下。锅底一上来就开始翻滚，那个牛油香味直接冲上来。你看这个毛肚，七上八下，脆到不行。还有这个肥牛，一口下去全是香味。')
+
+const currentBusiness = computed(() => businessOptions.find((item) => item.id === selectedBusiness.value) || businessOptions[0])
 
 function goBack() {
   uni.navigateBack()
+}
+
+function openBusinessPopup() {
+  tempBusiness.value = selectedBusiness.value
+  showBusinessPopup.value = true
+}
+
+function closeBusinessPopup() {
+  showBusinessPopup.value = false
+}
+
+function selectBusiness(id) {
+  tempBusiness.value = id
+}
+
+function confirmBusiness() {
+  selectedBusiness.value = tempBusiness.value
+  closeBusinessPopup()
 }
 
 function generateVideo() {
@@ -620,5 +685,105 @@ function generateVideo() {
   color: #a4abb5;
   font-size: 20rpx;
   text-align: center;
+}
+
+.popup-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+}
+
+.business-popup {
+  width: 100%;
+  padding: 16rpx 22rpx calc(40rpx + env(safe-area-inset-bottom));
+  border-radius: 26rpx 26rpx 0 0;
+  background: #ffffff;
+}
+
+.popup-handle {
+  width: 72rpx;
+  height: 8rpx;
+  margin: 0 auto 32rpx;
+  border-radius: 999rpx;
+  background: #eeeeee;
+}
+
+.popup-title {
+  color: #1f2933;
+  font-size: 30rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.business-list {
+  margin-top: 32rpx;
+}
+
+.business-option {
+  height: 90rpx;
+  margin-top: 18rpx;
+  padding: 0 24rpx;
+  border: 2rpx solid #f0f0f0;
+  border-radius: 18rpx;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.business-option.active {
+  border-color: #ff9a31;
+  background: #fff2df;
+}
+
+.business-option.focused {
+  border-color: #409eff;
+}
+
+.business-name {
+  color: #ff8e24;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.business-desc {
+  margin-left: 28rpx;
+  color: #5d6672;
+  font-size: 24rpx;
+}
+
+.business-edit {
+  color: #1f2933;
+  font-size: 26rpx;
+}
+
+.business-add {
+  height: 90rpx;
+  margin-top: 20rpx;
+  border-radius: 18rpx;
+  background: #f2f2f2;
+  color: #1f2933;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.popup-confirm {
+  width: 460rpx;
+  height: 100rpx;
+  margin: 58rpx auto 0;
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #ffc98f 0%, #ff9835 100%);
+  color: #ffffff;
+  font-size: 31rpx;
+  line-height: 100rpx;
+}
+
+.popup-confirm::after {
+  border: 0;
 }
 </style>
