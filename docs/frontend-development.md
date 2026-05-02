@@ -847,11 +847,208 @@ export function ensureLogin() {
 }
 ```
 
-## 9. 分包策略
+## 9. 登录后首页
+
+登录后首页以设计图为准，作为小程序核心工作台页面。页面需要承载用户今日数据、内容推荐、AI 创作入口、智能工具和底部导航，开发时应优先保证首屏加载速度、模块边界清晰和接口异常可降级。
+
+### 9.1 页面定位
+
+首页路径建议为 `pages/home/index`，属于主包和 tabBar 页面。用户完成静默登录或手机号登录后，默认进入首页。
+
+页面目标：
+
+- 展示用户今日概览数据，帮助用户快速判断账号状态。
+- 提供内容、数字人、视频创作、智能工具、文案工作站等高频入口。
+- 承接底部 tabBar 的第一个入口，保持登录后主要操作都能从首页触达。
+- 对部分接口失败场景提供默认空态，避免首页白屏。
+
+### 9.2 页面模块拆分
+
+根据设计图，首页从上到下拆分为以下模块：
+
+| 模块 | 建议组件 | 说明 |
+| --- | --- | --- |
+| 顶部导航 | `HomeHeader` | 展示品牌、日期、平台胶囊区域，可适配微信小程序状态栏 |
+| 今日爆款评分 | `TodayScoreCard` | 展示评分、线索数、浏览数、转化率、平台和行业筛选 |
+| 今日爆款内容 | `HotContentList` | 横向内容卡片列表，支持“换一批” |
+| 快捷操作 | `HomeQuickActions` | `AI 一键成片`、`引流数据` 等核心按钮 |
+| 数字人视频 | `DigitalHumanSection` | 数字人形象创建、已创建数字人列表、全部形象入口 |
+| 视频创作 | `VideoCreationSection` | 数字人创作、开始创作、图片转视频、视频剪辑入口 |
+| 智能工具库 | `SmartToolGrid` | 文字生图、人物换装、图片高清化、智能提取、人脸融合等工具 |
+| 文案工作站 | `CopywritingGrid` | 企业宣传、文案仿写、电商带货、口播文案、AI 标题等入口 |
+| 底部 tabBar | `pages.json tabBar` | 首页、创作、我的等主入口，按项目最终 tabBar 配置调整 |
+
+目录建议：
+
+```text
+src
+├── pages
+│   └── home
+│       ├── index.vue
+│       └── components
+│           ├── HomeHeader.vue
+│           ├── TodayScoreCard.vue
+│           ├── HotContentList.vue
+│           ├── HomeQuickActions.vue
+│           ├── DigitalHumanSection.vue
+│           ├── VideoCreationSection.vue
+│           ├── SmartToolGrid.vue
+│           └── CopywritingGrid.vue
+├── api
+│   └── home.js
+└── stores
+    └── home.js
+```
+
+### 9.3 首页数据模型
+
+首页数据建议由 `src/stores/home.js` 统一管理，页面负责触发加载和组织展示。
+
+建议字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `scoreSummary` | `Object` | 今日爆款评分、线索数、浏览数、转化率 |
+| `scoreFilters` | `Object` | 当前平台、行业筛选条件 |
+| `hotContents` | `Array` | 今日爆款内容卡片列表 |
+| `digitalHumans` | `Array` | 数字人形象列表 |
+| `creationStats` | `Object` | 数字人创作、图片转视频、视频剪辑作品数量 |
+| `smartTools` | `Array` | 智能工具入口列表 |
+| `copywritingTools` | `Array` | 文案工具入口列表 |
+| `loading` | `Boolean` | 首页整体加载状态 |
+| `loaded` | `Boolean` | 是否已完成首次加载 |
+
+Store 示例：
+
+```js
+import { defineStore } from 'pinia'
+import { getHomeDashboard } from '@/api/home'
+
+export const useHomeStore = defineStore('home', {
+  state: () => ({
+    scoreSummary: null,
+    scoreFilters: {
+      platform: '',
+      industry: ''
+    },
+    hotContents: [],
+    digitalHumans: [],
+    creationStats: {
+      digitalHuman: 0,
+      imageToVideo: 0,
+      videoEdit: 0
+    },
+    smartTools: [],
+    copywritingTools: [],
+    loading: false,
+    loaded: false
+  }),
+  actions: {
+    async fetchDashboard() {
+      this.loading = true
+      try {
+        const data = await getHomeDashboard(this.scoreFilters)
+        this.scoreSummary = data.scoreSummary
+        this.hotContents = data.hotContents || []
+        this.digitalHumans = data.digitalHumans || []
+        this.creationStats = data.creationStats || this.creationStats
+        this.smartTools = data.smartTools || []
+        this.copywritingTools = data.copywritingTools || []
+        this.loaded = true
+      } finally {
+        this.loading = false
+      }
+    }
+  }
+})
+```
+
+### 9.4 接口约定
+
+首页接口建议放在 `src/api/home.js`，按模块拆分接口，避免所有首页数据强依赖单个接口。首屏可使用聚合接口，非首屏模块可延迟加载。
+
+```js
+import { request } from '@/utils/request'
+
+export function getHomeDashboard(params) {
+  return request({
+    url: '/home/dashboard',
+    method: 'GET',
+    data: params
+  })
+}
+
+export function getHotContents(params) {
+  return request({
+    url: '/home/hot-contents',
+    method: 'GET',
+    data: params
+  })
+}
+
+export function getHomeTools() {
+  return request({
+    url: '/home/tools',
+    method: 'GET'
+  })
+}
+```
+
+接口返回建议：
+
+```json
+{
+  "scoreSummary": {
+    "score": 92,
+    "clueCount": 13000,
+    "viewCount": 3278,
+    "conversionRate": 2.1
+  },
+  "hotContents": [],
+  "digitalHumans": [],
+  "creationStats": {
+    "digitalHuman": 289,
+    "imageToVideo": 123,
+    "videoEdit": 96
+  },
+  "smartTools": [],
+  "copywritingTools": []
+}
+```
+
+### 9.5 页面交互规范
+
+- 顶部评分筛选切换后，只刷新评分和爆款内容模块，不重置整个首页。
+- “换一批”只刷新 `hotContents`，失败时保留上一批数据并给轻提示。
+- “AI 一键成片”“开始创作”等按钮跳转前需要检查登录态和手机号绑定状态。
+- 创建数字人、视频创作、工具入口建议统一通过工具配置跳转，避免页面内写大量分支。
+- 工具宫格支持后端控制开关、角标和排序；前端保留默认配置作为接口失败兜底。
+- 首屏优先渲染顶部区域、评分卡和快捷入口，工具区可在首屏后延迟加载。
+
+### 9.6 样式与适配规范
+
+- 页面主色以设计图橙色系为主，建议沉淀为样式变量，例如 `$primary-color`、`$primary-gradient`。
+- 卡片圆角、阴影、间距需要统一封装，避免每个模块重复写魔法值。
+- 横向内容卡片使用 `scroll-view`，注意小程序滚动性能和图片懒加载。
+- 底部 tabBar 避免遮挡页面内容，页面底部需要预留安全区高度。
+- 顶部导航需要兼容微信状态栏和胶囊按钮，避免内容与系统区域重叠。
+- 数字人头像、内容图片等远程图片需要设置默认占位图和加载失败兜底。
+
+### 9.7 验收要点
+
+- 登录后进入首页不白屏，静默登录失败时可展示游客态或登录引导。
+- 今日爆款评分、内容卡片、作品数量和工具入口能按接口数据正常展示。
+- 三张设计图中的不同数据状态都能覆盖：有作品数量、无作品数量、不同筛选条件。
+- 核心入口点击后能跳转到对应页面或分包页面。
+- 下拉刷新能重新拉取首页核心数据。
+- 弱网、接口失败、空数据场景均有 loading、空态或轻提示。
+- 真机验证页面滚动、横向卡片滑动、底部 tabBar 和安全区表现正常。
+
+## 10. 分包策略
 
 分包用于控制小程序主包体积、提升首屏加载速度，并按业务模块拆分页面资源。主体项目建议主包只保留首页、核心 tabBar 页面、登录页和公共能力，非首屏业务页面放入分包。
 
-### 9.1 适用场景
+### 10.1 适用场景
 
 建议使用分包的模块：
 
@@ -866,7 +1063,7 @@ export function ensureLogin() {
 - 全局组件、全局样式、Pinia store、请求封装等公共基础能力。
 - 多个分包都依赖的大型公共资源。
 
-### 9.2 推荐目录结构
+### 10.2 推荐目录结构
 
 ```text
 src
@@ -895,7 +1092,7 @@ src
 - 分包模块名使用语义化英文，例如 `order`、`activity`、`settings`。
 - 分包内页面文件可按 `list.vue`、`detail.vue`、`index.vue` 命名。
 
-### 9.3 pages.json 配置
+### 10.3 pages.json 配置
 
 `src/pages.json` 中通过 `subPackages` 声明分包。示例：
 
@@ -974,7 +1171,7 @@ uni.navigateTo({
 })
 ```
 
-### 9.4 主包与分包边界
+### 10.4 主包与分包边界
 
 - 主包只放启动必需页面、tabBar 页面、登录页和公共基础代码。
 - 分包页面可以依赖主包中的 `api`、`stores`、`utils`、`components` 等公共模块。
@@ -982,7 +1179,7 @@ uni.navigateTo({
 - 分包资源优先放在对应业务目录或 `static/sub/<module>`，避免把低频资源放入主包。
 - tabBar 页面必须在主包中声明，不能作为分包页面。
 
-### 9.5 分包预下载
+### 10.5 分包预下载
 
 对用户进入概率较高的分包，可使用 `preloadRule` 做预下载。示例：
 
@@ -1003,7 +1200,7 @@ uni.navigateTo({
 - 优先在 Wi-Fi 下预下载资源较大的分包。
 - 预下载规则应结合埋点数据和真实入口路径调整。
 
-### 9.6 注意事项
+### 10.6 注意事项
 
 - 分包路径、页面跳转路径和 `pages.json` 声明必须保持一致。
 - 分包新增页面后，需要在微信开发者工具中验证首次进入加载是否正常。
@@ -1011,25 +1208,25 @@ uni.navigateTo({
 - 大图、视频等资源优先使用 CDN，不建议随分包提交到仓库。
 - 后续接入 CI 时，可增加主包和分包体积检查。
 
-## 10. 样式规范
+## 11. 样式规范
 
 - 小程序页面尺寸优先使用 `rpx`。
 - 全局变量放在 `src/uni.scss` 或 `src/styles/variables.scss`。
 - 通用样式放在 `src/styles`，页面私有样式写在页面内并使用 `scoped`。
 - 颜色、间距、字号应尽量使用设计变量，避免散落魔法值。
 
-## 11. 静态资源规范
+## 12. 静态资源规范
 
 - 小图标和本地图片可放在 `src/static`。
 - 业务图片优先使用 CDN 或后端返回地址。
 - 图片命名使用语义化英文，例如 `icon-user-default.png`。
 - 避免提交未压缩的大体积图片。
 
-## 12. 开发到上线流程
+## 13. 开发到上线流程
 
 本章节用于约定从需求开发到小程序上线的完整执行顺序。每个功能模块应尽量按以下流程推进，避免只完成页面开发而遗漏联调、真机验证和上线检查。
 
-### 12.1 需求与分支准备
+### 13.1 需求与分支准备
 
 1. 明确本次需求影响的页面、接口、状态模块、分包和权限范围。
 2. 确认是否需要新增页面路由、tabBar、分包、Pinia store 或接口模块。
@@ -1043,7 +1240,7 @@ uni.navigateTo({
 - 是否需要登录、手机号授权、定位、支付等平台能力已确认。
 - 是否需要新增分包或调整主包资源已确认。
 
-### 12.2 本地开发
+### 13.2 本地开发
 
 开发顺序建议：
 
@@ -1062,7 +1259,7 @@ uni.navigateTo({
 - 跨页面状态进入 Pinia，页面临时 UI 状态保留在页面内部。
 - 分包页面新增后同步检查跳转路径和 `pages.json` 声明。
 
-### 12.3 联调与自测
+### 13.3 联调与自测
 
 接口联调：
 
@@ -1079,7 +1276,7 @@ uni.navigateTo({
 - 分包页面首次进入是否能正常下载和打开。
 - 表单提交是否有防重复提交和必要校验。
 
-### 12.4 真机与小程序能力验证
+### 13.4 真机与小程序能力验证
 
 涉及微信能力的功能必须使用微信开发者工具和真机验证：
 
@@ -1089,7 +1286,7 @@ uni.navigateTo({
 - 合法域名、隐私协议、授权弹窗和基础库兼容性。
 - 不同网络环境和不同机型上的页面表现。
 
-### 12.5 提交前检查
+### 13.5 提交前检查
 
 提交前建议完成以下检查：
 
@@ -1109,7 +1306,7 @@ npm run build:mp-weixin
 - 登录态、token 失效、手机号授权等关键流程已验证。
 - 静态资源体积合理，大图优先走 CDN。
 
-### 12.6 构建与提审
+### 13.6 构建与提审
 
 上线前流程：
 
@@ -1127,7 +1324,7 @@ npm run build:mp-weixin
 - 是否涉及登录、手机号、支付、定位等敏感能力。
 - 是否存在需要运营或后端配合的配置项。
 
-### 12.7 发布、回滚与上线后观察
+### 13.7 发布、回滚与上线后观察
 
 发布前确认：
 
@@ -1147,7 +1344,7 @@ npm run build:mp-weixin
 - 如果问题由配置引起，优先通过后端配置或运营配置回滚。
 - 如果问题由接口兼容引起，前后端需要确认字段兼容和默认值策略。
 
-## 13. 提交与分支约定
+## 14. 提交与分支约定
 
 推荐分支命名：
 
@@ -1161,7 +1358,7 @@ npm run build:mp-weixin
 - `fix: handle login expired state`
 - `docs: update frontend development guide`
 
-## 14. 后续待补充内容
+## 15. 后续待补充内容
 
 后续可继续扩展以下章节：
 
