@@ -81,7 +81,7 @@
     </view>
 
     <view class="bottom-action">
-      <button class="next-btn">下一步</button>
+      <button class="next-btn" @tap="goToGenerate">下一步</button>
       <text class="tip">◎ 后续可在【我的 - 主营业务】内修改</text>
     </view>
 
@@ -208,6 +208,12 @@ function goToBusiness() {
 function goToLocation() {
   uni.navigateTo({
     url: '/pages/create/location/index'
+  })
+}
+
+function goToGenerate() {
+  uni.navigateTo({
+    url: '/pages/create/generate/index'
   })
 }
 </script>

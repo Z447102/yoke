@@ -1071,7 +1071,8 @@ AI 一键成片页面以设计图为准，用于在生成视频前收集商户�
 | 主营业务范围 | `CreateTextareaField` | 多行输入，右下角清空按钮 |
 | 店铺/公司名称 | `CreateInputField` | 必填，输入店铺或公司名称 |
 | 店铺/公司位置 | `CreateLocationInput` / `CreateLocationPage` | 必填，可手动填写，也可点击地图选点跳转位置选择页 |
-| 底部操作 | `CreateFooter` | 下一步按钮和修改提示 |
+| 底部操作 | `CreateFooter` | 下一步按钮和修改提示，信息填写完毕后跳转生成视频页 |
+| 生成视频配置 | `CreateGeneratePage` | 选择视频模板、上传照片、选择出镜形象、编辑视频文案并生成视频 |
 
 目录建议：
 
@@ -1084,6 +1085,8 @@ src
 │       │   └── index.vue
 │       ├── location
 │       │   └── index.vue
+│       ├── generate
+│       │   └── index.vue
 │       └── components
 │           ├── CreateHeader.vue
 │           ├── CreateWelcome.vue
@@ -1094,6 +1097,7 @@ src
 │           ├── CreateInputField.vue
 │           ├── CreateLocationInput.vue
 │           ├── CreateLocationPage.vue
+│           ├── CreateGeneratePage.vue
 │           └── CreateFooter.vue
 ├── api
 │   └── create.js
@@ -1147,7 +1151,9 @@ const form = reactive({
 - 位置选择页顶部展示地图区域、取消和发送按钮，底部展示搜索框和候选位置列表。
 - 用户选择候选位置后高亮选中项，点击“发送”后返回上一页；后续接入状态共享时通过 Pinia 或页面事件回填 `locationText`。
 - “下一步”点击时校验必填项，缺失字段需要提示具体项。
-- 表单提交前不要直接生成视频，先进入下一步确认或素材选择流程。
+- 信息填写完毕后点击“下一步”跳转 `pages/create/generate/index`，进入生成视频配置页。
+- 生成视频配置页需要允许用户确认主营业务和平台，选择视频模板，上传门头照片、内部环境、菜品照片和其他照片，选择出镜形象，编辑视频文案后再生成视频。
+- 生成视频配置页底部固定展示清晰度选择、消耗点数和“生成视频”按钮；生成前需要校验模板、必要照片、出镜形象和文案。
 
 ### 10.5 接口约定
 
@@ -1228,6 +1234,8 @@ export function getBusinessCategories(params) {
 - 清空主营业务范围按钮可正常清空输入。
 - 店铺/公司位置输入框可正常输入，未填写时点击“下一步”有明确提示。
 - 点击地图选点能进入位置选择页，搜索框、候选位置、选中态和发送按钮展示符合设计图。
+- 信息填写完毕后点击“下一步”能进入生成视频配置页。
+- 生成视频配置页的视频模板、上传照片、出镜形象、视频文案和底部生成按钮展示符合设计图。
 - 真机验证输入框、选择器、底部按钮和安全区显示正常。
 
 ## 11. 我的模块

@@ -30,6 +30,13 @@
       }
     },
     {
+      "path": "pages/create/generate/index",
+      "style": {
+        "navigationBarTitleText": "生成视频",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/mine/index",
       "style": {
         "navigationBarTitleText": "我的",
