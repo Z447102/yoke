@@ -1070,7 +1070,7 @@ AI 一键成片页面以设计图为准，用于在生成视频前收集商户�
 | 主营业务选择 | `CreateBusinessPage` | 必填，点击后跳转主营业务选择页；类目数据、分组和选择规则按行业由后端返回 |
 | 主营业务范围 | `CreateTextareaField` | 多行输入，右下角清空按钮 |
 | 店铺/公司名称 | `CreateInputField` | 必填，输入店铺或公司名称 |
-| 店铺/公司位置 | `CreateLocationInput` | 必填，由用户手动填写店铺或公司位置 |
+| 店铺/公司位置 | `CreateLocationInput` / `CreateLocationPage` | 必填，可手动填写，也可点击地图选点跳转位置选择页 |
 | 底部操作 | `CreateFooter` | 下一步按钮和修改提示 |
 
 目录建议：
@@ -1082,6 +1082,8 @@ src
 │       ├── index.vue
 │       ├── business
 │       │   └── index.vue
+│       ├── location
+│       │   └── index.vue
 │       └── components
 │           ├── CreateHeader.vue
 │           ├── CreateWelcome.vue
@@ -1090,7 +1092,8 @@ src
 │           ├── CreateSelectField.vue
 │           ├── CreateTextareaField.vue
 │           ├── CreateInputField.vue
-│           ├── CreateLocationField.vue
+│           ├── CreateLocationInput.vue
+│           ├── CreateLocationPage.vue
 │           └── CreateFooter.vue
 ├── api
 │   └── create.js
@@ -1139,8 +1142,10 @@ const form = reactive({
 - 只有所有后端标记为必填的分组都完成选择后，“确定”按钮才变为可点击状态；未完成时按钮保持置灰并拦截点击。
 - 点击“确定”后返回上一页；后续接入状态共享时通过 Pinia 或页面事件回填完整 `businessType` 选择结果。
 - 主营业务范围支持清空按钮；清空仅清除当前输入内容。
-- 店铺/公司位置由用户手动输入，为必填项；该表单不提供地图选点入口。
-- 位置输入建议支持门店名称、商圈、街道或详细地址，提交时按后端字段要求传递 `locationText`。
+- 店铺/公司位置为必填项，用户可手动输入门店名称、商圈、街道或详细地址。
+- 点击“地图选点”跳转 `pages/create/location/index`，进入位置选择页。
+- 位置选择页顶部展示地图区域、取消和发送按钮，底部展示搜索框和候选位置列表。
+- 用户选择候选位置后高亮选中项，点击“发送”后返回上一页；后续接入状态共享时通过 Pinia 或页面事件回填 `locationText`。
 - “下一步”点击时校验必填项，缺失字段需要提示具体项。
 - 表单提交前不要直接生成视频，先进入下一步确认或素材选择流程。
 
@@ -1222,6 +1227,7 @@ export function getBusinessCategories(params) {
 - 必填项未填写时点击“下一步”有明确提示。
 - 清空主营业务范围按钮可正常清空输入。
 - 店铺/公司位置输入框可正常输入，未填写时点击“下一步”有明确提示。
+- 点击地图选点能进入位置选择页，搜索框、候选位置、选中态和发送按钮展示符合设计图。
 - 真机验证输入框、选择器、底部按钮和安全区显示正常。
 
 ## 11. 我的模块
