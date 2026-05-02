@@ -5,14 +5,14 @@
         <text class="section__flame">今</text>
         <text>今日爆款内容</text>
       </view>
-      <view class="section__more" @click="$emit('refresh')">
+      <view class="section__more" @tap="$emit('refresh')">
         <text class="section__reload">⟳</text>
         <text>换一批</text>
       </view>
     </view>
-    <scroll-view scroll-x class="hot-scroll" show-scrollbar="false">
+    <scroll-view scroll-x class="hot-scroll" :show-scrollbar="false">
       <view class="hot-list">
-        <view v-for="item in list" :key="item.id" class="hot-card">
+        <view v-for="item in items" :key="item.id" class="hot-card">
           <image class="hot-card__image" :src="item.image" mode="aspectFill" />
           <view class="hot-card__body">
             <text class="hot-card__title">{{ item.title }}</text>

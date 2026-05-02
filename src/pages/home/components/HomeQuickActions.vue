@@ -1,10 +1,10 @@
 <template>
   <view class="quick-actions">
-    <view class="quick-card" @click="handleClick('AI 一键成片')">
+    <view class="quick-card" @tap="handleClick('AI 一键成片')">
       <view class="quick-icon">▣</view>
       <text>AI一键成片</text>
     </view>
-    <view class="quick-card" @click="handleClick('引流数据')">
+    <view class="quick-card" @tap="handleClick('引流数据')">
       <view class="quick-icon">▥</view>
       <text>引流数据</text>
     </view>

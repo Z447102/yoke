@@ -1,6 +1,6 @@
 <template>
   <view class="video-section">
-    <SectionTitle title="视频创作" tip="创作技巧" />
+    <SectionTitle title="视频创作" more-text="创作技巧" />
 
     <view class="creator-card">
       <view>

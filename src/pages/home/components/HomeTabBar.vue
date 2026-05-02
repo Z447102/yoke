@@ -1,16 +1,37 @@
 <template>
   <view class="home-tab-bar">
-    <view class="tab-item active">
+    <view class="tab-item" :class="{ active: current === 'home' }" @tap="goTo('/pages/home/index')">
       <text class="tab-icon">⌂</text>
     </view>
-    <view class="tab-main">
+    <view class="tab-main" @tap="goTo('/pages/create/index')">
       <text class="tab-main-icon">人</text>
     </view>
-    <view class="tab-item">
+    <view class="tab-item" :class="{ active: current === 'mine' }" @tap="goTo('/pages/mine/index')">
       <text class="tab-icon">♟</text>
     </view>
   </view>
 </template>
+
+<script setup>
+defineProps({
+  current: {
+    type: String,
+    default: 'home'
+  }
+})
+
+function goTo(url) {
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const currentRoute = currentPage ? `/${currentPage.route}` : ''
+
+  if (currentRoute === url) {
+    return
+  }
+
+  uni.redirectTo({ url })
+}
+</script>
 
 <style lang="scss" scoped>
 .home-tab-bar {
