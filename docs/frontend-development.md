@@ -190,6 +190,76 @@ const title = ref('首页')
 </style>
 ```
 
+### 5.1 组件引入规范
+
+组件按复用范围拆分到不同目录，页面只引入当前页面真正使用的组件，避免把业务组件集中注册为全局组件。
+
+推荐目录：
+
+```text
+src
+├── components
+│   ├── base                 # 基础通用组件，例如按钮、空状态、弹窗
+│   ├── business             # 跨页面复用业务组件
+│   └── layout               # 页面布局类组件
+└── pages
+    └── home
+        └── components       # 首页私有组件
+```
+
+命名约定：
+
+- 组件文件名使用 PascalCase，例如 `BaseEmpty.vue`、`UserCard.vue`。
+- 基础组件建议使用 `Base` 前缀，例如 `BaseButton`、`BasePopup`。
+- 业务组件使用业务名词命名，例如 `OrderCard`、`ActivityItem`。
+- 页面私有组件放在页面目录下的 `components`，不向其他业务模块直接暴露。
+
+组件引入方式：
+
+```vue
+<template>
+  <view class="page-home">
+    <BaseEmpty v-if="isEmpty" text="暂无数据" />
+    <OrderCard
+      v-for="item in list"
+      :key="item.id"
+      :order="item"
+      @click="handleOrderClick"
+    />
+  </view>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import BaseEmpty from '@/components/base/BaseEmpty.vue'
+import OrderCard from '@/components/business/OrderCard.vue'
+
+const props = defineProps({
+  list: {
+    type: Array,
+    default: () => []
+  }
+})
+
+const isEmpty = computed(() => props.list.length === 0)
+
+function handleOrderClick(order) {
+  uni.navigateTo({
+    url: `/pages-sub/order/detail?id=${order.id}`
+  })
+}
+</script>
+```
+
+使用规范：
+
+- 页面组件优先显式 `import`，便于追踪依赖关系。
+- 全局组件只放高频基础组件，且需要在项目配置中统一声明。
+- 组件通过 `props` 接收数据，通过 `emit` 通知外部事件，不直接修改 Pinia store。
+- 组件内部不直接调用业务接口；需要数据时由页面、hooks 或 store 获取后传入。
+- 组件样式默认使用 `scoped`，跨组件复用样式放入 `src/styles`。
+- 分包私有组件优先放在对应分包目录，多个分包共用时再上移到 `src/components`。
+
 ## 6. Pinia 状态管理约定
 
 Pinia store 统一放在 `src/stores`。按业务领域拆分 store，避免把全部状态集中到单个文件。
@@ -369,6 +439,97 @@ export function getUserProfile() {
   })
 }
 ```
+
+### 7.1 接口调用规范
+
+接口调用按“请求封装 -> 业务 API -> hooks/store -> 页面”的层次组织，页面不直接拼接 URL，也不直接处理通用错误码。
+
+推荐目录：
+
+```text
+src
+├── api
+│   ├── auth.js              # 登录相关接口
+│   ├── user.js              # 用户资料接口
+│   ├── order.js             # 订单相关接口
+│   └── home.js              # 首页相关接口
+├── hooks
+│   └── use-order.js         # 复杂业务流程编排
+└── utils
+    └── request.js           # uni.request 统一封装
+```
+
+分层职责：
+
+| 层级 | 职责 | 不应处理 |
+| --- | --- | --- |
+| `utils/request.js` | baseURL、header、token、状态码、通用错误提示 | 具体业务字段组装 |
+| `api/*.js` | 声明接口地址、方法、参数 | 页面交互、Pinia 状态写入 |
+| `hooks/use-*.js` | 组合多个接口、store 和页面流程 | 底层请求细节 |
+| `stores/*.js` | 维护跨页面共享状态和缓存 | 页面弹窗、复杂跳转 |
+| `pages/*.vue` | 触发业务动作、展示 loading 和结果 | 直接调用 `uni.request` |
+
+业务 API 示例：
+
+```js
+import { request } from '@/utils/request'
+
+export function getOrderList(params) {
+  return request({
+    url: '/orders',
+    method: 'GET',
+    data: params
+  })
+}
+
+export function createOrder(data) {
+  return request({
+    url: '/orders',
+    method: 'POST',
+    data
+  })
+}
+```
+
+页面调用示例：
+
+```vue
+<script setup>
+import { onLoad } from '@dcloudio/uni-app'
+import { ref } from 'vue'
+import { getOrderList } from '@/api/order'
+
+const loading = ref(false)
+const list = ref([])
+
+async function fetchOrderList() {
+  try {
+    loading.value = true
+    const data = await getOrderList({
+      page: 1,
+      pageSize: 10
+    })
+    list.value = data.list || []
+  } finally {
+    loading.value = false
+  }
+}
+
+onLoad(() => {
+  fetchOrderList()
+})
+</script>
+```
+
+调用约定：
+
+- `GET` 请求参数统一通过 `data` 传递，由请求封装适配到 `uni.request`。
+- `POST` / `PUT` 请求体统一使用 `data`，不要在页面中拼接 query 字符串。
+- 页面只处理当前页面的 loading、空状态和轻量提示。
+- 登录失效、网络异常、服务端错误等通用错误由请求封装统一处理。
+- 需要跨页面复用的数据，接口结果写入 Pinia；只在当前页面使用的数据保留在页面局部状态。
+- 多接口串联、提交前校验、提交后跳转等复杂流程优先封装到 `hooks/use-*.js`。
+- 接口文件按业务模块拆分，避免出现 `api/index.js` 包含所有接口。
 
 ## 8. 登录模块
 
