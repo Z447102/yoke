@@ -228,6 +228,88 @@ export const useUserStore = defineStore('user', {
 })
 ```
 
+### 6.1 多模块数据管理
+
+数据管理按业务领域拆分为多个 store，每个 store 只维护自己领域内的状态、派生数据和修改方法，避免出现一个全局大 store。
+
+推荐模块：
+
+| 模块 | 文件 | 职责 |
+| --- | --- | --- |
+| 应用配置 | `src/stores/app.js` | 主题、系统信息、启动参数、全局开关 |
+| 用户登录 | `src/stores/user.js` | token、用户信息、手机号绑定状态 |
+| 首页数据 | `src/stores/home.js` | 首页缓存、轮播、推荐列表 |
+| 分类数据 | `src/stores/category.js` | 分类树、当前分类、筛选条件 |
+| 订单数据 | `src/stores/order.js` | 订单列表筛选、订单详情缓存 |
+| 购物车或业务篮 | `src/stores/cart.js` | 商品数量、选中项、结算数据 |
+| 位置能力 | `src/stores/location.js` | 定位授权、经纬度、城市信息 |
+
+目录示例：
+
+```text
+src
+└── stores
+    ├── app.js
+    ├── user.js
+    ├── home.js
+    ├── category.js
+    ├── order.js
+    ├── cart.js
+    └── location.js
+```
+
+模块拆分原则：
+
+- 按业务领域拆分，不按页面机械拆分；多个页面共用的状态应沉淀为业务 store。
+- 页面临时 UI 状态优先放在页面组件内，例如弹窗开关、输入框内容、局部 loading。
+- 接口返回的大列表不默认全部放入 store，只有跨页面复用、需要缓存或需要统一修改的数据才进入 store。
+- store 中不直接写页面跳转和弹窗交互，页面或 hooks 负责交互编排。
+- store action 可以调用接口，但复杂流程建议放到 `hooks` 中组合多个 store 和接口。
+
+多模块调用示例：
+
+```js
+import { defineStore } from 'pinia'
+import { useUserStore } from './user'
+import { getOrderList } from '@/api/order'
+
+export const useOrderStore = defineStore('order', {
+  state: () => ({
+    list: [],
+    query: {
+      status: 'all',
+      page: 1
+    }
+  }),
+  actions: {
+    async fetchList() {
+      const userStore = useUserStore()
+
+      if (!userStore.isLogin) {
+        this.list = []
+        return
+      }
+
+      const data = await getOrderList(this.query)
+      this.list = data.list || []
+    },
+    reset() {
+      this.list = []
+      this.query = {
+        status: 'all',
+        page: 1
+      }
+    }
+  }
+})
+```
+
+持久化边界：
+
+- 建议持久化：`token`、用户基础信息、主题配置、城市信息等恢复体验必要的数据。
+- 不建议持久化：接口临时列表、分页参数、一次性授权 code、支付参数、敏感业务数据。
+- 退出登录时需要清理用户相关模块，例如 `user`、`order`、`cart`，避免切换账号后看到旧数据。
+
 `main.js` 中注册 Pinia：
 
 ```js
