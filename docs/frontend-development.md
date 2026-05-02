@@ -288,21 +288,215 @@ export function getUserProfile() {
 }
 ```
 
-## 8. 样式规范
+## 8. 登录模块
+
+登录模块统一放在用户相关业务目录中维护：
+
+```text
+src
+├── api
+│   └── auth.js              # 登录、换取 token、手机号绑定等接口
+├── pages
+│   └── login
+│       └── index.vue        # 需要用户主动操作的登录页
+├── stores
+│   └── user.js              # token、用户信息、登录状态
+└── utils
+    └── auth.js              # 登录态读取、跳转、权限判断等工具
+```
+
+登录方式分为两类：
+
+- 微信授权静默登录：进入小程序后通过 `uni.login` 获取临时 code，调用后端接口换取登录态。
+- 手机号登录：用户点击手机号授权按钮，获取手机号授权凭证后调用后端完成登录或绑定。
+
+### 8.1 登录状态
+
+登录状态由 `src/stores/user.js` 统一维护，页面不直接读写本地缓存。
+
+建议维护字段：
+
+- `token`：后端登录凭证。
+- `profile`：用户基础信息。
+- `openid` / `unionid`：如业务需要，由后端返回后保存。
+- `loginType`：登录来源，例如 `wechat_silent`、`phone`。
+
+本地缓存只保存必要登录态，例如 `token` 和基础用户信息。退出登录时需要同时清理 Pinia 状态和本地缓存。
+
+### 8.2 微信授权静默登录
+
+静默登录用于小程序启动、进入首页或需要识别用户身份但不需要用户主动输入手机号的场景。
+
+流程：
+
+1. 小程序启动或进入需要登录态的页面。
+2. 前端调用 `uni.login` 获取微信临时 `code`。
+3. 前端调用后端静默登录接口，传递 `code`。
+4. 后端使用 `code` 换取微信身份信息，并返回业务 token、用户基础信息和是否需要绑定手机号。
+5. 前端写入 Pinia 和本地缓存。
+6. 如果后端返回 `needBindPhone: true`，引导用户进入手机号登录或绑定流程。
+
+示例：
+
+```js
+import { silentLogin } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
+
+export function loginByWechatCode() {
+  const userStore = useUserStore()
+
+  return new Promise((resolve, reject) => {
+    uni.login({
+      provider: 'weixin',
+      success: async ({ code }) => {
+        try {
+          const data = await silentLogin({ code })
+          userStore.setLoginState({
+            token: data.token,
+            profile: data.profile,
+            loginType: 'wechat_silent'
+          })
+          resolve(data)
+        } catch (error) {
+          reject(error)
+        }
+      },
+      fail: reject
+    })
+  })
+}
+```
+
+注意事项：
+
+- `code` 只能使用一次，失效后需要重新调用 `uni.login`。
+- 静默登录不应强制弹出授权弹窗，避免影响首页首屏体验。
+- 后端未返回有效 token 时，前端应保持游客态或引导手机号登录。
+
+### 8.3 手机号登录
+
+手机号登录用于需要实名手机号、下单、报名、会员绑定等必须确认用户手机号的场景。
+
+流程：
+
+1. 页面展示手机号登录按钮。
+2. 用户点击授权按钮。
+3. 前端从回调中获取手机号授权凭证。
+4. 前端调用后端手机号登录接口。
+5. 后端解密或换取手机号后返回业务 token 和用户信息。
+6. 前端更新 Pinia、本地缓存，并返回原页面或进入首页。
+
+按钮示例：
+
+```vue
+<template>
+  <button open-type="getPhoneNumber" @getphonenumber="handlePhoneLogin">
+    手机号快捷登录
+  </button>
+</template>
+
+<script setup>
+import { phoneLogin } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+
+async function handlePhoneLogin(event) {
+  const { code, errMsg } = event.detail
+
+  if (!code) {
+    uni.showToast({
+      title: errMsg || '未授权手机号',
+      icon: 'none'
+    })
+    return
+  }
+
+  const data = await phoneLogin({ code })
+  userStore.setLoginState({
+    token: data.token,
+    profile: data.profile,
+    loginType: 'phone'
+  })
+}
+</script>
+```
+
+注意事项：
+
+- 新版微信小程序手机号能力优先使用 `code` 换取手机号，避免在前端处理敏感加密数据。
+- 用户拒绝授权时，只提示必要信息，不重复打扰。
+- 手机号登录成功后，应统一走 `setLoginState`，保证状态写入逻辑一致。
+
+### 8.4 接口约定
+
+建议接口放在 `src/api/auth.js`：
+
+```js
+import { request } from '@/utils/request'
+
+export function silentLogin(data) {
+  return request({
+    url: '/auth/wechat/silent-login',
+    method: 'POST',
+    data
+  })
+}
+
+export function phoneLogin(data) {
+  return request({
+    url: '/auth/phone/login',
+    method: 'POST',
+    data
+  })
+}
+
+export function logout() {
+  return request({
+    url: '/auth/logout',
+    method: 'POST'
+  })
+}
+```
+
+建议后端返回结构：
+
+```json
+{
+  "token": "token value",
+  "profile": {
+    "id": "user id",
+    "nickname": "用户昵称",
+    "avatar": "头像地址",
+    "phone": "手机号"
+  },
+  "needBindPhone": false
+}
+```
+
+### 8.5 路由与权限
+
+- 普通页面可先静默登录，失败时允许游客访问。
+- 必须登录的页面在进入前检查 `userStore.isLogin`。
+- 必须绑定手机号的页面额外检查用户手机号字段。
+- 登录成功后优先返回来源页面，没有来源页面时进入首页。
+- token 失效时由请求封装统一处理，清理登录态并跳转登录页或提示重新登录。
+
+## 9. 样式规范
 
 - 小程序页面尺寸优先使用 `rpx`。
 - 全局变量放在 `src/uni.scss` 或 `src/styles/variables.scss`。
 - 通用样式放在 `src/styles`，页面私有样式写在页面内并使用 `scoped`。
 - 颜色、间距、字号应尽量使用设计变量，避免散落魔法值。
 
-## 9. 静态资源规范
+## 10. 静态资源规范
 
 - 小图标和本地图片可放在 `src/static`。
 - 业务图片优先使用 CDN 或后端返回地址。
 - 图片命名使用语义化英文，例如 `icon-user-default.png`。
 - 避免提交未压缩的大体积图片。
 
-## 10. 开发流程
+## 11. 开发流程
 
 1. 从目标基础分支创建功能分支。
 2. 根据页面或模块拆分开发任务。
@@ -311,7 +505,7 @@ export function getUserProfile() {
 5. 使用微信开发者工具进行页面、授权、网络和真机验证。
 6. 提交前检查格式、构建结果和核心流程。
 
-## 11. 提交与分支约定
+## 12. 提交与分支约定
 
 推荐分支命名：
 
@@ -325,13 +519,13 @@ export function getUserProfile() {
 - `fix: handle login expired state`
 - `docs: update frontend development guide`
 
-## 12. 后续待补充内容
+## 13. 后续待补充内容
 
 后续可继续扩展以下章节：
 
 - 业务页面清单
 - 接口字段说明
-- 登录与授权流程
+- 登录模块接口字段细化
 - 分包策略
 - 权限与隐私弹窗
 - 错误码与异常处理
