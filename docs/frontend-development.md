@@ -1044,11 +1044,243 @@ export function getHomeTools() {
 - 弱网、接口失败、空数据场景均有 loading、空态或轻提示。
 - 真机验证页面滚动、横向卡片滑动、底部 tabBar 和安全区表现正常。
 
-## 10. 分包策略
+## 10. 我的模块
+
+我的模块以设计图为准，作为用户登录后的个人中心页面。页面需要承载用户资料、会员状态、点数资产、会员/点数入口、作品列表和底部导航，开发时应优先保证登录态读取稳定、资产数据准确、作品列表可分页加载。
+
+### 10.1 页面定位
+
+我的页面路径建议为 `pages/mine/index`，属于主包页面和底部导航入口。用户从底部导航进入后，应展示当前账号的个人资料、会员状态、点数余额和作品数据。
+
+页面目标：
+
+- 展示用户头像、昵称、会员状态和兑换码入口。
+- 展示点数余额、帮助中心、会员中心和点数中心入口。
+- 聚合展示视频作品、我的形象、图片作品、文案作品等个人资产。
+- 支持作品管理、分类切换和作品卡片跳转详情。
+- 对未登录、会员未开通、作品为空等状态提供清晰引导。
+
+### 10.2 页面模块拆分
+
+根据设计图，我的页面从上到下拆分为以下模块：
+
+| 模块 | 建议组件 | 说明 |
+| --- | --- | --- |
+| 顶部用户信息 | `MineUserHeader` | 展示头像、昵称、会员状态、会员兑换码按钮和橙色背景 |
+| 资产快捷卡片 | `MineAssetBar` | 展示我的点数、帮助中心两个横向入口 |
+| 权益入口 | `MineBenefitCards` | 展示会员中心、点数中心，包含活动倒计时和充值权益提示 |
+| 作品分类 Tabs | `MineWorkTabs` | 视频作品、我的形象、图片作品、文案作品切换 |
+| 作品概览 | `MineWorkSummary` | 展示“您已创作 xxx 条视频作品”和管理按钮 |
+| 作品列表 | `MineWorkGrid` | 三列作品卡片，展示封面、播放按钮、时长和日期 |
+| 底部导航 | `HomeTabBar` 或公共 `AppTabBar` | 首页、创作、我的三个入口，我的入口高亮 |
+
+目录建议：
+
+```text
+src
+├── pages
+│   └── mine
+│       ├── index.vue
+│       └── components
+│           ├── MineUserHeader.vue
+│           ├── MineAssetBar.vue
+│           ├── MineBenefitCards.vue
+│           ├── MineWorkTabs.vue
+│           ├── MineWorkSummary.vue
+│           └── MineWorkGrid.vue
+├── api
+│   └── mine.js
+└── stores
+    └── mine.js
+```
+
+### 10.3 我的模块数据模型
+
+我的模块数据建议由 `src/stores/mine.js` 管理，用户基础登录态仍由 `src/stores/user.js` 维护。`mine` store 只维护个人中心展示所需的资产、会员权益和作品列表。
+
+建议字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `profile` | `Object` | 昵称、头像、会员状态等个人资料快照 |
+| `points` | `Number` | 当前点数余额 |
+| `member` | `Object` | 会员状态、会员标题、会员有效期、活动倒计时 |
+| `recharge` | `Object` | 点数中心充值文案、充值档位和权益提示 |
+| `workTabs` | `Array` | 作品分类 tab 配置 |
+| `activeWorkType` | `String` | 当前选中的作品分类 |
+| `workSummary` | `Object` | 当前分类作品数量和管理权限 |
+| `works` | `Array` | 当前分类作品列表 |
+| `pagination` | `Object` | 页码、分页大小、是否还有更多 |
+| `loading` | `Boolean` | 页面或列表加载状态 |
+
+Store 示例：
+
+```js
+import { defineStore } from 'pinia'
+import { getMineDashboard, getMineWorks } from '@/api/mine'
+
+export const useMineStore = defineStore('mine', {
+  state: () => ({
+    profile: null,
+    points: 0,
+    member: null,
+    recharge: null,
+    workTabs: [
+      { key: 'video', name: '视频作品' },
+      { key: 'digitalHuman', name: '我的形象' },
+      { key: 'image', name: '图片作品' },
+      { key: 'copywriting', name: '文案作品' }
+    ],
+    activeWorkType: 'video',
+    workSummary: {
+      total: 0,
+      unit: '条视频作品'
+    },
+    works: [],
+    pagination: {
+      page: 1,
+      pageSize: 12,
+      hasMore: true
+    },
+    loading: false
+  }),
+  actions: {
+    async fetchDashboard() {
+      const data = await getMineDashboard()
+      this.profile = data.profile
+      this.points = data.points || 0
+      this.member = data.member
+      this.recharge = data.recharge
+      this.workSummary = data.workSummary || this.workSummary
+    },
+    async fetchWorks(reset = false) {
+      if (reset) {
+        this.pagination.page = 1
+        this.works = []
+      }
+
+      this.loading = true
+      try {
+        const data = await getMineWorks({
+          type: this.activeWorkType,
+          page: this.pagination.page,
+          pageSize: this.pagination.pageSize
+        })
+        this.works = reset ? data.list || [] : this.works.concat(data.list || [])
+        this.pagination.hasMore = Boolean(data.hasMore)
+        this.pagination.page += 1
+      } finally {
+        this.loading = false
+      }
+    },
+    switchWorkType(type) {
+      if (this.activeWorkType === type) return
+      this.activeWorkType = type
+      this.fetchWorks(true)
+    }
+  }
+})
+```
+
+### 10.4 接口约定
+
+我的模块接口建议放在 `src/api/mine.js`。页面首屏可使用聚合接口获取用户资料、点数、会员卡片和作品概览，作品列表按分类分页接口获取。
+
+```js
+import { request } from '@/utils/request'
+
+export function getMineDashboard() {
+  return request({
+    url: '/mine/dashboard',
+    method: 'GET'
+  })
+}
+
+export function getMineWorks(params) {
+  return request({
+    url: '/mine/works',
+    method: 'GET',
+    data: params
+  })
+}
+```
+
+接口返回建议：
+
+```json
+{
+  "profile": {
+    "nickname": "Cat - 先生",
+    "avatar": "https://example.com/avatar.png",
+    "memberStatus": "未开通会员"
+  },
+  "points": 344,
+  "member": {
+    "title": "会员中心",
+    "subtitle": "永久免费 限时出货",
+    "activityEndText": "活动 6天23:09:29"
+  },
+  "recharge": {
+    "title": "点数中心",
+    "subtitle": "充值折扣 限时优惠",
+    "benefitText": "充1000点 得1200点"
+  },
+  "workSummary": {
+    "total": 389,
+    "unit": "条视频作品"
+  },
+  "works": []
+}
+```
+
+作品列表字段建议：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `String` | 作品 ID |
+| `type` | `String` | `video`、`digitalHuman`、`image`、`copywriting` |
+| `cover` | `String` | 封面图地址 |
+| `duration` | `String` | 视频时长，例如 `30s` |
+| `createdDate` | `String` | 展示日期，例如 `26-4-20` |
+| `title` | `String` | 作品标题，可用于详情页 |
+| `status` | `String` | 作品状态，例如 `normal`、`processing`、`failed` |
+
+### 10.5 页面交互规范
+
+- 页面进入时先检查登录态；未登录时跳转登录页或展示登录引导。
+- 会员兑换码按钮点击后进入兑换弹窗或兑换页面，兑换成功后刷新会员状态。
+- 我的点数点击进入点数明细，帮助中心点击进入帮助页面。
+- 会员中心和点数中心卡片点击进入对应分包或业务页面。
+- 作品分类切换时只刷新作品列表和作品概览，不重置顶部用户信息。
+- 作品管理按钮进入批量管理模式，支持选择、删除、移动分类等后续能力。
+- 作品卡片点击进入作品详情；视频作品需要展示播放图标、时长和日期。
+- 下拉刷新重新获取用户资产、会员权益和当前作品列表。
+- 上拉加载更多只请求当前 `activeWorkType` 的下一页作品。
+
+### 10.6 样式与适配规范
+
+- 顶部区域使用橙色渐变背景，可叠加弱纹理或半透明图层，但不应影响头像和文字可读性。
+- 用户头像建议使用圆形裁切，缺省时展示默认头像。
+- 会员中心和点数中心卡片使用左右双卡布局，宽度、圆角、阴影和间距保持一致。
+- 作品分类 tab 使用横向均分布局，选中态使用橙色文字和短横线。
+- 作品列表使用三列网格，封面比例建议接近设计图的竖向卡片比例。
+- 作品卡片底部信息使用半透明黑色蒙层，保证白色文字在不同封面上可读。
+- 底部导航需要预留安全区高度，避免遮挡最后一行作品。
+
+### 10.7 验收要点
+
+- 登录后进入我的页面不白屏，用户头像、昵称、会员状态和点数能正常展示。
+- 会员兑换码、我的点数、帮助中心、会员中心、点数中心均可点击并有明确跳转或提示。
+- 视频作品 tab 默认选中，作品数量、封面、播放按钮、时长和日期展示正确。
+- 切换“我的形象 / 图片作品 / 文案作品”时列表能刷新，空数据时展示空态。
+- 下拉刷新和上拉加载更多逻辑正常，弱网或接口失败时保留已有数据并给轻提示。
+- 真机验证顶部安全区、底部导航、安全区和作品网格滚动表现正常。
+
+## 11. 分包策略
 
 分包用于控制小程序主包体积、提升首屏加载速度，并按业务模块拆分页面资源。主体项目建议主包只保留首页、核心 tabBar 页面、登录页和公共能力，非首屏业务页面放入分包。
 
-### 10.1 适用场景
+### 11.1 适用场景
 
 建议使用分包的模块：
 
@@ -1063,7 +1295,7 @@ export function getHomeTools() {
 - 全局组件、全局样式、Pinia store、请求封装等公共基础能力。
 - 多个分包都依赖的大型公共资源。
 
-### 10.2 推荐目录结构
+### 11.2 推荐目录结构
 
 ```text
 src
@@ -1092,7 +1324,7 @@ src
 - 分包模块名使用语义化英文，例如 `order`、`activity`、`settings`。
 - 分包内页面文件可按 `list.vue`、`detail.vue`、`index.vue` 命名。
 
-### 10.3 pages.json 配置
+### 11.3 pages.json 配置
 
 `src/pages.json` 中通过 `subPackages` 声明分包。示例：
 
@@ -1171,7 +1403,7 @@ uni.navigateTo({
 })
 ```
 
-### 10.4 主包与分包边界
+### 11.4 主包与分包边界
 
 - 主包只放启动必需页面、tabBar 页面、登录页和公共基础代码。
 - 分包页面可以依赖主包中的 `api`、`stores`、`utils`、`components` 等公共模块。
@@ -1179,7 +1411,7 @@ uni.navigateTo({
 - 分包资源优先放在对应业务目录或 `static/sub/<module>`，避免把低频资源放入主包。
 - tabBar 页面必须在主包中声明，不能作为分包页面。
 
-### 10.5 分包预下载
+### 11.5 分包预下载
 
 对用户进入概率较高的分包，可使用 `preloadRule` 做预下载。示例：
 
@@ -1200,7 +1432,7 @@ uni.navigateTo({
 - 优先在 Wi-Fi 下预下载资源较大的分包。
 - 预下载规则应结合埋点数据和真实入口路径调整。
 
-### 10.6 注意事项
+### 11.6 注意事项
 
 - 分包路径、页面跳转路径和 `pages.json` 声明必须保持一致。
 - 分包新增页面后，需要在微信开发者工具中验证首次进入加载是否正常。
@@ -1208,25 +1440,25 @@ uni.navigateTo({
 - 大图、视频等资源优先使用 CDN，不建议随分包提交到仓库。
 - 后续接入 CI 时，可增加主包和分包体积检查。
 
-## 11. 样式规范
+## 12. 样式规范
 
 - 小程序页面尺寸优先使用 `rpx`。
 - 全局变量放在 `src/uni.scss` 或 `src/styles/variables.scss`。
 - 通用样式放在 `src/styles`，页面私有样式写在页面内并使用 `scoped`。
 - 颜色、间距、字号应尽量使用设计变量，避免散落魔法值。
 
-## 12. 静态资源规范
+## 13. 静态资源规范
 
 - 小图标和本地图片可放在 `src/static`。
 - 业务图片优先使用 CDN 或后端返回地址。
 - 图片命名使用语义化英文，例如 `icon-user-default.png`。
 - 避免提交未压缩的大体积图片。
 
-## 13. 开发到上线流程
+## 14. 开发到上线流程
 
 本章节用于约定从需求开发到小程序上线的完整执行顺序。每个功能模块应尽量按以下流程推进，避免只完成页面开发而遗漏联调、真机验证和上线检查。
 
-### 13.1 需求与分支准备
+### 14.1 需求与分支准备
 
 1. 明确本次需求影响的页面、接口、状态模块、分包和权限范围。
 2. 确认是否需要新增页面路由、tabBar、分包、Pinia store 或接口模块。
@@ -1240,7 +1472,7 @@ uni.navigateTo({
 - 是否需要登录、手机号授权、定位、支付等平台能力已确认。
 - 是否需要新增分包或调整主包资源已确认。
 
-### 13.2 本地开发
+### 14.2 本地开发
 
 开发顺序建议：
 
@@ -1259,7 +1491,7 @@ uni.navigateTo({
 - 跨页面状态进入 Pinia，页面临时 UI 状态保留在页面内部。
 - 分包页面新增后同步检查跳转路径和 `pages.json` 声明。
 
-### 13.3 联调与自测
+### 14.3 联调与自测
 
 接口联调：
 
@@ -1276,7 +1508,7 @@ uni.navigateTo({
 - 分包页面首次进入是否能正常下载和打开。
 - 表单提交是否有防重复提交和必要校验。
 
-### 13.4 真机与小程序能力验证
+### 14.4 真机与小程序能力验证
 
 涉及微信能力的功能必须使用微信开发者工具和真机验证：
 
@@ -1286,7 +1518,7 @@ uni.navigateTo({
 - 合法域名、隐私协议、授权弹窗和基础库兼容性。
 - 不同网络环境和不同机型上的页面表现。
 
-### 13.5 提交前检查
+### 14.5 提交前检查
 
 提交前建议完成以下检查：
 
@@ -1306,7 +1538,7 @@ npm run build:mp-weixin
 - 登录态、token 失效、手机号授权等关键流程已验证。
 - 静态资源体积合理，大图优先走 CDN。
 
-### 13.6 构建与提审
+### 14.6 构建与提审
 
 上线前流程：
 
@@ -1324,7 +1556,7 @@ npm run build:mp-weixin
 - 是否涉及登录、手机号、支付、定位等敏感能力。
 - 是否存在需要运营或后端配合的配置项。
 
-### 13.7 发布、回滚与上线后观察
+### 14.7 发布、回滚与上线后观察
 
 发布前确认：
 
@@ -1344,7 +1576,7 @@ npm run build:mp-weixin
 - 如果问题由配置引起，优先通过后端配置或运营配置回滚。
 - 如果问题由接口兼容引起，前后端需要确认字段兼容和默认值策略。
 
-## 14. 提交与分支约定
+## 15. 提交与分支约定
 
 推荐分支命名：
 
@@ -1358,7 +1590,7 @@ npm run build:mp-weixin
 - `fix: handle login expired state`
 - `docs: update frontend development guide`
 
-## 15. 后续待补充内容
+## 16. 后续待补充内容
 
 后续可继续扩展以下章节：
 
