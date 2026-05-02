@@ -1,6 +1,6 @@
 <template>
   <view class="quick-actions">
-    <view class="quick-card" @tap="handleClick('AI 一键成片')">
+    <view class="quick-card" @tap="goToCreate">
       <view class="quick-icon">▣</view>
       <text>AI一键成片</text>
     </view>
@@ -12,6 +12,12 @@
 </template>
 
 <script setup>
+function goToCreate() {
+  uni.navigateTo({
+    url: '/pages/create/index'
+  })
+}
+
 function handleClick(name) {
   uni.showToast({
     title: name,

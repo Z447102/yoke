@@ -871,7 +871,7 @@ export function ensureLogin() {
 | 顶部导航 | `HomeHeader` | 展示品牌、日期、平台胶囊区域，可适配微信小程序状态栏 |
 | 今日爆款评分 | `TodayScoreCard` | 展示评分、线索数、浏览数、转化率、平台和行业筛选 |
 | 今日爆款内容 | `HotContentList` | 横向内容卡片列表，支持“换一批” |
-| 快捷操作 | `HomeQuickActions` | `AI 一键成片`、`引流数据` 等核心按钮 |
+| 快捷操作 | `HomeQuickActions` | `AI 一键成片`、`引流数据` 等核心按钮；`AI 一键成片` 跳转 `pages/create/index` |
 | 数字人视频 | `DigitalHumanSection` | 数字人形象创建、已创建数字人列表、全部形象入口 |
 | 视频创作 | `VideoCreationSection` | 数字人创作、开始创作、图片转视频、视频剪辑入口 |
 | 智能工具库 | `SmartToolGrid` | 文字生图、人物换装、图片高清化、智能提取、人脸融合等工具 |
@@ -1020,6 +1020,7 @@ export function getHomeTools() {
 
 - 顶部评分筛选切换后，只刷新评分和爆款内容模块，不重置整个首页。
 - “换一批”只刷新 `hotContents`，失败时保留上一批数据并给轻提示。
+- “AI 一键成片”点击后跳转 `pages/create/index`，进入一键成片表单页。
 - “AI 一键成片”“开始创作”等按钮跳转前需要检查登录态和手机号绑定状态。
 - 创建数字人、视频创作、工具入口建议统一通过工具配置跳转，避免页面内写大量分支。
 - 工具宫格支持后端控制开关、角标和排序；前端保留默认配置作为接口失败兜底。
@@ -1044,7 +1045,115 @@ export function getHomeTools() {
 - 弱网、接口失败、空数据场景均有 loading、空态或轻提示。
 - 真机验证页面滚动、横向卡片滑动、底部 tabBar 和安全区表现正常。
 
-## 10. 我的模块
+## 10. AI 一键成片
+
+AI 一键成片页面以设计图为准，用于在生成视频前收集商户基础信息。首页点击“AI 一键成片”后进入该页面，用户完善行业、主营业务、店铺/公司名称和位置信息后进入下一步。
+
+### 10.1 页面定位
+
+页面路径建议为 `pages/create/index`，标题为“一键成片”。该页面属于主包页面，可从首页快捷入口、创作 tab 或其他创作入口进入。
+
+页面目标：
+
+- 引导用户补全商业信息，为后续精准成片提供上下文。
+- 收集行业、主营业务、主营业务范围、店铺/公司名称和位置。
+- 对必填项做前端校验，未完成时禁用或拦截“下一步”。
+- 提示用户后续可在“我的 - 主营业务”中修改相关信息。
+
+### 10.2 页面模块拆分
+
+| 模块 | 建议组件 | 说明 |
+| --- | --- | --- |
+| 自定义导航 | `CreateHeader` | 返回按钮、页面标题、微信胶囊占位 |
+| 欢迎说明 | `CreateWelcome` | 展示欢迎文案和说明文字 |
+| 行业选择 | `CreateSelectField` | 必填，下拉选择行业 |
+| 主营业务选择 | `CreateSelectField` | 必填，下拉选择主营业务 |
+| 主营业务范围 | `CreateTextareaField` | 多行输入，右下角清空按钮 |
+| 店铺/公司名称 | `CreateInputField` | 必填，输入店铺或公司名称 |
+| 位置信息 | `CreateLocationField` | 必填，支持地图选点 |
+| 底部操作 | `CreateFooter` | 下一步按钮和修改提示 |
+
+目录建议：
+
+```text
+src
+├── pages
+│   └── create
+│       ├── index.vue
+│       └── components
+│           ├── CreateHeader.vue
+│           ├── CreateWelcome.vue
+│           ├── CreateSelectField.vue
+│           ├── CreateTextareaField.vue
+│           ├── CreateInputField.vue
+│           ├── CreateLocationField.vue
+│           └── CreateFooter.vue
+├── api
+│   └── create.js
+└── stores
+    └── create.js
+```
+
+### 10.3 表单数据模型
+
+建议由页面局部状态或 `src/stores/create.js` 管理。若信息需要跨步骤复用，应放入 Pinia。
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `industry` | `String` | 是 | 行业 |
+| `businessType` | `String` | 是 | 主营业务 |
+| `businessScope` | `String` | 否 | 主营业务范围 |
+| `shopName` | `String` | 是 | 店铺/公司名称 |
+| `location` | `Object` | 是 | 位置名称、经纬度、地址 |
+
+示例：
+
+```js
+const form = reactive({
+  industry: '',
+  businessType: '',
+  businessScope: '',
+  shopName: '',
+  location: null
+})
+```
+
+### 10.4 交互规范
+
+- 首页点击“AI 一键成片”使用 `uni.navigateTo({ url: '/pages/create/index' })`。
+- 返回按钮优先 `uni.navigateBack()`，无页面栈时回到首页。
+- 行业和主营业务使用选择器或弹层选择，选中后回填按钮文案。
+- 主营业务范围支持清空按钮；清空仅清除当前输入内容。
+- 地图选点按钮调用位置授权和地图选点能力，失败时给轻提示。
+- “下一步”点击时校验必填项，缺失字段需要提示具体项。
+- 表单提交前不要直接生成视频，先进入下一步确认或素材选择流程。
+
+### 10.5 接口约定
+
+如需保存商户信息，接口建议放在 `src/api/create.js`：
+
+```js
+import { request } from '@/utils/request'
+
+export function saveBusinessProfile(data) {
+  return request({
+    url: '/create/business-profile',
+    method: 'POST',
+    data
+  })
+}
+```
+
+### 10.6 验收要点
+
+- 首页点击“AI 一键成片”能进入一键成片页面。
+- 页面顶部、欢迎文案、表单区域和底部按钮布局与设计图一致。
+- 必填项未填写时点击“下一步”有明确提示。
+- 清空主营业务范围按钮可正常清空输入。
+- 地图选点入口有点击反馈，未授权或失败时有提示。
+- 真机验证输入框、选择器、底部按钮和安全区显示正常。
+
+## 11. 我的模块
 
 我的模块以设计图为准，作为用户登录后的个人中心页面。页面需要承载用户资料、会员状态、点数资产、会员/点数入口、作品列表和底部导航，开发时应优先保证登录态读取稳定、资产数据准确、作品列表可分页加载。
 

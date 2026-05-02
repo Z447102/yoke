@@ -1,28 +1,351 @@
 <template>
-  <view class="placeholder-page">
-    <text class="title">创作</text>
-    <text class="desc">创作中心模块待接入</text>
+  <view class="create-page">
+    <view class="nav-bar">
+      <view class="nav-left" @tap="goBack">
+        <text class="back-icon">‹</text>
+        <text>一键成片</text>
+      </view>
+      <view class="capsule">
+        <text class="dot">•••</text>
+        <view class="circle"></view>
+      </view>
+    </view>
+
+    <view class="intro">
+      <view class="intro-title">
+        <text class="wave">👋</text>
+        <text>欢迎您使用有客一键成片</text>
+      </view>
+      <text class="intro-desc">请先完善您的商业信息，以便为您精准成片</text>
+    </view>
+
+    <view class="form">
+      <view class="form-row">
+        <text class="label">请选择您的行业</text>
+        <text class="required">*</text>
+        <view class="select-pill">
+          <text>行业</text>
+          <text class="select-arrow">⌄</text>
+        </view>
+      </view>
+
+      <view class="form-row">
+        <text class="label">请选择您的主营业务</text>
+        <text class="required">*</text>
+        <view class="select-pill wide">
+          <text>主营业务</text>
+          <text class="select-arrow">⌄</text>
+        </view>
+      </view>
+
+      <view class="textarea-card">
+        <textarea
+          class="business-textarea"
+          placeholder="请选择您的主营业务范围"
+          placeholder-class="placeholder"
+          maxlength="200"
+        />
+        <button class="clear-btn" size="mini">清空</button>
+      </view>
+
+      <view class="field-block">
+        <view class="field-title">
+          <text>请输入您的店铺/公司名称</text>
+          <text class="required">*</text>
+        </view>
+        <input
+          class="input"
+          placeholder="请输入您的店铺名称"
+          placeholder-class="placeholder"
+        />
+      </view>
+
+      <view class="field-block">
+        <view class="field-title location-title">
+          <view>
+            <text>请确认您的位置信息</text>
+            <text class="required">*</text>
+          </view>
+          <view class="location-btn">
+            <text class="location-icon">⌖</text>
+            <text>地图选点</text>
+          </view>
+        </view>
+        <text class="location-empty">暂无位置信息</text>
+      </view>
+    </view>
+
+    <view class="bottom-action">
+      <button class="next-btn">下一步</button>
+      <text class="tip">◎ 后续可在【我的 - 主营业务】内修改</text>
+    </view>
   </view>
 </template>
 
+<script setup>
+function goBack() {
+  const pages = getCurrentPages()
+
+  if (pages.length > 1) {
+    uni.navigateBack()
+    return
+  }
+
+  uni.switchTab?.({
+    url: '/pages/home/index',
+    fail: () => {
+      uni.redirectTo({
+        url: '/pages/home/index'
+      })
+    }
+  })
+}
+</script>
+
 <style lang="scss" scoped>
-.placeholder-page {
+.create-page {
   min-height: 100vh;
-  padding: 120rpx 40rpx;
-  background: #f7f7f7;
-  color: #333;
+  padding-bottom: calc(172rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  color: #202633;
 }
 
-.title {
-  display: block;
-  font-size: 40rpx;
-  font-weight: 700;
+.nav-bar {
+  height: calc(112rpx + env(safe-area-inset-top));
+  padding: calc(30rpx + env(safe-area-inset-top)) 18rpx 16rpx;
+  background: linear-gradient(180deg, #ffd29f 0%, #ffffff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.desc {
+.nav-left {
+  display: flex;
+  align-items: center;
+  color: #1f2933;
+  font-size: 30rpx;
+}
+
+.back-icon {
+  margin-right: 8rpx;
+  font-size: 52rpx;
+  line-height: 1;
+}
+
+.capsule {
+  width: 172rpx;
+  height: 58rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.dot {
+  margin-top: -8rpx;
+  color: #111111;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.circle {
+  width: 24rpx;
+  height: 24rpx;
+  border: 4rpx solid #111111;
+  border-radius: 50%;
+}
+
+.intro {
+  padding: 24rpx 22rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.intro-title {
+  display: flex;
+  align-items: center;
+  color: #1f2630;
+  font-size: 36rpx;
+  font-weight: 800;
+}
+
+.wave {
+  margin-right: 8rpx;
+  font-size: 44rpx;
+}
+
+.intro-desc {
   display: block;
-  margin-top: 20rpx;
-  color: #999;
+  margin-top: 10rpx;
+  color: #8d96a3;
   font-size: 26rpx;
+}
+
+.form {
+  background: #ffffff;
+}
+
+.form-row {
+  height: 108rpx;
+  padding: 0 20rpx;
+  border-bottom: 1rpx solid #f2f2f2;
+  display: flex;
+  align-items: center;
+}
+
+.label,
+.field-title {
+  color: #1f2933;
+  font-size: 27rpx;
+  font-weight: 600;
+}
+
+.required {
+  color: #ff5656;
+  font-size: 28rpx;
+}
+
+.select-pill {
+  min-width: 138rpx;
+  height: 56rpx;
+  margin-left: 34rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: #f0f0f0;
+  color: #696f78;
+  font-size: 25rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18rpx;
+}
+
+.select-pill.wide {
+  min-width: 176rpx;
+  margin-left: 20rpx;
+}
+
+.select-arrow {
+  color: #222222;
+  font-size: 28rpx;
+}
+
+.textarea-card {
+  position: relative;
+  height: 260rpx;
+  margin: 22rpx 20rpx 48rpx;
+  padding: 24rpx;
+  border: 1rpx solid #ffe2e2;
+  border-radius: 22rpx;
+  background: #fff9f9;
+}
+
+.business-textarea {
+  width: 100%;
+  height: 190rpx;
+  color: #333333;
+  font-size: 25rpx;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 14rpx;
+  bottom: 14rpx;
+  width: 72rpx;
+  height: 40rpx;
+  padding: 0;
+  border-radius: 999rpx;
+  background: #d7d9de;
+  color: #ffffff;
+  font-size: 20rpx;
+  line-height: 40rpx;
+}
+
+.clear-btn::after {
+  border: 0;
+}
+
+.field-block {
+  padding: 0 20rpx 36rpx;
+  border-top: 1rpx solid #f5f5f5;
+}
+
+.field-title {
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  height: 78rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid #ffe2e2;
+  border-radius: 22rpx;
+  background: #fff9f9;
+  color: #333333;
+  font-size: 25rpx;
+}
+
+.location-title {
+  justify-content: space-between;
+}
+
+.location-btn {
+  min-width: 146rpx;
+  height: 52rpx;
+  border-radius: 999rpx;
+  background: #f0f0f0;
+  color: #666d78;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.location-icon {
+  color: #9ca3af;
+}
+
+.location-empty {
+  color: #8b95a1;
+  font-size: 28rpx;
+}
+
+.placeholder {
+  color: #b3bbc7;
+}
+
+.bottom-action {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(172rpx + env(safe-area-inset-bottom));
+  padding-top: 30rpx;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #f4f4f4;
+  text-align: center;
+}
+
+.next-btn {
+  width: 510rpx;
+  height: 108rpx;
+  border-radius: 999rpx;
+  background: #ffc58d;
+  color: #ffffff;
+  font-size: 32rpx;
+  line-height: 108rpx;
+}
+
+.next-btn::after {
+  border: 0;
+}
+
+.tip {
+  display: block;
+  margin-top: 14rpx;
+  color: #a4abb5;
+  font-size: 22rpx;
 }
 </style>
