@@ -61,17 +61,15 @@
       </view>
 
       <view class="field-block">
-        <view class="field-title location-title">
-          <view>
-            <text>请确认您的位置信息</text>
-            <text class="required">*</text>
-          </view>
-          <view class="location-btn">
-            <text class="location-icon">⌖</text>
-            <text>地图选点</text>
-          </view>
+        <view class="field-title">
+          <text>请输入您的店铺/公司位置</text>
+          <text class="required">*</text>
         </view>
-        <text class="location-empty">暂无位置信息</text>
+        <input
+          class="input"
+          placeholder="请输入您的店铺/公司位置"
+          placeholder-class="placeholder"
+        />
       </view>
     </view>
 
@@ -366,32 +364,6 @@ function goToBusiness() {
   background: #fff9f9;
   color: #333333;
   font-size: 25rpx;
-}
-
-.location-title {
-  justify-content: space-between;
-}
-
-.location-btn {
-  min-width: 146rpx;
-  height: 52rpx;
-  border-radius: 999rpx;
-  background: #f0f0f0;
-  color: #666d78;
-  font-size: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
-}
-
-.location-icon {
-  color: #9ca3af;
-}
-
-.location-empty {
-  color: #8b95a1;
-  font-size: 28rpx;
 }
 
 .placeholder {
