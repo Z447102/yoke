@@ -41,8 +41,6 @@ defineProps({
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/variables.scss';
-
 .video-section {
   padding: 0 20rpx;
 }
@@ -107,7 +105,7 @@ defineProps({
   padding: 22rpx;
   border-radius: 26rpx;
   color: #fff;
-  background: $primary-gradient;
+  background: linear-gradient(135deg, #ffb04d 0%, #ff8e24 100%);
   box-shadow: 0 12rpx 22rpx rgba(255, 147, 48, 0.22);
   overflow: hidden;
 }
