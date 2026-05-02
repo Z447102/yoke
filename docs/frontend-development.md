@@ -290,51 +290,80 @@ export function getUserProfile() {
 
 ## 8. 登录模块
 
-登录模块统一放在用户相关业务目录中维护：
+登录模块负责建立小程序用户身份、维护本地登录态，并在需要手机号的业务场景中完成手机号授权。当前约定支持两种方式：
+
+- 微信授权静默登录：通过 `uni.login` 获取微信临时 `code`，后端换取微信身份并返回业务登录态。
+- 手机号登录：用户主动点击手机号授权按钮，后端换取手机号并完成登录或绑定。
+
+设计原则：
+
+- 静默登录优先，不打断首页和普通浏览流程。
+- 手机号登录必须由用户主动触发，只在业务确实需要手机号时出现。
+- 登录态只由 Pinia store 统一写入和清理，页面不直接维护 token。
+- token 失效、退出登录、手机号绑定成功都走统一状态更新方法。
+
+### 8.1 目录职责
+
+登录相关代码按职责拆分：
 
 ```text
 src
 ├── api
-│   └── auth.js              # 登录、换取 token、手机号绑定等接口
+│   └── auth.js              # 静默登录、手机号登录、退出登录等接口
+├── hooks
+│   └── use-login.js         # 登录流程编排，可按业务需要拆分
 ├── pages
 │   └── login
 │       └── index.vue        # 需要用户主动操作的登录页
 ├── stores
-│   └── user.js              # token、用户信息、登录状态
+│   └── user.js              # token、用户信息、手机号绑定状态
 └── utils
-    └── auth.js              # 登录态读取、跳转、权限判断等工具
+    └── auth.js              # token 读写、来源页跳转、权限判断等工具
 ```
 
-登录方式分为两类：
+职责边界：
 
-- 微信授权静默登录：进入小程序后通过 `uni.login` 获取临时 code，调用后端接口换取登录态。
-- 手机号登录：用户点击手机号授权按钮，获取手机号授权凭证后调用后端完成登录或绑定。
+- `api/auth.js` 只描述接口，不处理页面跳转。
+- `stores/user.js` 只维护登录态和用户信息，不直接调用页面组件方法。
+- `hooks/use-login.js` 负责串联 `uni.login`、接口请求、状态写入和异常提示。
+- `pages/login/index.vue` 只承载用户主动登录、手机号授权和失败重试入口。
 
-### 8.1 登录状态
+### 8.2 登录状态模型
 
-登录状态由 `src/stores/user.js` 统一维护，页面不直接读写本地缓存。
+登录状态由 `src/stores/user.js` 统一维护，建议字段如下：
 
-建议维护字段：
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `token` | `String` | 后端业务登录凭证 |
+| `profile` | `Object \| null` | 用户基础信息 |
+| `openid` | `String` | 微信用户标识，按后端返回决定是否保存 |
+| `unionid` | `String` | 微信开放平台标识，按业务需要保存 |
+| `phone` | `String` | 已绑定手机号 |
+| `needBindPhone` | `Boolean` | 是否需要引导手机号授权 |
+| `loginType` | `String` | `wechat_silent` 或 `phone` |
 
-- `token`：后端登录凭证。
-- `profile`：用户基础信息。
-- `openid` / `unionid`：如业务需要，由后端返回后保存。
-- `loginType`：登录来源，例如 `wechat_silent`、`phone`。
+Store 方法建议：
 
-本地缓存只保存必要登录态，例如 `token` 和基础用户信息。退出登录时需要同时清理 Pinia 状态和本地缓存。
+- `setLoginState(payload)`：统一写入 token、用户信息、手机号绑定状态和缓存。
+- `setProfile(profile)`：更新用户资料。
+- `setNeedBindPhone(value)`：更新是否需要绑定手机号。
+- `clearLoginState()`：清理 Pinia 状态和本地缓存。
 
-### 8.2 微信授权静默登录
+本地缓存只保存必要登录态，例如 `token`、`profile` 和 `needBindPhone`。不要在前端缓存手机号授权临时 `code`、微信 session key 或其他敏感信息。
 
-静默登录用于小程序启动、进入首页或需要识别用户身份但不需要用户主动输入手机号的场景。
+### 8.3 微信授权静默登录
+
+静默登录适用于小程序启动、进入首页、恢复登录态、普通页面识别用户身份等场景。静默登录失败时不应阻塞普通浏览，除非当前页面明确要求登录。
 
 流程：
 
-1. 小程序启动或进入需要登录态的页面。
-2. 前端调用 `uni.login` 获取微信临时 `code`。
-3. 前端调用后端静默登录接口，传递 `code`。
-4. 后端使用 `code` 换取微信身份信息，并返回业务 token、用户基础信息和是否需要绑定手机号。
-5. 前端写入 Pinia 和本地缓存。
-6. 如果后端返回 `needBindPhone: true`，引导用户进入手机号登录或绑定流程。
+1. 应用启动或页面进入时读取本地缓存。
+2. 如果已有有效 token，优先恢复 Pinia 登录态。
+3. 如果没有 token 或后端判定 token 失效，调用 `uni.login({ provider: 'weixin' })` 获取临时 `code`。
+4. 调用后端静默登录接口，传递 `code`。
+5. 后端返回 token、用户信息和 `needBindPhone`。
+6. 前端调用 `setLoginState` 写入 Pinia 和本地缓存。
+7. 如果 `needBindPhone` 为 `true`，在需要手机号的页面引导用户进行手机号登录。
 
 示例：
 
@@ -342,18 +371,31 @@ src
 import { silentLogin } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 
+let silentLoginTask = null
+
 export function loginByWechatCode() {
+  if (silentLoginTask) {
+    return silentLoginTask
+  }
+
   const userStore = useUserStore()
 
-  return new Promise((resolve, reject) => {
+  silentLoginTask = new Promise((resolve, reject) => {
     uni.login({
       provider: 'weixin',
       success: async ({ code }) => {
+        if (!code) {
+          reject(new Error('微信登录 code 为空'))
+          return
+        }
+
         try {
           const data = await silentLogin({ code })
           userStore.setLoginState({
             token: data.token,
             profile: data.profile,
+            phone: data.profile?.phone || '',
+            needBindPhone: data.needBindPhone,
             loginType: 'wechat_silent'
           })
           resolve(data)
@@ -363,42 +405,55 @@ export function loginByWechatCode() {
       },
       fail: reject
     })
+  }).finally(() => {
+    silentLoginTask = null
   })
+
+  return silentLoginTask
 }
 ```
 
 注意事项：
 
-- `code` 只能使用一次，失效后需要重新调用 `uni.login`。
-- 静默登录不应强制弹出授权弹窗，避免影响首页首屏体验。
-- 后端未返回有效 token 时，前端应保持游客态或引导手机号登录。
+- `code` 只能使用一次，接口失败后需要重新调用 `uni.login` 获取新 `code`。
+- 静默登录期间要避免多页面并发重复请求，可用 `silentLoginTask` 复用进行中的 Promise。
+- 静默登录失败时保留游客态；必须登录的页面再跳转登录页或提示用户操作。
+- 后端返回 `needBindPhone: true` 不等于登录失败，只表示部分业务能力需要手机号。
 
-### 8.3 手机号登录
+### 8.4 手机号登录
 
-手机号登录用于需要实名手机号、下单、报名、会员绑定等必须确认用户手机号的场景。
+手机号登录适用于下单、报名、会员绑定、联系服务等必须确认手机号的场景。手机号授权需要用户主动点击按钮触发，不能在静默流程中自动弹出。
 
 流程：
 
-1. 页面展示手机号登录按钮。
-2. 用户点击授权按钮。
-3. 前端从回调中获取手机号授权凭证。
-4. 前端调用后端手机号登录接口。
-5. 后端解密或换取手机号后返回业务 token 和用户信息。
-6. 前端更新 Pinia、本地缓存，并返回原页面或进入首页。
+1. 进入需要手机号的页面，检查 `userStore.isLogin` 和 `userStore.hasPhone`。
+2. 未登录时先执行静默登录。
+3. 已登录但缺少手机号时展示手机号授权按钮。
+4. 用户点击按钮后，从 `event.detail.code` 获取手机号授权凭证。
+5. 调用后端手机号登录或绑定接口。
+6. 后端返回 token、用户信息、手机号绑定状态。
+7. 前端调用 `setLoginState` 或 `setProfile` 更新状态，并返回来源页面或继续当前业务。
 
 按钮示例：
 
 ```vue
 <template>
-  <button open-type="getPhoneNumber" @getphonenumber="handlePhoneLogin">
+  <button
+    type="primary"
+    open-type="getPhoneNumber"
+    :loading="loading"
+    @getphonenumber="handlePhoneLogin"
+  >
     手机号快捷登录
   </button>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { phoneLogin } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 
+const loading = ref(false)
 const userStore = useUserStore()
 
 async function handlePhoneLogin(event) {
@@ -412,12 +467,19 @@ async function handlePhoneLogin(event) {
     return
   }
 
-  const data = await phoneLogin({ code })
-  userStore.setLoginState({
-    token: data.token,
-    profile: data.profile,
-    loginType: 'phone'
-  })
+  try {
+    loading.value = true
+    const data = await phoneLogin({ code })
+    userStore.setLoginState({
+      token: data.token,
+      profile: data.profile,
+      phone: data.profile?.phone || '',
+      needBindPhone: false,
+      loginType: 'phone'
+    })
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 ```
@@ -425,10 +487,11 @@ async function handlePhoneLogin(event) {
 注意事项：
 
 - 新版微信小程序手机号能力优先使用 `code` 换取手机号，避免在前端处理敏感加密数据。
-- 用户拒绝授权时，只提示必要信息，不重复打扰。
-- 手机号登录成功后，应统一走 `setLoginState`，保证状态写入逻辑一致。
+- 用户拒绝授权时只提示必要信息，不要循环弹窗或阻断非强制业务。
+- 手机号登录可能是“首次登录”，也可能是“已静默登录后的手机号绑定”，接口需与后端确认是否合并。
+- 手机号授权按钮不要封装成自动触发逻辑，必须保留真实用户点击。
 
-### 8.4 接口约定
+### 8.5 接口约定
 
 建议接口放在 `src/api/auth.js`：
 
@@ -459,7 +522,23 @@ export function logout() {
 }
 ```
 
-建议后端返回结构：
+静默登录请求参数建议：
+
+```json
+{
+  "code": "wechat login code"
+}
+```
+
+手机号登录请求参数建议：
+
+```json
+{
+  "code": "phone number code"
+}
+```
+
+统一返回结构建议：
 
 ```json
 {
@@ -470,17 +549,47 @@ export function logout() {
     "avatar": "头像地址",
     "phone": "手机号"
   },
-  "needBindPhone": false
+  "needBindPhone": false,
+  "expiresIn": 7200
 }
 ```
 
-### 8.5 路由与权限
+错误码建议：
 
-- 普通页面可先静默登录，失败时允许游客访问。
-- 必须登录的页面在进入前检查 `userStore.isLogin`。
-- 必须绑定手机号的页面额外检查用户手机号字段。
-- 登录成功后优先返回来源页面，没有来源页面时进入首页。
-- token 失效时由请求封装统一处理，清理登录态并跳转登录页或提示重新登录。
+| 错误码 | 场景 | 前端处理 |
+| --- | --- | --- |
+| `TOKEN_EXPIRED` | token 过期或无效 | 清理登录态，重新静默登录或跳转登录页 |
+| `WECHAT_CODE_INVALID` | 微信 code 失效 | 重新调用 `uni.login` 后重试一次 |
+| `PHONE_AUTH_DENIED` | 用户拒绝手机号授权 | 轻提示，不强制重复授权 |
+| `PHONE_REQUIRED` | 当前业务必须绑定手机号 | 引导手机号登录 |
+
+### 8.6 路由、权限与异常处理
+
+- 普通页面可先尝试静默登录，失败时保持游客态。
+- 必须登录的页面在进入前检查 `userStore.isLogin`，未登录时跳转登录页并携带来源地址。
+- 必须绑定手机号的页面额外检查 `userStore.hasPhone` 或 `profile.phone`。
+- 登录成功后优先回到来源页面，没有来源页面时进入首页。
+- 请求封装中统一处理 token 失效，避免每个页面重复判断。
+- 退出登录时先调用后端退出接口，再执行 `clearLoginState`；后端接口失败时也应清理本地状态。
+
+推荐页面权限判断：
+
+```js
+import { useUserStore } from '@/stores/user'
+
+export function ensureLogin() {
+  const userStore = useUserStore()
+
+  if (userStore.isLogin) {
+    return true
+  }
+
+  uni.navigateTo({
+    url: '/pages/login/index'
+  })
+  return false
+}
+```
 
 ## 9. 样式规范
 
