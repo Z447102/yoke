@@ -3,7 +3,7 @@
     {
       "path": "pages/home/index",
       "style": {
-        "navigationBarTitleText": "有客",
+        "navigationBarTitleText": "yoke",
         "navigationStyle": "custom",
         "backgroundColor": "#ff982f"
       }
@@ -31,7 +31,7 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "有客",
+    "navigationBarTitleText": "yoke",
     "navigationBarBackgroundColor": "#ff982f",
     "backgroundColor": "#f7f7f7"
   }

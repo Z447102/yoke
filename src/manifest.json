@@ -1,7 +1,7 @@
 {
   "name": "yoke",
   "appid": "__UNI__YOKE",
-  "description": "有客小程序前端",
+  "description": "yoke 小程序前端",
   "versionName": "1.0.0",
   "versionCode": "100",
   "transformPx": false,
