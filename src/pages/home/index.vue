@@ -11,7 +11,9 @@
 
     <HomeQuickActions />
 
-    <view class="section-gap"></view>
+    <view class="section-divider">
+      <view class="section-divider__bar"></view>
+    </view>
 
     <DigitalHumanSection :list="homeStore.digitalHumans" />
 
@@ -61,15 +63,25 @@ onPullDownRefresh(async () => {
 .home-page {
   min-height: 100vh;
   padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, #ff9d34 0, #ff9d34 244rpx, #f7f7f7 246rpx, #f7f7f7 100%);
+  background: linear-gradient(180deg, #ff9d34 0, #ff9d34 560rpx, #f7f7f7 562rpx, #f7f7f7 100%);
 }
 
 .hero {
   padding: 0 18rpx 20rpx;
 }
 
-.section-gap {
-  height: 10rpx;
+.section-divider {
+  height: 34rpx;
   background: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-divider__bar {
+  width: 54rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: #e0e0e0;
 }
 </style>

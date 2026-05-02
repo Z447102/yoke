@@ -54,15 +54,24 @@ const mockHomeDashboard = {
     videoEdit: 96
   },
   smartTools: [
-    { key: 'textToImage', name: '文字生图', desc: 'Text to Image', icon: '🖼' },
-    { key: 'outfitSwap', name: '人物换装', desc: 'Outfit Swap', icon: '👕' },
+    { key: 'textToImage', name: '文字生图', desc: 'Text to Image', icon: '▧' },
+    { key: 'outfitSwap', name: '人物换装', desc: 'Outfit Swap', icon: '▣' },
     { key: 'hdImage', name: '图片高清化', desc: 'HD Enhance', icon: 'HD' },
-    { key: 'extract', name: '智能提取', desc: 'Smart Extract', icon: '▥' }
+    { key: 'extract', name: '智能提取', desc: 'Smart Extract', icon: '▥' },
+    { key: 'faceFusion', name: '人脸融合', desc: 'Face Fusion', icon: '◌' },
+    { key: 'gesture', name: '手势商品', desc: 'Gesture Goods', icon: '⌁' },
+    { key: 'idPhoto', name: '老照片修复', desc: 'Photo Repair', icon: '▤' },
+    { key: 'faceChange', name: '人脸换发型', desc: 'Face Hairstyle', icon: '↻' }
   ],
   copywritingTools: [
     { key: 'brand', name: '企业宣传', desc: 'Co. Promotion', icon: '♨' },
     { key: 'rewrite', name: '文案仿写', desc: 'Copy Rewriting', icon: '↝' },
-    { key: 'ecommerce', name: '电商带货', desc: 'Copy Extraction', icon: '♪' }
+    { key: 'ecommerce', name: '电商带货', desc: 'Copy Extraction', icon: '♪' },
+    { key: 'oral', name: '口播文案', desc: 'Oral Copy', icon: '◁' },
+    { key: 'title', name: 'AI标题', desc: 'AI Title', icon: '▰' },
+    { key: 'scene', name: '文案提取', desc: 'Copy Extract', icon: '▤' },
+    { key: 'agent', name: '朋友文案', desc: 'Friend Copy', icon: '♟' },
+    { key: 'team', name: '同城团购', desc: 'Group Buy', icon: '▦' }
   ]
 }
 

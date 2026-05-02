@@ -1,25 +1,36 @@
 <template>
-  <view class="digital-human">
-    <view class="create-card" @tap="$emit('create')">
-      <view class="plus">+</view>
-      <text>创建数字形象</text>
-    </view>
+  <view class="digital-section">
+    <SectionTitle
+      icon="⟡"
+      title="数字人视频"
+      tag="60秒生成口播视频"
+      more-text="全部形象"
+    />
 
-    <view
-      v-for="item in items"
-      :key="item.id"
-      class="human-card"
-      :style="{ backgroundImage: `url(${item.avatar})` }"
-    >
-      <view class="human-tag">{{ item.tag }}</view>
-      <view v-if="item.playable" class="play">▶</view>
+    <view class="digital-human">
+      <view class="create-card" @tap="$emit('create')">
+        <view class="plus">+</view>
+        <text>创建数字形象</text>
+      </view>
+
+      <view
+        v-for="item in list"
+        :key="item.id"
+        class="human-card"
+        :style="{ backgroundImage: `url(${item.avatar})` }"
+      >
+        <view class="human-tag">{{ item.tag }}</view>
+        <view v-if="item.playable" class="play">▶</view>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup>
+import SectionTitle from './SectionTitle.vue'
+
 defineProps({
-  items: {
+  list: {
     type: Array,
     default: () => []
   }
@@ -29,6 +40,10 @@ defineEmits(['create'])
 </script>
 
 <style lang="scss" scoped>
+.digital-section {
+  padding-top: 10rpx;
+}
+
 .digital-human {
   display: grid;
   grid-template-columns: 152rpx 1fr 1fr;

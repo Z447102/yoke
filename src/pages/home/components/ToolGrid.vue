@@ -58,17 +58,17 @@ defineEmits(['select'])
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12rpx;
-  margin: 10rpx 24rpx 0;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 22rpx;
+  column-gap: 6rpx;
+  margin: 10rpx 20rpx 0;
 }
 
 .tool-item {
-  min-height: 138rpx;
-  padding: 18rpx 10rpx 12rpx;
-  border-radius: 22rpx;
-  background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
-  box-shadow: 0 12rpx 30rpx rgba(20, 20, 20, 0.06);
+  min-height: 118rpx;
+  padding: 12rpx 4rpx 8rpx;
+  border-radius: 20rpx;
+  background: transparent;
   text-align: center;
 }
 
@@ -77,11 +77,12 @@ defineEmits(['select'])
   width: 52rpx;
   height: 52rpx;
   margin: 0 auto 10rpx;
-  border-radius: 18rpx;
-  background: #fff8ef;
+  border-radius: 16rpx;
+  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
   color: #ff922f;
   font-size: 31rpx;
   line-height: 52rpx;
+  box-shadow: 0 8rpx 22rpx rgba(20, 20, 20, 0.06);
 }
 
 .tool-badge {
@@ -99,7 +100,7 @@ defineEmits(['select'])
 .tool-name {
   display: block;
   color: #3a3a3a;
-  font-size: 21rpx;
+  font-size: 20rpx;
   font-weight: 600;
   line-height: 1.2;
 }

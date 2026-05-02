@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 28rpx 24rpx 18rpx;
+  padding: calc(20rpx + env(safe-area-inset-top)) 24rpx 16rpx;
   color: #111;
 }
 
