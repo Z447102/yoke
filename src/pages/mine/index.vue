@@ -1,6 +1,13 @@
 <template>
   <!-- 我的：用户摘要与设置/退出（docs §11 完整能力待接） -->
   <view class="mine-page">
+    <view class="mine-top-bar">
+      <view class="back-home" @tap="goHome">
+        <text class="back-home-icon">‹</text>
+        <text class="back-home-text">返回首页</text>
+      </view>
+    </view>
+
     <view class="mine-header">
       <view class="avatar">{{ avatarText }}</view>
       <view class="user-info">
@@ -41,6 +48,22 @@ const avatarText = computed(() => {
   return nickname.slice(0, 1).toUpperCase()
 })
 
+/** 与 HomeTabBar 一致：关当前页并打开首页 */
+function goHome() {
+  const pages = getCurrentPages()
+  const route = pages[pages.length - 1] ? `/${pages[pages.length - 1].route}` : ''
+  if (route === '/pages/home/index') {
+    return
+  }
+
+  uni.redirectTo({
+    url: '/pages/home/index',
+    fail: () => {
+      uni.reLaunch({ url: '/pages/home/index' })
+    }
+  })
+}
+
 function handleLogout() {
   if (!userStore.isLogin) {
     uni.showToast({
@@ -71,8 +94,32 @@ function handleLogout() {
 <style lang="scss" scoped>
 .mine-page {
   min-height: 100vh;
-  padding: calc(40rpx + env(safe-area-inset-top)) 24rpx 48rpx;
+  padding: 0 24rpx 48rpx;
+  padding-top: calc(16rpx + env(safe-area-inset-top));
   background: #f7f7f7;
+}
+
+.mine-top-bar {
+  margin-bottom: 20rpx;
+}
+
+.back-home {
+  display: inline-flex;
+  align-items: center;
+  padding: 8rpx 12rpx 8rpx 4rpx;
+}
+
+.back-home-icon {
+  margin-right: 4rpx;
+  font-size: 44rpx;
+  line-height: 1;
+  color: #1f2933;
+}
+
+.back-home-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2933;
 }
 
 .mine-header {
