@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: 'mock-token',
+    /** 创作消耗等逻辑依赖点数，联调后由接口刷新 */
+    points: 100,
     profile: {
       id: '1',
       nickname: '有客用户',
@@ -27,6 +29,11 @@ export const useUserStore = defineStore('user', {
       this.profile = null
       this.needBindPhone = false
       this.loginType = ''
+      this.points = 0
+    },
+    setPoints(value) {
+      const n = Number(value)
+      this.points = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0
     }
   }
 })

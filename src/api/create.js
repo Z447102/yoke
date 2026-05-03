@@ -1,3 +1,5 @@
+import { VIDEO_GENERATE_COST_POINTS } from '@/constants/create'
+
 const businessCategoryTree = {
   '餐饮': [
     {
@@ -51,5 +53,15 @@ export function getBusinessCategories(industry = '餐饮') {
   return Promise.resolve({
     industry,
     levels: businessCategoryTree[industry] || businessCategoryTree['餐饮']
+  })
+}
+
+/**
+ * 单次成片消耗点数预览。联调后改为真实 GET，字段与后端约定。
+ * @returns {Promise<{ points: number }>}
+ */
+export function getVideoGenerateCostPreview() {
+  return Promise.resolve({
+    points: VIDEO_GENERATE_COST_POINTS
   })
 }

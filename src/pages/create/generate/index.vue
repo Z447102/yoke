@@ -125,14 +125,14 @@
     </view>
 
     <view class="bottom-action">
-      <view class="quality-select">
-        <text class="quality-main">720P</text>
-        <text class="quality-sub">Seedance 2.0</text>
+      <view class="quality-select" @tap="openQualityPopup">
+        <text class="quality-main">{{ currentResolution.label }}</text>
+        <text class="quality-sub">{{ currentModel.label }}</text>
         <text class="quality-arrow">⌄</text>
       </view>
       <button class="generate-btn" @tap="generateVideo">
         <text>生成视频</text>
-        <text class="cost">▰ 20点</text>
+        <text class="cost">▰ {{ generateCostPoints }}点</text>
       </button>
       <text class="ai-tip">◎ 内容由AI生成，禁止利用功能从事违法活动</text>
     </view>
@@ -187,11 +187,36 @@
         <button class="popup-confirm" @tap="confirmPlatform">确定</button>
       </view>
     </view>
+
+    <QualitySettingsSheet
+      :show="showQualityPopup"
+      :cost-points="generateCostPoints"
+      :resolution-options="resolutionOptions"
+      :model-options="modelOptions"
+      :selected-resolution="selectedResolution"
+      :selected-model="selectedModel"
+      @close="closeQualityPopup"
+      @resolution-tap="onPickResolution"
+      @model-tap="selectModel"
+      @generate="confirmGenerateFromPopup"
+    />
+
+    <VipSubscribeModal :show="showVipModal" @close="closeVipModal" @confirm="submitVipSubscribe" />
   </view>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { getVideoGenerateCostPreview } from '@/api/create'
+import {
+  CREATE_MODEL_OPTIONS,
+  CREATE_RESOLUTION_OPTIONS,
+  HD_RESOLUTION_IDS,
+  VIDEO_GENERATE_COST_POINTS
+} from '@/constants/create'
+import QualitySettingsSheet from '../components/QualitySettingsSheet.vue'
+import VipSubscribeModal from '../components/VipSubscribeModal.vue'
 
 const businessTags = ['新派粤菜', '家宴', '客家菜', '活鲜', '粤菜', '融合菜']
 const templates = [
@@ -250,12 +275,14 @@ const businessOptions = [
   {
     id: 'business1',
     name: '主营业务1',
-    path: '餐饮-火锅'
+    path: '餐饮-火锅',
+    desc: '餐饮-火锅'
   },
   {
     id: 'business2',
     name: '主营业务2',
-    path: '餐饮-正餐(家常菜 / 酒楼)...'
+    path: '餐饮-正餐(家常菜 / 酒楼)...',
+    desc: '餐饮-正餐(家常菜 / 酒楼)...'
   }
 ]
 const platformOptions = [
@@ -272,8 +299,42 @@ const tempPlatform = ref('douyin')
 const showPlatformPopup = ref(false)
 const copywriting = ref('重庆老火锅，这味道太顶了！兄弟们，这家重庆老火锅我真的要安利一下。锅底一上来就开始翻滚，那个牛油香味直接冲上来。你看这个毛肚，七上八下，脆到不行。还有这个肥牛，一口下去全是香味。')
 
+const userStore = useUserStore()
+
+/** 分辨率与模型选项来自常量，二者互不耦合 */
+const resolutionOptions = CREATE_RESOLUTION_OPTIONS
+const modelOptions = CREATE_MODEL_OPTIONS
+
+const generateCostPoints = ref(VIDEO_GENERATE_COST_POINTS)
+
+const selectedResolution = ref('720p')
+const selectedModel = ref('seedance2')
+const showQualityPopup = ref(false)
+
+const showVipModal = ref(false)
+
 const currentBusiness = computed(() => businessOptions.find((item) => item.id === selectedBusiness.value) || businessOptions[0])
 const currentPlatform = computed(() => platformOptions.find((item) => item.id === selectedPlatform.value) || platformOptions[0])
+
+const currentResolution = computed(
+  () => resolutionOptions.find((item) => item.id === selectedResolution.value) || resolutionOptions[0]
+)
+const currentModel = computed(() => modelOptions.find((item) => item.id === selectedModel.value) || modelOptions[0])
+
+onMounted(async () => {
+  try {
+    const data = await getVideoGenerateCostPreview()
+    if (data != null && typeof data.points === 'number' && data.points >= 0) {
+      generateCostPoints.value = data.points
+    }
+  } catch {
+    // 接口失败时沿用常量默认值
+  }
+})
+
+function openVipPurchaseModal() {
+  showVipModal.value = true
+}
 
 function goBack() {
   uni.navigateBack()
@@ -315,7 +376,59 @@ function confirmPlatform() {
   closePlatformPopup()
 }
 
+function openQualityPopup() {
+  showQualityPopup.value = true
+}
+
+function closeQualityPopup() {
+  showQualityPopup.value = false
+}
+
+function selectResolution(id) {
+  selectedResolution.value = id
+}
+
+/** 高清档位：点数低于单次消耗时弹出 VIP 套餐（设计图），不切换分辨率 */
+function onPickResolution(item) {
+  const isHdResolution = HD_RESOLUTION_IDS.includes(item.id)
+  if (isHdResolution && userStore.points < generateCostPoints.value) {
+    openVipPurchaseModal()
+    return
+  }
+  selectResolution(item.id)
+}
+
+function closeVipModal() {
+  showVipModal.value = false
+}
+
+/** @param {{ plan: 'month' | 'year' }} payload */
+function submitVipSubscribe(payload) {
+  uni.showToast({
+    title: `请接入微信支付（${payload.plan === 'year' ? '包年' : '包月'}）`,
+    icon: 'none'
+  })
+  // 下单成功：closeVipModal(); await refreshUserPoints(); userStore.setPoints(...)
+}
+
+function selectModel(id) {
+  selectedModel.value = id
+}
+
+function confirmGenerateFromPopup() {
+  if (userStore.points < generateCostPoints.value) {
+    openVipPurchaseModal()
+    return
+  }
+  closeQualityPopup()
+  generateVideo()
+}
+
 function generateVideo() {
+  if (userStore.points < generateCostPoints.value) {
+    openVipPurchaseModal()
+    return
+  }
   uni.showToast({
     title: '开始生成视频',
     icon: 'none'
@@ -834,5 +947,35 @@ function generateVideo() {
 
 .popup-confirm::after {
   border: 0;
+}
+
+.platform-popup {
+  width: 100%;
+  padding: 16rpx 22rpx calc(40rpx + env(safe-area-inset-bottom));
+  border-radius: 26rpx 26rpx 0 0;
+  background: #ffffff;
+}
+
+.platform-list {
+  margin-top: 32rpx;
+}
+
+.platform-option {
+  height: 88rpx;
+  margin-top: 16rpx;
+  border-radius: 18rpx;
+  background: #f6f6f6;
+  color: #1f2933;
+  font-size: 28rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.platform-option.active {
+  background: #fff2df;
+  color: #ff8e24;
+  border: 2rpx solid #ff9a31;
 }
 </style>
