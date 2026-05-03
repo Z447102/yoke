@@ -1,3 +1,7 @@
+/**
+ * 【首页 · 接口模块】
+ * 当前为 Mock 数据；联调后改为 request 封装请求真实首页聚合接口（docs §9.4）。
+ */
 const mockHomeDashboard = {
   scoreSummary: {
     score: 92,
@@ -75,10 +79,12 @@ const mockHomeDashboard = {
   ]
 }
 
+// --- 聚合仪表盘（Mock） ---
 export function getHomeDashboard() {
   return Promise.resolve(mockHomeDashboard)
 }
 
+// --- 爆款内容单独刷新（Mock） ---
 export function getHotContents() {
   return Promise.resolve({
     list: mockHomeDashboard.hotContents

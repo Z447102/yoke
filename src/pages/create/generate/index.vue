@@ -1,5 +1,7 @@
 <template>
+  <!-- 一键成片 · 生成配置页 | docs §10：导航 → 筛选 → 模板/标签 → 照片/形象/文案 → 底栏 → 弹窗 -->
   <view class="generate-page">
+    <!-- 顶部导航 -->
     <view class="nav-bar">
       <view class="nav-left" @tap="goBack">
         <text class="back-icon">‹</text>
@@ -11,6 +13,7 @@
       </view>
     </view>
 
+    <!-- 筛选：主营业务、发布平台 -->
     <view class="filter-bar">
       <view class="filter-group">
         <text class="filter-label">主营业务</text>
@@ -28,6 +31,7 @@
       </view>
     </view>
 
+    <!-- 业务标签（示意） -->
     <view class="tag-row">
       <view
         v-for="tag in businessTags"
@@ -38,6 +42,7 @@
       </view>
     </view>
 
+    <!-- 视频模板 -->
     <view class="section">
       <view class="section-title">请选择视频模板</view>
       <scroll-view scroll-x class="template-scroll" :show-scrollbar="false">
@@ -64,6 +69,7 @@
       </scroll-view>
     </view>
 
+    <!-- 素材：上传照片 -->
     <view class="section upload-section">
       <view class="section-header">
         <view class="section-title">请上传照片</view>
@@ -81,6 +87,7 @@
       </view>
     </view>
 
+    <!-- 出镜形象 -->
     <view class="section">
       <view class="section-header">
         <view class="section-title">请选择出镜形象</view>
@@ -107,6 +114,7 @@
       </scroll-view>
     </view>
 
+    <!-- 口播/展示文案 -->
     <view class="section copy-section">
       <view class="section-title">视频文案</view>
       <view class="copy-card">
@@ -124,6 +132,7 @@
       </view>
     </view>
 
+    <!-- 底部：画质摘要 + 生成（消耗点数见 generateCostPoints） -->
     <view class="bottom-action">
       <view class="quality-select" @tap="openQualityPopup">
         <text class="quality-main">{{ currentResolution.label }}</text>
@@ -137,6 +146,7 @@
       <text class="ai-tip">◎ 内容由AI生成，禁止利用功能从事违法活动</text>
     </view>
 
+    <!-- 弹窗：主营业务 -->
     <view v-if="showBusinessPopup" class="popup-mask" @tap="closeBusinessPopup">
       <view class="business-popup" @tap.stop>
         <view class="popup-handle"></view>
@@ -167,6 +177,7 @@
       </view>
     </view>
 
+    <!-- 弹窗：平台 -->
     <view v-if="showPlatformPopup" class="popup-mask" @tap="closePlatformPopup">
       <view class="platform-popup" @tap.stop>
         <view class="popup-handle"></view>
@@ -188,6 +199,7 @@
       </view>
     </view>
 
+    <!-- 弹窗：分辨率与模型（组件） -->
     <QualitySettingsSheet
       :show="showQualityPopup"
       :cost-points="generateCostPoints"
@@ -201,11 +213,18 @@
       @generate="confirmGenerateFromPopup"
     />
 
+    <!-- 弹窗：VIP 套餐（点数不足等） -->
     <VipSubscribeModal :show="showVipModal" @close="closeVipModal" @confirm="submitVipSubscribe" />
   </view>
 </template>
 
 <script setup>
+/**
+ * 【一键成片 · 生成配置页】pages/create/generate/index.vue
+ *
+ * 功能块：筛选与模板、素材与文案、底部成片操作、业务/平台弹窗、画质与模型子组件、VIP 套餐。
+ * 规范：docs/frontend-development.md §10；常量 @/constants/create；接口 @/api/create。
+ */
 import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { getVideoGenerateCostPreview } from '@/api/create'
@@ -218,6 +237,7 @@ import {
 import QualitySettingsSheet from '../components/QualitySettingsSheet.vue'
 import VipSubscribeModal from '../components/VipSubscribeModal.vue'
 
+// --- 页面静态配置：模板、标签、照片槽、数字人形象（Mock，后续接接口） ---
 const businessTags = ['新派粤菜', '家宴', '客家菜', '活鲜', '粤菜', '融合菜']
 const templates = [
   {
@@ -299,20 +319,24 @@ const tempPlatform = ref('douyin')
 const showPlatformPopup = ref(false)
 const copywriting = ref('重庆老火锅，这味道太顶了！兄弟们，这家重庆老火锅我真的要安利一下。锅底一上来就开始翻滚，那个牛油香味直接冲上来。你看这个毛肚，七上八下，脆到不行。还有这个肥牛，一口下去全是香味。')
 
+// --- 用户态：点数用于成片前校验（高清档位、主按钮） ---
 const userStore = useUserStore()
 
-/** 分辨率与模型选项来自常量，二者互不耦合 */
+// --- 成片参数：分辨率 / 模型（与常量表一致，二者独立） ---
 const resolutionOptions = CREATE_RESOLUTION_OPTIONS
 const modelOptions = CREATE_MODEL_OPTIONS
 
+// --- 计费：单次消耗点数，进入页后尝试拉取接口预览，失败则沿用常量 ---
 const generateCostPoints = ref(VIDEO_GENERATE_COST_POINTS)
 
 const selectedResolution = ref('720p')
 const selectedModel = ref('seedance2')
 const showQualityPopup = ref(false)
 
+// --- VIP 套餐弹窗（点数不足等） ---
 const showVipModal = ref(false)
 
+// --- 展示用 computed ---
 const currentBusiness = computed(() => businessOptions.find((item) => item.id === selectedBusiness.value) || businessOptions[0])
 const currentPlatform = computed(() => platformOptions.find((item) => item.id === selectedPlatform.value) || platformOptions[0])
 
@@ -321,6 +345,7 @@ const currentResolution = computed(
 )
 const currentModel = computed(() => modelOptions.find((item) => item.id === selectedModel.value) || modelOptions[0])
 
+// --- 成片计费预览（Mock API） ---
 onMounted(async () => {
   try {
     const data = await getVideoGenerateCostPreview()
@@ -336,10 +361,12 @@ function openVipPurchaseModal() {
   showVipModal.value = true
 }
 
+// --- 页面导航 ---
 function goBack() {
   uni.navigateBack()
 }
 
+// --- 主营业务弹窗 ---
 function openBusinessPopup() {
   tempBusiness.value = selectedBusiness.value
   showBusinessPopup.value = true
@@ -358,6 +385,7 @@ function confirmBusiness() {
   closeBusinessPopup()
 }
 
+// --- 发布平台弹窗 ---
 function openPlatformPopup() {
   tempPlatform.value = selectedPlatform.value
   showPlatformPopup.value = true
@@ -376,6 +404,7 @@ function confirmPlatform() {
   closePlatformPopup()
 }
 
+// --- 画质 / 模型底部弹窗 ---
 function openQualityPopup() {
   showQualityPopup.value = true
 }
@@ -388,7 +417,7 @@ function selectResolution(id) {
   selectedResolution.value = id
 }
 
-/** 高清档位：点数低于单次消耗时弹出 VIP 套餐（设计图），不切换分辨率 */
+/** 高清档位（1080p/4k）：点数不足则弹出 VIP、不切分辨率；详见 constants HD_RESOLUTION_IDS */
 function onPickResolution(item) {
   const isHdResolution = HD_RESOLUTION_IDS.includes(item.id)
   if (isHdResolution && userStore.points < generateCostPoints.value) {
@@ -398,6 +427,7 @@ function onPickResolution(item) {
   selectResolution(item.id)
 }
 
+// --- VIP 订阅（支付占位） ---
 function closeVipModal() {
   showVipModal.value = false
 }
@@ -415,6 +445,7 @@ function selectModel(id) {
   selectedModel.value = id
 }
 
+// --- 发起成片（弹窗内 / 主按钮均需点数充足） ---
 function confirmGenerateFromPopup() {
   if (userStore.points < generateCostPoints.value) {
     openVipPurchaseModal()
@@ -437,6 +468,8 @@ function generateVideo() {
 </script>
 
 <style lang="scss" scoped>
+/* 【一键成片 · 生成页】区块样式：导航 / 筛选 / 卡片 / 底栏 / 业务与平台弹窗 */
+
 .generate-page {
   min-height: 100vh;
   padding-bottom: calc(178rpx + env(safe-area-inset-bottom));

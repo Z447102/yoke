@@ -1,4 +1,5 @@
 <template>
+  <!-- 一键成片 · 地图选点（示意 UI）：确认后写 storage 回 create 页 -->
   <view class="location-page">
     <view class="map-area">
       <view class="status-row">
@@ -57,6 +58,9 @@
 </template>
 
 <script setup>
+/**
+ * 【一键成片 · 选点】Mock 地图与 POI 列表；与 create 页通过 create:selected-location 传递。
+ */
 import { computed, ref } from 'vue'
 
 const keyword = ref('七公')

@@ -1,3 +1,7 @@
+/**
+ * 【首页 · Pinia】
+ * 聚合工作台数据：爆款评分、爆款内容、数字人、创作统计、工具宫格等（docs §9）。
+ */
 import { defineStore } from 'pinia'
 import { getHomeDashboard, getHotContents } from '@/api/home'
 

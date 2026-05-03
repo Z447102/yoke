@@ -1,5 +1,12 @@
+/**
+ * 【一键成片 · 接口模块】
+ * - 主营业务类目：供 pages/create/business 等选择链路使用
+ * - 成片消耗预览：供 generate 页展示「N点」并与校验逻辑一致
+ * 联调后改为真实 baseURL + request 封装（见 docs §7）
+ */
 import { VIDEO_GENERATE_COST_POINTS } from '@/constants/create'
 
+// --- 主营业务类目（Mock，按行业展开树） ---
 const businessCategoryTree = {
   '餐饮': [
     {
@@ -56,6 +63,7 @@ export function getBusinessCategories(industry = '餐饮') {
   })
 }
 
+// --- 成片计费预览（Mock） ---
 /**
  * 单次成片消耗点数预览。联调后改为真实 GET，字段与后端约定。
  * @returns {Promise<{ points: number }>}

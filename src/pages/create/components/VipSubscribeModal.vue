@@ -1,4 +1,5 @@
 <template>
+  <!-- 【一键成片】VIP 套餐：协议在组件内校验，支付在父页 confirm -->
   <view v-if="show" class="vip-mask" @tap="emit('close')">
     <view class="vip-modal" @tap.stop>
       <view class="vip-modal-header">
@@ -53,6 +54,9 @@
 </template>
 
 <script setup>
+/**
+ * 事件：close | confirm({ plan: 'month'|'year' })（已勾选协议后派发）
+ */
 import { ref, watch } from 'vue'
 
 const props = defineProps({
@@ -87,6 +91,8 @@ function handleConfirm() {
 </script>
 
 <style lang="scss" scoped>
+/* 居中弹窗：头图权益 + 套餐卡片 + 协议 + 开通 */
+
 .vip-mask {
   position: fixed;
   inset: 0;

@@ -1,9 +1,15 @@
+/**
+ * 【用户 · Pinia】
+ * - 登录态：token、profile、手机号引导（与 docs §8 一致）
+ * - 资产：points 用于成片扣费前置校验；支付/登录态刷新后由接口写回
+ */
 import { defineStore } from 'pinia'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
+    // --- 登录态（Mock，联调后由静默登录/授权回填） ---
     token: 'mock-token',
-    /** 创作消耗等逻辑依赖点数，联调后由接口刷新 */
+    /** 点数：一键成片等消耗逻辑读取；联调后随用户信息刷新 */
     points: 100,
     profile: {
       id: '1',
@@ -13,10 +19,12 @@ export const useUserStore = defineStore('user', {
     needBindPhone: false,
     loginType: 'wechat_silent'
   }),
+
   getters: {
     isLogin: (state) => Boolean(state.token),
     hasPhone: (state) => Boolean(state.profile?.phone)
   },
+
   actions: {
     setLoginState(payload) {
       this.token = payload.token || ''

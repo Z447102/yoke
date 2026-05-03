@@ -1,4 +1,5 @@
 <template>
+  <!-- 我的：用户摘要与设置/退出（docs §11 完整能力待接） -->
   <view class="mine-page">
     <view class="mine-header">
       <view class="avatar">{{ avatarText }}</view>
@@ -29,6 +30,7 @@
 </template>
 
 <script setup>
+/** 【我的】个人中心轻量版：读 userStore，退出清状态 */
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 

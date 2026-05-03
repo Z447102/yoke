@@ -1,4 +1,5 @@
 <template>
+  <!-- 登录占位：静默登录/手机号等见 docs §8，后续接真实页 -->
   <view class="placeholder-page">
     <text class="placeholder-title">登录</text>
     <text class="placeholder-desc">微信静默登录和手机号登录流程后续接入真实接口。</text>

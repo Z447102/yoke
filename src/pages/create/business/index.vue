@@ -1,4 +1,5 @@
 <template>
+  <!-- 一键成片 · 主营业务：按行业拉取类目树，逐级单选/展开（api/getBusinessCategories） -->
   <view class="business-page">
     <view class="nav-bar">
       <view class="nav-left" @tap="goBack">
@@ -56,6 +57,9 @@
 </template>
 
 <script setup>
+/**
+ * 【一键成片 · 主营业务选择】按接口 levels 动态渲染；选完回写 storage 并返回上页。
+ */
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getBusinessCategories } from '@/api/create'

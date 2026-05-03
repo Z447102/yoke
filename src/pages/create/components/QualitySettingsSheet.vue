@@ -1,4 +1,5 @@
 <template>
+  <!-- 【一键成片】画质与模型底部弹窗：分辨率/模型独立；高清点数逻辑在父页 -->
   <view v-if="show" class="qss-mask" @tap="emit('close')">
     <view class="quality-popup" @tap.stop>
       <view class="popup-handle"></view>
@@ -44,6 +45,9 @@
 </template>
 
 <script setup>
+/**
+ * 事件：close | resolution-tap(item) | model-tap(id) | generate
+ */
 defineProps({
   show: { type: Boolean, default: false },
   costPoints: { type: Number, default: 20 },
@@ -57,6 +61,8 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
 </script>
 
 <style lang="scss" scoped>
+/* 底部弹层：遮罩 + 分辨率行 + 模型横滑 + 主按钮 */
+
 .qss-mask {
   position: fixed;
   inset: 0;

@@ -1,4 +1,5 @@
 <template>
+  <!-- 首页工作台：评分与爆款、快捷入口、数字人、创作、工具宫格、自定义 tabBar -->
   <view class="home-page">
     <view class="hero">
       <HomeHeader />
@@ -36,6 +37,9 @@
 </template>
 
 <script setup>
+/**
+ * 【首页】登录后工作台：数据由 homeStore 拉取（api/home Mock），下拉刷新见 onPullDownRefresh。
+ */
 import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useHomeStore } from '@/stores/home'
 import HomeHeader from './components/HomeHeader.vue'

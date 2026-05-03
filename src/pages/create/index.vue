@@ -1,5 +1,7 @@
 <template>
+  <!-- 一键成片 · 商户信息表单页：行业 → 主营业务 → 店铺与位置 → 下一步进入生成配置 -->
   <view class="create-page">
+    <!-- 顶部导航 -->
     <view class="nav-bar">
       <view class="nav-left" @tap="goBack">
         <text class="back-icon">‹</text>
@@ -11,6 +13,7 @@
       </view>
     </view>
 
+    <!-- 引导文案 -->
     <view class="intro">
       <view class="intro-title">
         <text class="wave">👋</text>
@@ -19,6 +22,7 @@
       <text class="intro-desc">请先完善您的商业信息，以便为您精准成片</text>
     </view>
 
+    <!-- 表单：行业、主营业务、范围、店名、位置 -->
     <view class="form">
       <view class="form-row">
         <text class="label">请选择您的行业</text>
@@ -80,11 +84,13 @@
       </view>
     </view>
 
+    <!-- 底部：进入生成配置页 -->
     <view class="bottom-action">
       <button class="next-btn" @tap="goToGenerate">下一步</button>
       <text class="tip">◎ 后续可在【我的 - 主营业务】内修改</text>
     </view>
 
+    <!-- 行业选择 -->
     <view v-if="showIndustryPopup" class="popup-mask" @tap="closeIndustryPopup">
       <view class="industry-popup" @tap.stop>
         <view class="popup-handle"></view>
@@ -109,9 +115,14 @@
 </template>
 
 <script setup>
+/**
+ * 【一键成片 · 商户信息】pages/create/index.vue
+ * 收集行业与店铺信息，跳转 generate；地图/主营业务回传见 onShow + storage。
+ */
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
+// --- 行业列表（本地枚举；后续可接口下发） ---
 const industryOptions = [
   '餐饮',
   '美业',
@@ -149,6 +160,7 @@ const showIndustryPopup = ref(false)
 const locationText = ref('')
 const businessText = ref('')
 
+// --- 从子页返回时读取地图选点 / 主营业务 ---
 onShow(() => {
   const selectedLocation = uni.getStorageSync('create:selected-location')
   if (selectedLocation) {
