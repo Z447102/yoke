@@ -1,24 +1,59 @@
 <template>
   <view class="home-tab-bar">
-    <view class="tab-item" :class="{ active: current === 'home' }" @tap="goTo('/pages/home/index')">
-      <text class="tab-icon">⌂</text>
+    <view class="tab-item" @tap="goTo('/pages/home/index')">
+      <image
+        class="tab-icon-img"
+        :src="homeTabSrc"
+        mode="aspectFit"
+      />
     </view>
     <view class="tab-main" @tap="goTo('/pages/create/index')">
-      <text class="tab-main-icon">人</text>
+      <image class="tab-main-img" :src="tabCenter" mode="aspectFill" />
     </view>
-    <view class="tab-item" :class="{ active: current === 'mine' }" @tap="goTo('/pages/mine/index')">
-      <text class="tab-icon">♟</text>
+    <view class="tab-item" @tap="goTo('/pages/mine/index')">
+      <image
+        class="tab-icon-img"
+        :src="mineTabSrc"
+        mode="aspectFit"
+      />
     </view>
   </view>
 </template>
 
 <script setup>
-defineProps({
-  current: {
-    type: String,
-    default: 'home'
+import { ref, computed, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import tabHome from '@/static/home/tabbar-home.png'
+import tabHomeActive from '@/static/home/tabbar-home-active.png'
+import tabMine from '@/static/home/tabbar-mine.png'
+import tabMineActive from '@/static/home/tabbar-mine-active.png'
+import tabCenter from '@/static/home/tabbar-center.png'
+
+/** home | mine | create — 中间「创作」不高亮左右 icon */
+const activeKey = ref('home')
+
+function syncRoute() {
+  try {
+    const pages = getCurrentPages()
+    const route = pages[pages.length - 1]?.route || ''
+    if (route.includes('pages/mine')) activeKey.value = 'mine'
+    else if (route.includes('pages/create')) activeKey.value = 'create'
+    else activeKey.value = 'home'
+  } catch (_) {
+    activeKey.value = 'home'
   }
-})
+}
+
+onMounted(syncRoute)
+onShow(syncRoute)
+
+const homeTabSrc = computed(() =>
+  activeKey.value === 'home' ? tabHomeActive : tabHome
+)
+
+const mineTabSrc = computed(() =>
+  activeKey.value === 'mine' ? tabMineActive : tabMine
+)
 
 function goTo(url) {
   const pages = getCurrentPages()
@@ -55,16 +90,11 @@ function goTo(url) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #c8c8c8;
 }
 
-.tab-item.active {
-  color: #ff9634;
-}
-
-.tab-icon {
-  font-size: 44rpx;
-  font-weight: 800;
+.tab-icon-img {
+  width: 52rpx;
+  height: 52rpx;
 }
 
 .tab-main {
@@ -73,16 +103,16 @@ function goTo(url) {
   margin-top: -42rpx;
   border: 8rpx solid #fff0d5;
   border-radius: 50%;
-  background: linear-gradient(180deg, #ffc56c 0%, #ff982f 100%);
-  color: #ffffff;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 10rpx 24rpx rgba(255, 148, 48, 0.28);
 }
 
-.tab-main-icon {
-  font-size: 46rpx;
-  font-weight: 800;
+.tab-main-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
 }
 </style>

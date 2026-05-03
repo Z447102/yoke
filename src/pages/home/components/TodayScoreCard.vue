@@ -52,7 +52,7 @@ defineProps({
 
 <style lang="scss" scoped>
 .score-card {
-  margin: 6rpx 20rpx 0;
+  margin: 6rpx 0 0;
   padding: 20rpx 20rpx 16rpx;
   border-radius: 24rpx;
   background: rgba(255, 244, 225, 0.95);

@@ -1,16 +1,23 @@
 <template>
-  <!-- 首页工作台：评分与爆款、快捷入口、数字人、创作、工具宫格、自定义 tabBar -->
+  <!-- 首页工作台：顶区背景图至快捷入口，下接分区与宫格、自定义 tabBar -->
   <view class="home-page">
-    <view class="hero">
-      <HomeHeader />
-      <TodayScoreCard
-        :summary="homeStore.scoreSummary"
-        :filters="homeStore.scoreFilters"
-      />
-      <HotContentList :list="homeStore.hotContents" @refresh="homeStore.refreshHotContents" />
+    <view class="home-top-skin">
+      <image class="home-top-skin__bg" :src="heroTopSkinBg" mode="aspectFill" />
+      <view class="home-top-skin__inner">
+        <view class="hero">
+          <HomeHeader />
+          <TodayScoreCard
+            :summary="homeStore.scoreSummary"
+            :filters="homeStore.scoreFilters"
+          />
+          <HotContentList
+            :list="homeStore.hotContents"
+            @refresh="homeStore.refreshHotContents"
+          />
+        </view>
+        <HomeQuickActions />
+      </view>
     </view>
-
-    <HomeQuickActions />
 
     <view class="section-divider">
       <view class="section-divider__bar"></view>
@@ -50,6 +57,7 @@ import DigitalHumanSection from './components/DigitalHumanSection.vue'
 import VideoCreationSection from './components/VideoCreationSection.vue'
 import ToolGrid from './components/ToolGrid.vue'
 import HomeTabBar from './components/HomeTabBar.vue'
+import heroTopSkinBg from '@/static/home/home-top-skin-bg.png'
 
 const homeStore = useHomeStore()
 
@@ -67,11 +75,39 @@ onPullDownRefresh(async () => {
 .home-page {
   min-height: 100vh;
   padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, #ff9d34 0, #ff9d34 560rpx, #f7f7f7 562rpx, #f7f7f7 100%);
+  background: #f7f7f7;
+}
+
+/* 最顶部 → AI一键成片 / 引流数据：整段共用顶图，左下圆角 */
+.home-top-skin {
+  position: relative;
+  overflow: hidden;
+  border-bottom-left-radius: 40rpx;
+  background-color: #ff9d34;
+}
+
+.home-top-skin__bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  transform: scale(1.08);
+  transform-origin: center top;
+}
+
+.home-top-skin__inner {
+  position: relative;
+  z-index: 1;
 }
 
 .hero {
-  padding: 0 18rpx 20rpx;
+  /* 与评分卡、爆款内容区同一左右基准，便于标题左缘对齐 */
+  padding: 0 20rpx 20rpx;
 }
 
 .section-divider {

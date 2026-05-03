@@ -9,8 +9,8 @@ export const useHomeStore = defineStore('home', {
   state: () => ({
     scoreSummary: null,
     scoreFilters: {
-      platform: 'platform',
-      industry: 'industry'
+      platform: '平台',
+      industry: '行业'
     },
     hotContents: [],
     digitalHumans: [],

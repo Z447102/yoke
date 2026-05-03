@@ -10,7 +10,12 @@
         <text>换一批</text>
       </view>
     </view>
-    <scroll-view scroll-x class="hot-scroll" :show-scrollbar="false">
+    <scroll-view
+      scroll-x
+      class="hot-scroll"
+      :show-scrollbar="false"
+      :enable-flex="true"
+    >
       <view class="hot-list">
         <view v-for="item in list" :key="item.id" class="hot-card">
           <view class="hot-card__image-wrap">
@@ -44,13 +49,15 @@ defineEmits(['refresh'])
 <style lang="scss" scoped>
 .section {
   margin-top: 18rpx;
+  /* 与上方「今日爆款评分」卡片内文左缘同一垂线（hero 20 + 本区 20 = 与卡片 padding-left 对齐） */
+  padding: 0 20rpx;
 }
 
 .section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4rpx;
+  padding: 0;
   margin-bottom: 12rpx;
 }
 
@@ -81,21 +88,34 @@ defineEmits(['refresh'])
 
 .hot-scroll {
   width: 100%;
-  white-space: nowrap;
+  /* 小程序 scroll-x 需明确高度，否则易出现无法横向拖动 */
+  height: 252rpx;
+  overflow: hidden;
 }
 
 .hot-list {
-  display: inline-flex;
-  gap: 14rpx;
-  padding: 0 4rpx 6rpx;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: max-content;
+  height: 100%;
+  padding: 0 0 6rpx;
+  box-sizing: border-box;
 }
 
 .hot-card {
   overflow: hidden;
+  flex-shrink: 0;
   width: 218rpx;
+  margin-right: 14rpx;
   background: #ffffff;
   border-radius: 18rpx;
   box-shadow: 0 8rpx 20rpx rgba(255, 137, 30, 0.14);
+}
+
+.hot-card:last-child {
+  margin-right: 0;
 }
 
 .hot-card__image-wrap {

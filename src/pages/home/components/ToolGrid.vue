@@ -2,25 +2,30 @@
   <view class="tool-section">
     <SectionTitle :title="title" />
 
-    <view class="tool-grid">
-      <view
-        v-for="tool in tools"
-        :key="tool.key"
-        class="tool-item"
-        @tap="$emit('select', tool)"
-      >
-        <view class="tool-icon">
-          <text>{{ tool.icon }}</text>
-          <view v-if="tool.badge" class="tool-badge">{{ tool.badge }}</view>
+    <!-- 默认一屏约 3 个入口宽度，横向滑动查看全部 -->
+    <scroll-view
+      v-if="tools.length"
+      class="tool-scroll"
+      scroll-x
+      :show-scrollbar="false"
+      :enable-flex="true"
+    >
+      <view class="tool-row">
+        <view
+          v-for="tool in tools"
+          :key="tool.key"
+          class="tool-item"
+          @tap="$emit('select', tool)"
+        >
+          <view class="tool-icon">
+            <text>{{ tool.icon }}</text>
+            <view v-if="tool.badge" class="tool-badge">{{ tool.badge }}</view>
+          </view>
+          <text class="tool-name">{{ tool.name }}</text>
+          <text class="tool-desc">{{ tool.desc }}</text>
         </view>
-        <text class="tool-name">{{ tool.name }}</text>
-        <text class="tool-desc">{{ tool.desc }}</text>
       </view>
-    </view>
-
-    <view class="pager">
-      <view class="pager-dot"></view>
-    </view>
+    </scroll-view>
 
     <view class="tool-cta">
       <text>‹‹</text>
@@ -52,19 +57,35 @@ defineEmits(['select'])
 </script>
 
 <style lang="scss" scoped>
+/* 与屏宽对齐：左右各 20rpx 内边距，3 列均分剩余宽度（约 228rpx/格） */
+$tool-side-pad: 20rpx;
+$tool-gap: 12rpx;
+/* (750 - 2*20 - 2*12) / 3 ≈ 228.67 */
+$tool-cell: 228rpx;
+
 .tool-section {
   padding-bottom: 24rpx;
 }
 
-.tool-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  row-gap: 22rpx;
-  column-gap: 6rpx;
-  margin: 10rpx 20rpx 0;
+.tool-scroll {
+  width: 100%;
+  height: 218rpx;
+  white-space: nowrap;
+}
+
+.tool-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 10rpx $tool-side-pad 0;
+  gap: $tool-gap;
+  box-sizing: border-box;
 }
 
 .tool-item {
+  flex: 0 0 $tool-cell;
+  width: $tool-cell;
+  box-sizing: border-box;
   min-height: 118rpx;
   padding: 12rpx 4rpx 8rpx;
   border-radius: 20rpx;
@@ -111,19 +132,6 @@ defineEmits(['select'])
   color: #b0b0b0;
   font-size: 14rpx;
   line-height: 1.2;
-}
-
-.pager {
-  display: flex;
-  justify-content: center;
-  margin-top: 18rpx;
-}
-
-.pager-dot {
-  width: 34rpx;
-  height: 8rpx;
-  border-radius: 999rpx;
-  background: #ff9a31;
 }
 
 .tool-cta {
