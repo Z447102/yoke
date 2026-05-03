@@ -78,7 +78,10 @@ defineProps({
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
+}
+
+.creator-action .pen {
+  margin-right: 6rpx;
 }
 
 .folder {
@@ -94,13 +97,19 @@ defineProps({
 
 .video-actions {
   margin-top: 18rpx;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.video-action + .video-action {
+  margin-left: 18rpx;
 }
 
 .video-action {
   position: relative;
+  flex: 1;
+  min-width: 0;
   min-height: 118rpx;
   padding: 22rpx;
   border-radius: 26rpx;

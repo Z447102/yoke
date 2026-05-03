@@ -28,17 +28,18 @@ function handleClick(name) {
 
 <style lang="scss" scoped>
 .quick-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
   padding: 16rpx 20rpx;
 }
 
 .quick-card {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16rpx;
   height: 74rpx;
   border-radius: 40rpx;
   background: linear-gradient(180deg, #fff4df 0%, #ffe7bd 100%);
@@ -48,7 +49,13 @@ function handleClick(name) {
   box-shadow: 0 10rpx 18rpx rgba(255, 159, 46, 0.16);
 }
 
+.quick-card + .quick-card {
+  margin-left: 18rpx;
+}
+
 .quick-icon {
+  flex-shrink: 0;
+  margin-right: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;

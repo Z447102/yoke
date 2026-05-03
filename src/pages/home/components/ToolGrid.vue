@@ -78,8 +78,11 @@ $tool-cell: 228rpx;
   flex-direction: row;
   align-items: flex-start;
   padding: 10rpx $tool-side-pad 0;
-  gap: $tool-gap;
   box-sizing: border-box;
+}
+
+.tool-row .tool-item + .tool-item {
+  margin-left: $tool-gap;
 }
 
 .tool-item {

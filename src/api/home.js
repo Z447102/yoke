@@ -10,7 +10,9 @@ const mockHomeDashboard = {
     viewCount: '3,278',
     conversionRate: '2.1%',
     platform: '平台',
-    industry: '行业'
+    industry: '行业',
+    locationLabel: '麻城区',
+    scoreTip: '小提示：早开发现状，真广众移家稳泰！'
   },
   hotContents: [
     {

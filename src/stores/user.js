@@ -10,11 +10,13 @@ export const useUserStore = defineStore('user', {
     // --- 登录态（Mock，联调后由静默登录/授权回填） ---
     token: 'mock-token',
     /** 点数：一键成片等消耗逻辑读取；联调后随用户信息刷新 */
-    points: 100,
+    points: 344,
     profile: {
       id: '1',
-      nickname: '有客用户',
-      phone: '13800000000'
+      nickname: 'Cat - 先生',
+      phone: '13800000000',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=240&h=240&fit=crop'
     },
     needBindPhone: false,
     loginType: 'wechat_silent'

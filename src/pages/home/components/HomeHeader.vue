@@ -62,7 +62,6 @@ const headerPadStyle = computed(() => {
 .brand {
   display: flex;
   align-items: baseline;
-  gap: 8rpx;
   min-width: 0;
 }
 
@@ -75,6 +74,7 @@ const headerPadStyle = computed(() => {
 }
 
 .brand-en {
+  margin-left: 8rpx;
   font-size: 22rpx;
   font-weight: 700;
   color: #1a1a1a;
@@ -86,7 +86,6 @@ const headerPadStyle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
   min-width: 0;
 }
 
@@ -100,6 +99,7 @@ const headerPadStyle = computed(() => {
 
 /* 星期 */
 .date-week {
+  margin-left: 8rpx;
   font-family: OPPOSans-regular, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 16rpx;
   font-weight: 400;

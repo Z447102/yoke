@@ -45,11 +45,17 @@ defineEmits(['create'])
 }
 
 .digital-human {
-  display: grid;
-  grid-template-columns: 152rpx 1fr 1fr;
-  gap: 16rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
   height: 202rpx;
   padding: 0 20rpx;
+}
+
+/* 微信小程序 WXSS 不支持 `.parent > * + *` 中的通配符，改用相邻兄弟选择器 */
+.create-card + .human-card,
+.human-card + .human-card {
+  margin-left: 16rpx;
 }
 
 .create-card,
@@ -59,6 +65,8 @@ defineEmits(['create'])
 }
 
 .create-card {
+  flex: 0 0 152rpx;
+  width: 152rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -81,6 +89,8 @@ defineEmits(['create'])
 
 .human-card {
   position: relative;
+  flex: 1;
+  min-width: 0;
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
