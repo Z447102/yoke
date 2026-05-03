@@ -53,7 +53,8 @@ defineProps({
 <style lang="scss" scoped>
 .score-card {
   margin: 6rpx 0 0;
-  padding: 20rpx 20rpx 16rpx;
+  /* 左缘与 hero 对齐；右侧保留内边距避免与筛选项贴边 */
+  padding: 20rpx 24rpx 16rpx 0;
   border-radius: 24rpx;
   background: rgba(255, 244, 225, 0.95);
   box-shadow: 0 8rpx 20rpx rgba(190, 101, 0, 0.12);

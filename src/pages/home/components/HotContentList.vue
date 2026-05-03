@@ -49,8 +49,8 @@ defineEmits(['refresh'])
 <style lang="scss" scoped>
 .section {
   margin-top: 18rpx;
-  /* 与上方「今日爆款评分」卡片内文左缘同一垂线（hero 20 + 本区 20 = 与卡片 padding-left 对齐） */
-  padding: 0 20rpx;
+  /* 左缘与 hero / 评分标题同一垂线（仅由 hero 的 24rpx 承担水平边距） */
+  padding: 0;
 }
 
 .section__header {

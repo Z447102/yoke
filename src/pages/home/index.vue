@@ -106,8 +106,11 @@ onPullDownRefresh(async () => {
 }
 
 .hero {
-  /* 与评分卡、爆款内容区同一左右基准，便于标题左缘对齐 */
-  padding: 0 20rpx 20rpx;
+  /* 与头部、评分、爆款内容统一左边距 24rpx；右侧含安全区 */
+  padding-top: 0;
+  padding-bottom: 20rpx;
+  padding-left: 24rpx;
+  padding-right: calc(24rpx + env(safe-area-inset-right));
 }
 
 .section-divider {

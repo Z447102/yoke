@@ -55,8 +55,8 @@ const headerPadStyle = computed(() => {
   justify-content: space-between;
   /* padding-top 由内联 style 注入：状态栏 + 留白 */
   padding-bottom: 16rpx;
-  padding-left: 24rpx;
-  padding-right: calc(24rpx + env(safe-area-inset-right));
+  padding-left: 0;
+  padding-right: env(safe-area-inset-right);
 }
 
 .brand {
