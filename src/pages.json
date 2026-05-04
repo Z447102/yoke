@@ -1,6 +1,16 @@
 {
   "pages": [
     {
+      "path": "pages/splash/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "",
+        "disableScroll": true,
+        "backgroundColor": "#ffb347",
+        "backgroundTextStyle": "light"
+      }
+    },
+    {
       "path": "pages/home/index",
       "style": {
         "navigationBarTitleText": "yoke",
@@ -50,6 +60,20 @@
       "path": "pages/login/index",
       "style": {
         "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/legal/user-agreement",
+      "style": {
+        "navigationBarTitleText": "用户软件许可协议",
+        "backgroundColor": "#f7f7f7"
+      }
+    },
+    {
+      "path": "pages/legal/privacy",
+      "style": {
+        "navigationBarTitleText": "隐私政策",
+        "backgroundColor": "#f7f7f7"
       }
     }
   ],

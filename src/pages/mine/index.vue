@@ -74,7 +74,7 @@
           <view class="promo-card__circle">
             <image
               class="promo-card__arrow"
-              src="/src/static/mine/icon-next-in-circle.svg"
+              :src="iconNextInCircle"
               mode="aspectFit"
             />
           </view>
@@ -87,7 +87,7 @@
           <view class="promo-card__circle promo-card__circle--dark">
             <image
               class="promo-card__arrow"
-              src="/src/static/mine/icon-next-in-circle.svg"
+              :src="iconNextInCircle"
               mode="aspectFit"
             />
           </view>
@@ -180,6 +180,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { onPullDownRefresh, onReady, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
+import { performLogout } from '@/hooks/use-login'
 import { getMinePageData } from '@/api/mine'
 import HomeTabBar from '@/pages/home/components/HomeTabBar.vue'
 import mineHeaderBg from '@/static/mine/mine-header-bg.png'
@@ -187,6 +188,7 @@ import iconPoints from '@/static/mine/icon-points.png'
 import iconBusiness from '@/static/mine/icon-business.png'
 import iconChevronRight from '@/static/mine/icon-chevron-right.svg'
 import iconChevronRightLight from '@/static/mine/icon-chevron-right-light.svg'
+import iconNextInCircle from '@/static/mine/icon-next-in-circle.svg'
 
 const userStore = useUserStore()
 
@@ -367,7 +369,7 @@ function toastSoon(name) {
 function goAccountSecurity() {
   if (!userStore.isLogin) {
     uni.navigateTo({
-      url: '/pages/login/index',
+      url: `/pages/login/index?redirect=${encodeURIComponent('/pages/mine/index')}`,
       fail: () => {
         uni.showToast({ title: '打开登录页失败', icon: 'none' })
       }
@@ -437,10 +439,14 @@ function handleLogout() {
     content: '确认退出当前账号吗？',
     confirmText: '退出',
     confirmColor: '#ff8e24',
-    success: ({ confirm }) => {
+    success: async ({ confirm }) => {
       if (!confirm) return
-      userStore.clearLoginState()
-      uni.showToast({ title: '已退出登录', icon: 'none' })
+      try {
+        await performLogout()
+        uni.showToast({ title: '已退出登录', icon: 'none' })
+      } catch (_) {
+        uni.showToast({ title: '退出失败，请重试', icon: 'none' })
+      }
     }
   })
 }
@@ -594,7 +600,7 @@ function handleLogout() {
 }
 
 .mine-name {
-  color: #031F2937;
+  color: #1f2937;
   font-size: 32rpx;
   font-weight: 800;
   letter-spacing: 0.5rpx;
