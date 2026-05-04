@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <!-- 与参考图同一色相，用于暖色/渐变底上（与浅底版同色阶） -->
+  <path
+    d="M9 7.5L14.5 12 9 16.5"
+    stroke="#454954"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

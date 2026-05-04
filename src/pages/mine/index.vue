@@ -27,9 +27,12 @@
             <view class="mine-hero__meta">
               <view class="mine-name-row" @tap="onAccountTap">
                 <text class="mine-name">{{ displayName }}</text>
-                <text class="mine-name-arrow">›</text>
+                <image
+                  class="mine-name-arrow"
+                  :src="iconChevronRightLight"
+                  mode="aspectFit"
+                />
               </view>
-              <text class="mine-member-line">{{ memberLine }}</text>
             </view>
             <view class="mine-hero__exchange-wrap">
               <view class="mine-exchange" @tap.stop="onMemberExchange">
@@ -49,16 +52,16 @@
             <text class="stats-title">我的点数</text>
             <text class="stats-value">{{ pointsDisplay }}</text>
           </view>
-          <text class="stats-chev">›</text>
+          <image class="stats-chev" :src="iconChevronRight" mode="aspectFit" />
         </view>
         <view class="stats-divider" />
-        <view class="stats-col" @tap="goBusiness">
+        <view class="stats-col right" @tap="goBusiness">
           <image class="stats-icon" :src="iconBusiness" mode="aspectFit" />
           <view class="stats-mid">
             <text class="stats-title">主营业务</text>
             <text class="stats-placeholder"> </text>
           </view>
-          <text class="stats-chev">›</text>
+          <image class="stats-chev" :src="iconChevronRight" mode="aspectFit" />
         </view>
       </view>
 
@@ -69,7 +72,11 @@
             <text class="promo-card__sub">当前立省 ¥99 送1000</text>
           </view>
           <view class="promo-card__circle">
-            <text class="promo-card__arrow">›</text>
+            <image
+              class="promo-card__arrow"
+              src="/src/static/mine/icon-next-in-circle.svg"
+              mode="aspectFit"
+            />
           </view>
         </view>
         <view class="promo-card promo-card--points" @tap="onRechargeTap">
@@ -78,7 +85,11 @@
             <text class="promo-card__sub">首充8折 限时优惠</text>
           </view>
           <view class="promo-card__circle promo-card__circle--dark">
-            <text class="promo-card__arrow">›</text>
+            <image
+              class="promo-card__arrow"
+              src="/src/static/mine/icon-next-in-circle.svg"
+              mode="aspectFit"
+            />
           </view>
         </view>
       </view>
@@ -174,6 +185,8 @@ import HomeTabBar from '@/pages/home/components/HomeTabBar.vue'
 import mineHeaderBg from '@/static/mine/mine-header-bg.png'
 import iconPoints from '@/static/mine/icon-points.png'
 import iconBusiness from '@/static/mine/icon-business.png'
+import iconChevronRight from '@/static/mine/icon-chevron-right.svg'
+import iconChevronRightLight from '@/static/mine/icon-chevron-right-light.svg'
 
 const userStore = useUserStore()
 
@@ -581,8 +594,8 @@ function handleLogout() {
 }
 
 .mine-name {
-  color: #ffffff;
-  font-size: 34rpx;
+  color: #031F2937;
+  font-size: 32rpx;
   font-weight: 800;
   letter-spacing: 0.5rpx;
   max-width: 100%;
@@ -593,11 +606,11 @@ function handleLogout() {
 }
 
 .mine-name-arrow {
+  flex-shrink: 0;
   margin-left: 4rpx;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 30rpx;
-  line-height: 1;
-  font-weight: 300;
+  width: 36rpx;
+  height: 36rpx;
+  display: block;
 }
 
 .mine-member-line {
@@ -647,15 +660,15 @@ function handleLogout() {
 .stats-card {
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
   align-items: stretch;
-  padding: 24rpx 8rpx 24rpx 16rpx;
+  padding: 26rpx 52rpx 26rpx 56rpx;
   border-radius: 26rpx;
   background: #ffffff;
   box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.07);
 }
 
 .stats-col {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: row;
@@ -663,31 +676,31 @@ function handleLogout() {
 }
 
 .stats-icon {
-  width: 48rpx;
-  height: 48rpx;
+  width: 40rpx;
+  height: 40rpx;
   flex-shrink: 0;
 }
 
 .stats-mid {
-  flex: 1;
   min-width: 0;
-  margin-left: 14rpx;
+  margin-left: 16rpx;
   display: flex;
-  flex-direction: column;
+  align-items: center;
 }
 
 .stats-title {
-  font-size: 24rpx;
-  color: #666666;
+  font-size: 28rpx;
+  color: rgba(31,41,55,1);
   line-height: 1.2;
 }
 
 .stats-value {
-  margin-top: 4rpx;
-  font-size: 32rpx;
+  // margin-top: 4rpx;
+  font-size: 28rpx;
   font-weight: 800;
   color: #1a1a1a;
   line-height: 1.15;
+  margin-left: 16rpx;
 }
 
 .stats-placeholder {
@@ -698,11 +711,10 @@ function handleLogout() {
 
 .stats-chev {
   flex-shrink: 0;
-  margin-left: 6rpx;
-  margin-right: 4rpx;
-  font-size: 38rpx;
-  color: #d8d8d8;
-  line-height: 1;
+  width: 36rpx;
+  height: 36rpx;
+  display: block;
+  margin-left: 2rpx;
 }
 
 .stats-divider {
@@ -783,9 +795,9 @@ function handleLogout() {
 }
 
 .promo-card__arrow {
-  color: #ffffff;
-  font-size: 26rpx;
-  line-height: 1;
+  width: 36rpx;
+  height: 36rpx;
+  display: block;
 }
 
 .tools-panel {
