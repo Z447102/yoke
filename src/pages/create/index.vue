@@ -506,15 +506,20 @@ function goToGenerate() {
   text-align: center;
 }
 
+/* 微信小程序对 grid/gap 支持不稳定，四列用 flex + 固定宽与 nth 去右边距 */
 .industry-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24rpx 28rpx;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   margin-top: 36rpx;
 }
 
 .industry-item {
+  width: 157rpx;
   height: 68rpx;
+  margin-right: 20rpx;
+  margin-bottom: 24rpx;
+  box-sizing: border-box;
   border: 1rpx solid #e3e5ea;
   border-radius: 14rpx;
   color: #a4abb5;
@@ -522,6 +527,10 @@ function goToGenerate() {
   line-height: 68rpx;
   text-align: center;
   background: #ffffff;
+}
+
+.industry-item:nth-child(4n) {
+  margin-right: 0;
 }
 
 .industry-item.active {

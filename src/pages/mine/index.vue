@@ -6,7 +6,12 @@
         <image class="mine-hero__bg" :src="mineHeaderBg" mode="aspectFill" />
       </view>
       <view class="mine-hero__shade" />
-      <view class="mine-hero__inner" :style="heroPadStyle">
+      <view class="mine-hero__inner">
+        <!-- 顶距用占位块：确保整行（含会员兑换）整体在胶囊下缘以下，避免 padding-top 在部分端不生效 -->
+        <view
+          class="mine-hero__nav-placeholder"
+          :style="{ height: `${heroLayout.navPlaceholderPx}px` }"
+        />
         <view class="mine-hero__row">
           <view class="mine-avatar-ring">
             <image
@@ -17,18 +22,21 @@
             />
             <view v-else class="mine-avatar-fallback">{{ avatarLetter }}</view>
           </view>
-          <view class="mine-hero__meta">
-            <view class="mine-name-row" @tap="onAccountTap">
-              <text class="mine-name">{{ displayName }}</text>
-              <text class="mine-name-arrow">›</text>
+          <!-- 昵称区与会员兑换：右侧留白由样式 rpx + safe-area 控制，不再用 JS 计算 padding-right -->
+          <view class="mine-hero__right">
+            <view class="mine-hero__meta">
+              <view class="mine-name-row" @tap="onAccountTap">
+                <text class="mine-name">{{ displayName }}</text>
+                <text class="mine-name-arrow">›</text>
+              </view>
+              <text class="mine-member-line">{{ memberLine }}</text>
             </view>
-            <text class="mine-member-line">{{ memberLine }}</text>
+            <view class="mine-hero__exchange-wrap">
+              <view class="mine-exchange" @tap.stop="onMemberExchange">
+                <text class="mine-exchange-text">会员兑换</text>
+              </view>
+            </view>
           </view>
-          <view class="mine-exchange" @tap="onMemberExchange">
-            <text class="mine-exchange-text">会员兑换</text>
-          </view>
-          <!-- 与微信右上角胶囊对齐留白，避免「会员兑换」被遮挡 -->
-          <view class="mine-nav-gap" aria-hidden="true" />
         </view>
       </view>
     </view>
@@ -119,7 +127,7 @@
         </view>
       </view>
 
-      <view class="works-grid">
+      <view v-if="worksList.length" class="works-grid">
         <view
           v-for="item in worksList"
           :key="item.id"
@@ -137,6 +145,20 @@
           </view>
         </view>
       </view>
+      <view v-else class="works-empty">
+        <text class="works-empty__text">暂无作品，去创作页试试吧</text>
+        <view class="works-empty__btn" @tap="goCreate">
+          <text>去创作</text>
+        </view>
+      </view>
+
+      <view class="mine-subnav">
+        <text class="mine-subnav__link" @tap="goAccountSecurity">账号与安全</text>
+        <text class="mine-subnav__sep">|</text>
+        <text class="mine-subnav__link mine-subnav__link--warn" @tap="handleLogout">
+          退出登录
+        </text>
+      </view>
     </view>
 
     <HomeTabBar />
@@ -144,9 +166,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { onPullDownRefresh, onReady, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
+import { getMinePageData } from '@/api/mine'
 import HomeTabBar from '@/pages/home/components/HomeTabBar.vue'
 import mineHeaderBg from '@/static/mine/mine-header-bg.png'
 import iconPoints from '@/static/mine/icon-points.png'
@@ -157,36 +180,105 @@ const userStore = useUserStore()
 const DEFAULT_CAT_AVATAR =
   'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=240&h=240&fit=crop'
 
-/** 顶区：状态栏与安全区取大，再加与内容间距（对齐设计稿顶距） */
-const topInsetPx = ref(48)
+/** 顶区：仅胶囊下缘占位高度（px）；右侧 padding 见 .mine-hero__inner 样式 */
+const heroLayout = ref({
+  navPlaceholderPx: 128
+})
 
-function syncTopSafeInset() {
+function readMenuButtonRect() {
+  try {
+    if (typeof wx !== 'undefined' && typeof wx.getMenuButtonBoundingClientRect === 'function') {
+      const mb = wx.getMenuButtonBoundingClientRect()
+      if (mb && typeof mb.top === 'number' && mb.top > 0) return mb
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    if (typeof uni !== 'undefined' && typeof uni.getMenuButtonBoundingClientRect === 'function') {
+      const mb = uni.getMenuButtonBoundingClientRect()
+      if (mb && typeof mb.top === 'number' && mb.top > 0) return mb
+    }
+  } catch (_) {
+    /* 非微信小程序等环境 */
+  }
+  return null
+}
+
+/** 胶囊下缘（px）：取 bottom 与 top+height，避免部分机型的 bottom 偏小；不再叠加对称公式以免顶区过高、与稿面比例不符 */
+function navBarBottomPx(mb) {
+  if (!mb || typeof mb.top !== 'number') return 0
+  const h = typeof mb.height === 'number' && mb.height > 0 ? mb.height : 32
+  const byBottom = typeof mb.bottom === 'number' && mb.bottom > 0 ? mb.bottom : 0
+  const byTop = mb.top + h
+  return Math.max(byBottom, byTop)
+}
+
+function syncHeroLayout() {
+  let navPlaceholderPx = 0
   try {
     const si = uni.getSystemInfoSync()
-    const sb = Number(si.statusBarHeight) || 0
-    const st =
+    const safeTop =
       si.safeAreaInsets && typeof si.safeAreaInsets.top === 'number'
         ? Number(si.safeAreaInsets.top)
         : 0
-    topInsetPx.value = Math.max(sb, st, 24)
+    const sb = Number(si.statusBarHeight) || 0
+
+    const mb = readMenuButtonRect()
+    const gapBelow = uni.upx2px ? uni.upx2px(12) : 10
+
+    if (mb) {
+      const navBottom = navBarBottomPx(mb)
+      if (navBottom > 0) {
+        navPlaceholderPx = navBottom + gapBelow
+      }
+    }
+
+    if (navPlaceholderPx <= 0) {
+      const merged = Math.max(sb, safeTop)
+      const base = merged > 0 ? merged : 44
+      const extra = uni.upx2px ? uni.upx2px(40) : 36
+      navPlaceholderPx = base + extra + 8
+    }
+
+    const minPlaceholder =
+      Math.max(sb, safeTop) + (uni.upx2px ? uni.upx2px(44) : 40)
+    navPlaceholderPx = Math.max(navPlaceholderPx, minPlaceholder)
+
+    heroLayout.value = {
+      navPlaceholderPx: Math.round(navPlaceholderPx)
+    }
   } catch (_) {
-    topInsetPx.value = 48
+    heroLayout.value = { navPlaceholderPx: 128 }
   }
 }
 
-onMounted(syncTopSafeInset)
-onShow(syncTopSafeInset)
+function scheduleHeroLayoutSync() {
+  syncHeroLayout()
+  nextTick(() => {
+    syncHeroLayout()
+    setTimeout(syncHeroLayout, 50)
+    setTimeout(syncHeroLayout, 200)
+  })
+}
 
-const heroPadStyle = computed(() => {
-  let extra = 24
-  try {
-    extra = typeof uni !== 'undefined' && uni.upx2px ? uni.upx2px(28) : 24
-  } catch (_) {
-    extra = 24
-  }
-  return {
-    paddingTop: `${topInsetPx.value + extra}px`
-  }
+onMounted(() => {
+  scheduleHeroLayoutSync()
+  loadMineWorks()
+})
+
+onReady(() => {
+  scheduleHeroLayoutSync()
+})
+
+onShow(() => {
+  scheduleHeroLayoutSync()
+  loadMineWorks()
+})
+
+onPullDownRefresh(async () => {
+  await loadMineWorks()
+  uni.stopPullDownRefresh()
 })
 
 const displayName = computed(() => {
@@ -219,15 +311,31 @@ const workTabs = [
 
 const activeWorkTab = ref('video')
 
-const worksCountByTab = {
+const worksCountByTab = ref({
   video: 389,
   digital: 12,
   image: 56,
   copy: 128
+})
+
+const worksList = ref([])
+
+async function loadMineWorks() {
+  try {
+    const data = await getMinePageData(activeWorkTab.value)
+    worksCountByTab.value = data.counts || worksCountByTab.value
+    worksList.value = data.works || []
+  } catch (_) {
+    worksList.value = []
+  }
 }
 
+watch(activeWorkTab, () => {
+  loadMineWorks()
+})
+
 const worksSummary = computed(() => {
-  const n = worksCountByTab[activeWorkTab.value] ?? 0
+  const n = worksCountByTab.value[activeWorkTab.value] ?? 0
   const label =
     activeWorkTab.value === 'video'
       ? '视频作品'
@@ -239,29 +347,28 @@ const worksSummary = computed(() => {
   return `您已创作 ${n} 条${label}`
 })
 
-const mockCovers = [
-  'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop'
-]
-
-const worksList = computed(() =>
-  Array.from({ length: 6 }, (_, i) => ({
-    id: `${activeWorkTab.value}-${i}`,
-    cover: mockCovers[i % mockCovers.length],
-    duration: '时长: 30s',
-    date: '26-4-20'
-  }))
-)
-
 function toastSoon(name) {
   uni.showToast({ title: `${name}（待接入）`, icon: 'none' })
 }
 
+function goAccountSecurity() {
+  if (!userStore.isLogin) {
+    uni.navigateTo({
+      url: '/pages/login/index',
+      fail: () => {
+        uni.showToast({ title: '打开登录页失败', icon: 'none' })
+      }
+    })
+    return
+  }
+  toastSoon('账号与安全')
+}
+
 function onAccountTap() {
+  if (!userStore.isLogin) {
+    goAccountSecurity()
+    return
+  }
   toastSoon('个人资料')
 }
 
@@ -282,6 +389,15 @@ function goBusiness() {
   })
 }
 
+function goCreate() {
+  uni.redirectTo({
+    url: '/pages/create/index',
+    fail: () => {
+      uni.showToast({ title: '打开失败', icon: 'none' })
+    }
+  })
+}
+
 function onVipTap() {
   toastSoon('VIP 会员中心')
 }
@@ -297,11 +413,31 @@ function onManageWorks() {
 function onWorkTap(item) {
   uni.showToast({ title: `作品 ${item.id}`, icon: 'none' })
 }
+
+function handleLogout() {
+  if (!userStore.isLogin) {
+    uni.showToast({ title: '当前未登录', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: '退出登录',
+    content: '确认退出当前账号吗？',
+    confirmText: '退出',
+    confirmColor: '#ff8e24',
+    success: ({ confirm }) => {
+      if (!confirm) return
+      userStore.clearLoginState()
+      uni.showToast({ title: '已退出登录', icon: 'none' })
+    }
+  })
+}
 </script>
 
 <style lang="scss" scoped>
 .mine-page {
   min-height: 100vh;
+  /* 底部：TabBar + 横条安全区（constant 兼容 iOS 11.2，env 为现行标准） */
+  padding-bottom: calc(150rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
   background: #f8f8f8;
 }
@@ -358,17 +494,44 @@ function onWorkTap(item) {
 .mine-hero__inner {
   position: relative;
   z-index: 2;
-  padding-left: 30rpx;
-  padding-right: calc(20rpx + constant(safe-area-inset-right));
-  padding-right: calc(20rpx + env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  
+  /* 顶距：mine-hero__nav-placeholder；左右：内容避让安全区 + 小程序右侧胶囊区 */
+  padding-left: calc(30rpx + constant(safe-area-inset-left));
+  padding-left: calc(30rpx + env(safe-area-inset-left));
+  padding-right: 30rpx;
   padding-bottom: 72rpx;
   box-sizing: border-box;
+}
+
+.mine-hero__nav-placeholder {
+  flex-shrink: 0;
+  width: 100%;
+  pointer-events: none;
 }
 
 .mine-hero__row {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
+}
+
+.mine-hero__right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-left: 24rpx;
+}
+
+.mine-hero__exchange-wrap {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-top: 4rpx;
 }
 
 .mine-avatar-ring {
@@ -405,15 +568,16 @@ function onWorkTap(item) {
 .mine-hero__meta {
   flex: 1;
   min-width: 0;
-  margin-left: 24rpx;
-  margin-right: 12rpx;
   padding-top: 2rpx;
+  /* 与按钮留极小缝；按钮靠右由 exchange-wrap 的 margin-left:auto 负责 */
+  padding-right: 8rpx;
 }
 
 .mine-name-row {
   display: flex;
   flex-direction: row;
   align-items: center;
+  min-width: 0;
 }
 
 .mine-name {
@@ -421,7 +585,7 @@ function onWorkTap(item) {
   font-size: 34rpx;
   font-weight: 800;
   letter-spacing: 0.5rpx;
-  max-width: 220rpx;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -447,34 +611,35 @@ function onWorkTap(item) {
 
 .mine-exchange {
   flex-shrink: 0;
-  min-height: 56rpx;
-  margin-right: 10rpx;
-  padding: 0 22rpx;
-  border-radius: 999rpx;
-  background: #ffffff;
+  height: 52rpx;
+  min-width: 52rpx;
+  padding: 0 18rpx;
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.96);
   border: 1rpx solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .mine-exchange-text {
-  font-size: 22rpx;
-  color: #666666;
+  font-size: 24rpx;
+  color: #888888;
   font-weight: 600;
-  line-height: 1.2;
-}
-
-.mine-nav-gap {
-  flex-shrink: 0;
-  width: 174rpx;
-  height: 56rpx;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .mine-body {
   margin-top: -44rpx;
-  padding: 0 30rpx 40rpx;
+  padding-top: 0;
+  padding-bottom: 40rpx;
+  padding-left: calc(30rpx + constant(safe-area-inset-left));
+  padding-left: calc(30rpx + env(safe-area-inset-left));
+  padding-right: calc(30rpx + constant(safe-area-inset-right));
+  padding-right: calc(30rpx + env(safe-area-inset-right));
   position: relative;
   z-index: 3;
 }
@@ -812,5 +977,62 @@ function onWorkTap(item) {
 .work-thumb__meta {
   font-size: 18rpx;
   color: rgba(255, 255, 255, 0.96);
+}
+
+.works-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 32rpx;
+  padding: 48rpx 32rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.04);
+}
+
+.works-empty__text {
+  font-size: 26rpx;
+  color: #999999;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.works-empty__btn {
+  margin-top: 24rpx;
+  padding: 16rpx 48rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #ffbd72 0%, #ff963a 100%);
+}
+
+.works-empty__btn text {
+  font-size: 26rpx;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.mine-subnav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 28rpx;
+  padding: 20rpx 0 8rpx;
+}
+
+.mine-subnav__link {
+  font-size: 24rpx;
+  color: #888888;
+  font-weight: 500;
+}
+
+.mine-subnav__link--warn {
+  color: #ff7a1a;
+}
+
+.mine-subnav__sep {
+  margin: 0 20rpx;
+  font-size: 22rpx;
+  color: #dddddd;
 }
 </style>

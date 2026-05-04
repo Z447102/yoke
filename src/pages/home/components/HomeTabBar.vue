@@ -77,7 +77,7 @@ function goTo(url) {
   z-index: 20;
   height: calc(108rpx + env(safe-area-inset-bottom));
   padding: 0 76rpx env(safe-area-inset-bottom);
-  background: rgba(247, 247, 247, 0.96);
+  background-color: rgba(244, 244, 244, 1);
   display: flex;
   align-items: center;
   justify-content: space-between;

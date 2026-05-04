@@ -40,7 +40,10 @@
       "path": "pages/mine/index",
       "style": {
         "navigationBarTitleText": "我的",
-        "navigationStyle": "custom"
+        "navigationStyle": "custom",
+        "enablePullDownRefresh": true,
+        "backgroundColor": "#f8f8f8",
+        "backgroundTextStyle": "dark"
       }
     },
     {
