@@ -101,8 +101,11 @@ function handleConfirm() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40rpx 36rpx;
   box-sizing: border-box;
+  padding: calc(40rpx + constant(safe-area-inset-top)) 36rpx
+    calc(40rpx + constant(safe-area-inset-bottom));
+  padding: calc(40rpx + env(safe-area-inset-top)) 36rpx
+    calc(40rpx + env(safe-area-inset-bottom));
 }
 
 .vip-modal {
@@ -167,6 +170,7 @@ function handleConfirm() {
 }
 
 .vip-modal-body {
+  padding: 28rpx 24rpx calc(28rpx + constant(safe-area-inset-bottom));
   padding: 28rpx 24rpx calc(28rpx + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, #fff8f4 0%, #ffffff 28%);
 }

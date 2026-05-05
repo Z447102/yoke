@@ -2,6 +2,7 @@
  * 登录相关接口
  * - 未配置 `VITE_API_BASE_URL` 时走 Mock
  * - 静默登录：`POST /api/auth/wechat/session`（可用 `VITE_AUTH_WECHAT_SILENT_PATH` 覆盖）
+ * - 请求体：`{ loginCode }`（值为 `uni.login` 返回的微信 code）
  * - 成功外壳：`{ code: 200, msg, data }`（成功码见 `VITE_API_BIZ_CODE_SUCCESS`，默认 200）
  *
  * data 约定（微信 session）：
@@ -10,7 +11,7 @@
  * - loginResult.token → token；loginResult 内可含 user 等扩展字段
  *
  * 手机号授权登录：`POST /api/auth/wechat/mobile-login`
- * - 请求体：`{ uuid, code }`（uuid 为 session 返回的预登录会话 id；code 为 getPhoneNumber 返回）；**不附带 Authorization**
+ * - 请求体：`{ uuid, phoneCode }`（uuid 为 session 返回的预登录会话 id；phoneCode 为 getPhoneNumber 返回）；**不附带 Authorization**
  * - 响应 data：常见含 `token`、`expiresIn`、`newUser`（无 profile 时保留本地原 profile）
  */
 import { isApiEnabled, post } from '@/utils/request'
@@ -196,13 +197,13 @@ function normalizeMobileLoginPayload(raw) {
 }
 
 /**
- * 真实网络：微信 code → session。
- * @param {{ code: string }} param0
+ * 真实网络：微信 code → session（请求体字段名为 `loginCode`）。
+ * @param {{ code: string }} param0 `uni.login` 得到的 code
  * @returns {Promise<object>}
  */
 async function silentLoginRequest({ code }) {
   const path = getAuthWechatSilentPath()
-  const raw = await post(path, { code }, { auth: false })
+  const raw = await post(path, { loginCode: code }, { auth: false })
   return normalizeSessionPayload(raw)
 }
 
@@ -231,7 +232,7 @@ async function mobileLoginRequest({ phoneCode, wxSessionUuid }) {
     err.code = 'NO_WX_SESSION'
     throw err
   }
-  const raw = await post(path, { uuid, code: phoneCode }, { auth: false })
+  const raw = await post(path, { uuid, phoneCode }, { auth: false })
   return normalizeMobileLoginPayload(raw)
 }
 

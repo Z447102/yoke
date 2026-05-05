@@ -2,15 +2,12 @@
   <!-- 一键成片 · 生成配置页 | docs §10：导航 → 筛选 → 模板/标签 → 照片/形象/文案 → 底栏 → 弹窗 -->
   <view class="generate-page">
     <!-- 顶部导航 -->
-    <view class="nav-bar">
+    <view class="nav-bar" :style="createNavBarStyle">
       <view class="nav-left" @tap="goBack">
-        <text class="back-icon">‹</text>
+        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
         <text>一键成片</text>
       </view>
-      <view class="capsule">
-        <text class="dot">•••</text>
-        <view class="circle"></view>
-      </view>
+      <view class="nav-bar__gap" aria-hidden="true" />
     </view>
 
     <!-- 筛选：主营业务、发布平台 -->
@@ -236,6 +233,14 @@ import {
 } from '@/constants/create'
 import QualitySettingsSheet from '../components/QualitySettingsSheet.vue'
 import VipSubscribeModal from '../components/VipSubscribeModal.vue'
+import {
+  getCreateNavBarInlineStyle,
+  scheduleCreateNavBarStyleRefresh
+} from '@/utils/create-nav-bar-style'
+import createBackIcon from '@/static/create/create-back-icon.png'
+import { onReady } from '@dcloudio/uni-app'
+
+const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 
 // --- 页面静态配置：模板、标签、照片槽、数字人形象（Mock，后续接接口） ---
 const businessTags = ['新派粤菜', '家宴', '客家菜', '活鲜', '粤菜', '融合菜']
@@ -347,6 +352,7 @@ const currentModel = computed(() => modelOptions.find((item) => item.id === sele
 
 // --- 成片计费预览（Mock API） ---
 onMounted(async () => {
+  scheduleCreateNavBarStyleRefresh(createNavBarStyle)
   try {
     const data = await getVideoGenerateCostPreview()
     if (data != null && typeof data.points === 'number' && data.points >= 0) {
@@ -355,6 +361,10 @@ onMounted(async () => {
   } catch {
     // 接口失败时沿用常量默认值
   }
+})
+
+onReady(() => {
+  scheduleCreateNavBarStyleRefresh(createNavBarStyle)
 })
 
 function openVipPurchaseModal() {
@@ -472,21 +482,29 @@ function generateVideo() {
 
 .generate-page {
   min-height: 100vh;
+  padding-bottom: calc(178rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(178rpx + env(safe-area-inset-bottom));
   background: #ffffff;
   color: #202633;
 }
 
 .nav-bar {
-  height: calc(112rpx + env(safe-area-inset-top));
-  padding: calc(30rpx + env(safe-area-inset-top)) 18rpx 16rpx;
-  background: linear-gradient(180deg, #ffd29f 0%, #ffffff 100%);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  padding-right: calc(18rpx + constant(safe-area-inset-right));
+  padding-right: calc(18rpx + env(safe-area-inset-right));
+  padding-left: calc(18rpx + constant(safe-area-inset-left));
+  padding-left: calc(18rpx + env(safe-area-inset-left));
+  padding-bottom: 16rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .nav-left {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   color: #1f2933;
@@ -494,33 +512,17 @@ function generateVideo() {
 }
 
 .back-icon {
-  margin-right: 8rpx;
-  font-size: 52rpx;
-  line-height: 1;
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 12rpx;
+  display: block;
 }
 
-.capsule {
-  width: 172rpx;
-  height: 58rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.86);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-}
-
-.dot {
-  margin-top: -8rpx;
-  color: #111111;
-  font-size: 28rpx;
-  font-weight: 800;
-}
-
-.circle {
-  width: 24rpx;
-  height: 24rpx;
-  border: 4rpx solid #111111;
-  border-radius: 50%;
+.nav-bar__gap {
+  flex-shrink: 0;
+  width: 174rpx;
+  height: 32rpx;
 }
 
 .filter-bar {
@@ -822,7 +824,9 @@ function generateVideo() {
   left: 0;
   right: 0;
   bottom: 0;
+  height: calc(178rpx + constant(safe-area-inset-bottom));
   height: calc(178rpx + env(safe-area-inset-bottom));
+  padding: 28rpx 30rpx constant(safe-area-inset-bottom);
   padding: 28rpx 30rpx env(safe-area-inset-bottom);
   background: #f4f4f4;
   gap: 18rpx;
@@ -886,6 +890,9 @@ function generateVideo() {
   position: fixed;
   inset: 0;
   z-index: 30;
+  box-sizing: border-box;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
   background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: flex-end;
@@ -893,6 +900,7 @@ function generateVideo() {
 
 .business-popup {
   width: 100%;
+  padding: 16rpx 22rpx calc(40rpx + constant(safe-area-inset-bottom));
   padding: 16rpx 22rpx calc(40rpx + env(safe-area-inset-bottom));
   border-radius: 26rpx 26rpx 0 0;
   background: #ffffff;
@@ -984,6 +992,7 @@ function generateVideo() {
 
 .platform-popup {
   width: 100%;
+  padding: 16rpx 22rpx calc(40rpx + constant(safe-area-inset-bottom));
   padding: 16rpx 22rpx calc(40rpx + env(safe-area-inset-bottom));
   border-radius: 26rpx 26rpx 0 0;
   background: #ffffff;

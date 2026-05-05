@@ -2,11 +2,11 @@
   <!-- 一键成片 · 地图选点（示意 UI）：确认后写 storage 回 create 页 -->
   <view class="location-page">
     <view class="map-area">
-      <view class="status-row">
+      <view class="status-row" :style="locationStatusRowStyle">
         <text>11:26</text>
         <text>5G  99</text>
       </view>
-      <view class="map-actions">
+      <view class="map-actions" :style="locationMapActionsStyle">
         <text class="cancel" @tap="goBack">取消</text>
         <button class="send-btn" @tap="confirmLocation">发送</button>
       </view>
@@ -61,7 +61,42 @@
 /**
  * 【一键成片 · 选点】Mock 地图与 POI 列表；与 create 页通过 create:selected-location 传递。
  */
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
+import { onReady } from '@dcloudio/uni-app'
+import { getCreateSafeAreaTopPx } from '@/utils/create-nav-padding'
+
+function buildLocationOverlayStyles() {
+  const safeTopPx = getCreateSafeAreaTopPx()
+  const rowH =
+    typeof uni !== 'undefined' && typeof uni.upx2px === 'function'
+      ? uni.upx2px(56)
+      : 28
+  const mapActionsOffsetPx = safeTopPx + rowH
+  return {
+    statusRow: { top: `${safeTopPx}px` },
+    mapActions: { top: `${mapActionsOffsetPx}px` }
+  }
+}
+
+function refreshLocationOverlay() {
+  const s = buildLocationOverlayStyles()
+  locationStatusRowStyle.value = s.statusRow
+  locationMapActionsStyle.value = s.mapActions
+}
+
+const _locationOverlayInit = buildLocationOverlayStyles()
+const locationStatusRowStyle = ref(_locationOverlayInit.statusRow)
+const locationMapActionsStyle = ref(_locationOverlayInit.mapActions)
+
+function scheduleLocationOverlayRefresh() {
+  refreshLocationOverlay()
+  nextTick(refreshLocationOverlay)
+  setTimeout(refreshLocationOverlay, 48)
+  setTimeout(refreshLocationOverlay, 200)
+}
+
+onMounted(() => scheduleLocationOverlayRefresh())
+onReady(() => scheduleLocationOverlayRefresh())
 
 const keyword = ref('七公')
 const pois = [
@@ -138,7 +173,6 @@ function goBack() {
 .status-row {
   position: absolute;
   z-index: 2;
-  top: env(safe-area-inset-top);
   left: 0;
   right: 0;
   height: 56rpx;
@@ -154,7 +188,6 @@ function goBack() {
 .map-actions {
   position: absolute;
   z-index: 3;
-  top: calc(64rpx + env(safe-area-inset-top));
   left: 0;
   right: 0;
   padding: 0 24rpx;
@@ -292,6 +325,7 @@ function goBack() {
   right: 0;
   bottom: 0;
   min-height: 420rpx;
+  padding: 18rpx 0 constant(safe-area-inset-bottom);
   padding: 18rpx 0 env(safe-area-inset-bottom);
   border-radius: 18rpx 18rpx 0 0;
   background: #ffffff;

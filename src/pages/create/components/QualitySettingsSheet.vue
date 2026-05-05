@@ -67,6 +67,9 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   position: fixed;
   inset: 0;
   z-index: 30;
+  box-sizing: border-box;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
   background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: flex-end;
@@ -75,6 +78,7 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
 .quality-popup {
   width: 100%;
   max-height: 85vh;
+  padding: 16rpx 24rpx calc(28rpx + constant(safe-area-inset-bottom));
   padding: 16rpx 24rpx calc(28rpx + env(safe-area-inset-bottom));
   border-radius: 26rpx 26rpx 0 0;
   background: #ffffff;

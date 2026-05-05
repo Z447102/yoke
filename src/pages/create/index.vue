@@ -2,22 +2,21 @@
   <!-- 一键成片 · 商户信息表单页：行业 → 主营业务 → 店铺与位置 → 下一步进入生成配置 -->
   <view class="create-page">
     <!-- 顶部导航 -->
-    <view class="nav-bar">
+    <view class="nav-bar" :style="createNavBarStyle">
       <view class="nav-left" @tap="goBack">
-        <text class="back-icon">‹</text>
-        <text>一键成片</text>
+        <!-- <image class="back-icon" :src="createBackIcon" mode="aspectFit" /> -->
+		<image class="back-icon" src="/src/static/create/create-back-icon.png" mode="aspectFill"></image>
+        <text class="back-text">一键成片</text>
       </view>
-      <view class="capsule">
-        <text class="dot">•••</text>
-        <view class="circle"></view>
-      </view>
+      <!-- 避让微信原生右上角菜单区，非模拟胶囊 -->
+      <view class="nav-bar__gap" aria-hidden="true" />
     </view>
 
     <!-- 引导文案 -->
     <view class="intro">
       <view class="intro-title">
-        <text class="wave">👋</text>
-        <text>欢迎您使用有客一键成片</text>
+        <image class="wave-icon" src="/src/static/create/create-icon-wave-hand.png" mode="aspectFill"></image>
+        <text class="wave-text">欢迎您使用有客一键成片</text>
       </view>
       <text class="intro-desc">请先完善您的商业信息，以便为您精准成片</text>
     </view>
@@ -27,29 +26,47 @@
       <view class="form-row">
         <text class="label">请选择您的行业</text>
         <text class="required">*</text>
-        <view class="select-pill" @tap="openIndustryPopup">
+        <view
+          class="select-pill"
+          :class="{ 'form-control--error': errorIndustry }"
+          @tap="openIndustryPopup"
+        >
           <text>{{ selectedIndustry || '行业' }}</text>
-          <text class="select-arrow">⌄</text>
+          <image src="/src/static/create/create-icon-arrow-down.png" mode="aspectFill"></image>
         </view>
       </view>
 
       <view class="form-row">
         <text class="label">请选择您的主营业务</text>
         <text class="required">*</text>
-        <view class="select-pill wide" @tap="goToBusiness">
-          <text>{{ businessText || '主营业务' }}</text>
-          <text class="select-arrow">⌄</text>
+        <view
+          class="select-pill wide"
+          :class="{ 'form-control--error': errorBusiness }"
+          @tap="goToBusiness"
+        >
+          <text>主营业务</text>
+          <image src="/src/static/create/create-icon-arrow-down.png" mode="aspectFill"></image>
         </view>
       </view>
 
+      <!-- 选择主营业务后：路径节点以标签展示在设计稿的大卡片内（可删标签 / 清空） -->
       <view class="textarea-card">
-        <textarea
-          class="business-textarea"
-          placeholder="请选择您的主营业务范围"
-          placeholder-class="placeholder"
-          maxlength="200"
-        />
-        <button class="clear-btn" size="mini">清空</button>
+        <view class="business-tags">
+          <view
+            v-for="(item, index) in businessPath"
+            :key="`${item.id}-${index}`"
+            class="business-tag"
+          >
+            <text class="business-tag__text">{{ item.name }}</text>
+            <view class="business-tag__remove" @tap.stop="removeBusinessTag(index)">
+              <text class="business-tag__minus">−</text>
+            </view>
+          </view>
+          <view v-if="!businessPath.length" class="business-tags-placeholder">
+            <text>请选择您的主营业务范围</text>
+          </view>
+        </view>
+        <text class="clear-btn" @tap.stop="clearAllBusinessTags">清空</text>
       </view>
 
       <view class="field-block">
@@ -58,36 +75,54 @@
           <text class="required">*</text>
         </view>
         <input
+          v-model="shopName"
           class="input"
+          :class="{ 'form-control--error': errorShop }"
           placeholder="请输入您的店铺名称"
           placeholder-class="placeholder"
         />
       </view>
 
       <view class="field-block">
-        <view class="field-title location-title">
+        <view class="field-title location-title-row">
           <view>
-            <text>请输入您的店铺/公司位置</text>
+            <text>请确认您的位置信息</text>
             <text class="required">*</text>
           </view>
-          <view class="location-btn" @tap="goToLocation">
-            <text class="location-icon">⌖</text>
-            <text>地图选点</text>
+          <view
+            class="location-btn"
+            :class="{ 'form-control--error': errorLocation }"
+            @tap="goToLocation"
+          >
+            <image src="/src/static/create/create-icon-map-pin.png" mode="aspectFill" />
+            <text class="location-btn__text">地图选点</text>
           </view>
         </view>
-        <input
-          v-model="locationText"
-          class="input"
-          placeholder="请输入您的店铺/公司位置"
-          placeholder-class="placeholder"
-        />
+        <view v-if="locationPick" class="location-display">
+          <text class="location-display__name">{{ locationPick.name }}</text>
+          <text v-if="locationPick.address" class="location-display__addr">{{
+            locationPick.address
+          }}</text>
+          <text v-if="locationPick.distance" class="location-display__meta">{{
+            locationPick.distance
+          }}</text>
+        </view>
+        <view v-else class="location-display--empty" @tap="goToLocation">
+          <text>暂无位置信息</text>
+        </view>
       </view>
     </view>
 
     <!-- 底部：进入生成配置页 -->
     <view class="bottom-action">
-      <button class="next-btn" @tap="goToGenerate">下一步</button>
-      <text class="tip">◎ 后续可在【我的 - 主营业务】内修改</text>
+      <button class="next-btn" @tap="goToGenerate">
+        下一步
+      </button>
+	  <view class="tips">
+		<image class="tips-icon" src="/src/static/create/create-icon-attention.png" mode="aspectFill"></image>
+	  	<text class="tips-text"> 后续可在【我的 - 主营业务】内修改</text>
+	  </view>
+      
     </view>
 
     <!-- 行业选择 -->
@@ -119,8 +154,17 @@
  * 【一键成片 · 商户信息】pages/create/index.vue
  * 收集行业与店铺信息，跳转 generate；地图/主营业务回传见 onShow + storage。
  */
-import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { ref, onMounted, watch } from 'vue'
+import { onShow, onReady } from '@dcloudio/uni-app'
+import {
+  getCreateNavBarInlineStyle,
+  scheduleCreateNavBarStyleRefresh
+} from '@/utils/create-nav-bar-style'
+import createBackIcon from '@/static/create/create-back-icon.png'
+
+const createNavBarStyle = ref(getCreateNavBarInlineStyle())
+onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
+onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
 // --- 行业列表（本地枚举；后续可接口下发） ---
 const industryOptions = [
@@ -157,20 +201,121 @@ const industryOptions = [
 const selectedIndustry = ref('')
 const tempIndustry = ref('')
 const showIndustryPopup = ref(false)
-const locationText = ref('')
-const businessText = ref('')
+/** 地图选点回传的展示数据（只读，不再用手输文本框） */
+const locationPick = ref(null)
+/** 主营业务路径节点（与选点页写入的 path 一致，用于标签展示） */
+const businessPath = ref([])
+/** 店铺 / 公司名称 */
+const shopName = ref('')
+
+function nodeDisplayName(p) {
+  if (!p || typeof p !== 'object') return ''
+  const raw = p.name ?? p.label ?? p.title ?? p.categoryName
+  return String(raw ?? '').trim()
+}
+
+/** 读缓存：部分运行环境下 storage 可能为 JSON 字符串 */
+function readSelectedBusinessPayload() {
+  let raw = uni.getStorageSync('create:selected-business')
+  if (raw == null || raw === '') return null
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      return null
+    }
+  }
+  if (!raw || typeof raw !== 'object') return null
+  if (!Array.isArray(raw.path)) return null
+  return raw
+}
+
+/** 删除对应标签（仅移除该项，不影响其余已选标签） */
+function removeBusinessTag(index) {
+  businessPath.value = businessPath.value.filter((_, i) => i !== index)
+}
+
+function clearAllBusinessTags() {
+  businessPath.value = []
+}
+
+/** 校验失败时仅高亮：行业下拉、主营业务下拉、店铺名输入、地图选点（其余样式不变） */
+const errorIndustry = ref(false)
+const errorBusiness = ref(false)
+const errorShop = ref(false)
+const errorLocation = ref(false)
+
+function isIndustryValid() {
+  return Boolean(String(selectedIndustry.value || '').trim())
+}
+
+function isBusinessValid() {
+  return businessPath.value.length > 0
+}
+
+function isShopValid() {
+  return Boolean(String(shopName.value || '').trim())
+}
+
+function isLocationValid() {
+  const loc = locationPick.value
+  if (!loc || typeof loc !== 'object') return false
+  return (
+    Boolean(String(loc.name || '').trim()) &&
+    Boolean(String(loc.address || '').trim())
+  )
+}
+
+function clearErrorsWhenFixed() {
+  if (isIndustryValid()) errorIndustry.value = false
+  if (isBusinessValid()) errorBusiness.value = false
+  if (isShopValid()) errorShop.value = false
+  if (isLocationValid()) errorLocation.value = false
+}
+
+watch(selectedIndustry, clearErrorsWhenFixed)
+watch(
+  () => businessPath.value,
+  () => clearErrorsWhenFixed(),
+  { deep: true }
+)
+watch(shopName, clearErrorsWhenFixed)
+watch(locationPick, clearErrorsWhenFixed, { deep: true })
+
+/** 读缓存：部分运行环境下 storage 可能为 JSON 字符串 */
+function readSelectedLocationPayload() {
+  let raw = uni.getStorageSync('create:selected-location')
+  if (raw == null || raw === '') return null
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      return null
+    }
+  }
+  if (!raw || typeof raw !== 'object') return null
+  return raw
+}
 
 // --- 从子页返回时读取地图选点 / 主营业务 ---
 onShow(() => {
-  const selectedLocation = uni.getStorageSync('create:selected-location')
-  if (selectedLocation) {
-    locationText.value = selectedLocation.name || selectedLocation.address || ''
+  const raw = readSelectedLocationPayload()
+  if (raw) {
+    locationPick.value = {
+      id: raw.id != null ? String(raw.id) : '',
+      name: raw.name != null ? String(raw.name) : '',
+      address: raw.address != null ? String(raw.address) : '',
+      distance: raw.distance != null ? String(raw.distance) : ''
+    }
     uni.removeStorageSync('create:selected-location')
   }
 
-  const selectedBusiness = uni.getStorageSync('create:selected-business')
+  const selectedBusiness = readSelectedBusinessPayload()
   if (selectedBusiness) {
-    businessText.value = selectedBusiness.displayName || ''
+    businessPath.value = selectedBusiness.path.map((p) => ({
+      id: p.id != null ? String(p.id) : '',
+      name: nodeDisplayName(p)
+    }))
     uni.removeStorageSync('create:selected-business')
   }
 })
@@ -224,6 +369,21 @@ function goToLocation() {
 }
 
 function goToGenerate() {
+  errorIndustry.value = !isIndustryValid()
+  errorBusiness.value = !isBusinessValid()
+  errorShop.value = !isShopValid()
+  errorLocation.value = !isLocationValid()
+
+  if (
+    errorIndustry.value ||
+    errorBusiness.value ||
+    errorShop.value ||
+    errorLocation.value
+  ) {
+    uni.showToast({ title: '请完善信息后进行下一步', icon: 'none' })
+    return
+  }
+
   uni.navigateTo({
     url: '/pages/create/generate/index'
   })
@@ -233,21 +393,29 @@ function goToGenerate() {
 <style lang="scss" scoped>
 .create-page {
   min-height: 100vh;
+  padding-bottom: calc(172rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(172rpx + env(safe-area-inset-bottom));
   background: #ffffff;
   color: #202633;
 }
 
 .nav-bar {
-  height: calc(112rpx + env(safe-area-inset-top));
-  padding: calc(30rpx + env(safe-area-inset-top)) 18rpx 16rpx;
-  background: linear-gradient(180deg, #ffd29f 0%, #ffffff 100%);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  padding-right: calc(18rpx + constant(safe-area-inset-right));
+  padding-right: calc(18rpx + env(safe-area-inset-right));
+  padding-left: calc(18rpx + constant(safe-area-inset-left));
+  padding-left: calc(18rpx + env(safe-area-inset-left));
+  padding-bottom: 16rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .nav-left {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   color: #1f2933;
@@ -255,38 +423,26 @@ function goToGenerate() {
 }
 
 .back-icon {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
   margin-right: 8rpx;
-  font-size: 52rpx;
-  line-height: 1;
+  display: block;
 }
-
-.capsule {
-  width: 172rpx;
-  height: 58rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.86);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
+.back-text{
+	font-size: 30rpx;
+	color: #1F2937 ;
 }
-
-.dot {
-  margin-top: -8rpx;
-  color: #111111;
-  font-size: 28rpx;
-  font-weight: 800;
-}
-
-.circle {
-  width: 24rpx;
-  height: 24rpx;
-  border: 4rpx solid #111111;
-  border-radius: 50%;
+/* 与首页 HomeHeader 一致：约等于微信胶囊宽度，避免标题与系统按钮叠盖 */
+.nav-bar__gap {
+  flex-shrink: 0;
+  width: 174rpx;
+  height: 32rpx;
 }
 
 .intro {
   padding: 24rpx 22rpx 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid #f5f5f5;
 }
 
 .intro-title {
@@ -297,16 +453,21 @@ function goToGenerate() {
   font-weight: 800;
 }
 
-.wave {
-  margin-right: 8rpx;
-  font-size: 44rpx;
+.wave-icon {
+  margin-right: 10rpx;
+  width: 64rpx;
+  height: 64rpx;
 }
-
+.wave-text{
+	font-size: 40rpx;
+	color: #1F2937;
+	font-family: OPPOSans-medium;
+}
 .intro-desc {
   display: block;
-  margin-top: 10rpx;
-  color: #8d96a3;
-  font-size: 26rpx;
+  margin-top: 6rpx;
+  color: #6B7280;
+  font-size: 28rpx;
 }
 
 .form {
@@ -316,15 +477,15 @@ function goToGenerate() {
 .form-row {
   height: 108rpx;
   padding: 0 20rpx;
-  border-bottom: 1rpx solid #f2f2f2;
+  border-bottom: 1rpx solid #f5f5f5;
   display: flex;
   align-items: center;
 }
 
 .label,
 .field-title {
-  color: #1f2933;
-  font-size: 27rpx;
+  color: #1F2937;
+  font-size: 28rpx;
   font-weight: 600;
 }
 
@@ -333,11 +494,17 @@ function goToGenerate() {
   font-size: 28rpx;
 }
 
+.form-control--error {
+  background-color: rgba(255, 218, 218, 1) !important;
+  border: 1rpx solid rgba(255, 112, 90, 1) !important;
+}
+
 .select-pill {
-  min-width: 138rpx;
+  box-sizing: border-box;
+  border: 1rpx solid transparent;
+  width: 200rpx;
   height: 56rpx;
   margin-left: 34rpx;
-  padding: 0 28rpx;
   border-radius: 999rpx;
   background: #f0f0f0;
   color: #696f78;
@@ -346,6 +513,11 @@ function goToGenerate() {
   align-items: center;
   justify-content: center;
   gap: 18rpx;
+  image {
+    width: 28rpx;
+    height: 28rpx;
+    margin-left: 18rpx;
+  }
 }
 
 .select-pill.wide {
@@ -360,19 +532,75 @@ function goToGenerate() {
 
 .textarea-card {
   position: relative;
-  height: 260rpx;
+  min-height: 260rpx;
   margin: 22rpx 20rpx 48rpx;
   padding: 24rpx;
+  padding-bottom: 56rpx;
+  box-sizing: border-box;
   border: 1rpx solid #ffe2e2;
   border-radius: 22rpx;
-  background: #fff9f9;
+  background-color: rgba(254, 249, 249, 1);
 }
 
-.business-textarea {
+/* 提高优先级，避免被 .textarea-card 的背景规则盖住 */
+.business-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx 14rpx;
+  align-content: flex-start;
+  align-items: flex-start;
+  min-height: 168rpx;
+}
+
+.business-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 12rpx 28rpx 12rpx 20rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #ffb366;
+  background: rgba(255, 247, 237, 1);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.business-tag__text {
+  font-size: 24rpx;
+  color: #ff8e24;
+  line-height: 1.3;
+}
+
+.business-tag__remove {
+  position: absolute;
+  top: -10rpx;
+  right: -10rpx;
+  z-index: 2;
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50%;
+  background: #b8bcc4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.business-tag__minus {
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* 与设计稿一致：大卡片内占位说明左上对齐，不作为整块居中 */
+.business-tags-placeholder {
+  flex: 1 1 100%;
   width: 100%;
-  height: 190rpx;
-  color: #333333;
-  font-size: 25rpx;
+  box-sizing: border-box;
+  padding: 4rpx 0 0;
+  text-align: left;
+  color: #b3bbc7;
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 
 .clear-btn {
@@ -381,21 +609,18 @@ function goToGenerate() {
   bottom: 14rpx;
   width: 72rpx;
   height: 40rpx;
-  padding: 0;
   border-radius: 999rpx;
   background: #d7d9de;
   color: #ffffff;
   font-size: 20rpx;
   line-height: 40rpx;
-}
-
-.clear-btn::after {
-  border: 0;
+  text-align: center;
 }
 
 .field-block {
   padding: 0 20rpx 36rpx;
   border-top: 1rpx solid #f5f5f5;
+  margin-bottom: 66rpx;
 }
 
 .field-title {
@@ -405,21 +630,69 @@ function goToGenerate() {
 }
 
 .input {
+  box-sizing: border-box;
   height: 78rpx;
   padding: 0 24rpx;
   border: 1rpx solid #ffe2e2;
   border-radius: 22rpx;
-  background: #fff9f9;
+  background-color: rgba(254,249,249,1);
   color: #333333;
   font-size: 25rpx;
 }
 
-.location-title {
-  justify-content: space-between;
+.field-title.location-title-row {
+  // justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
+.location-display__name {
+  display: block;
+  color: #1f2933;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.location-display__addr {
+  display: block;
+  margin-top: 10rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
+.location-display__meta {
+  display: block;
+  margin-top: 8rpx;
+  color: #9ca3af;
+  font-size: 22rpx;
+}
+
+/* 已选点后的展示块（卡片样式） */
+.location-display {
+  box-sizing: border-box;
+  margin-top: 16rpx;
+  padding: 24rpx;
+  border-radius: 22rpx;
+  border: 1rpx solid #ffe2e2;
+  background-color: rgba(254, 249, 249, 1);
+}
+
+/* 未选点：仅一行灰色提示，不占整块输入框样式 */
+.location-display--empty {
+  margin-top: 12rpx;
+  color: #9ca3af;
+  font-size: 25rpx;
+  line-height: 1.5;
 }
 
 .location-btn {
+  box-sizing: border-box;
+  border: 1rpx solid transparent;
   min-width: 146rpx;
+  width: 200rpx;
   height: 52rpx;
   border-radius: 999rpx;
   background: #f0f0f0;
@@ -428,7 +701,15 @@ function goToGenerate() {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-left: 20rpx;
   gap: 8rpx;
+  image{
+	width: 28rpx;
+	height: 28rpx;
+  }
+  .location-btn__text {
+    font-size: 24rpx;
+  }
 }
 
 .location-icon {
@@ -444,8 +725,10 @@ function goToGenerate() {
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(172rpx + env(safe-area-inset-bottom));
-  padding-top: 30rpx;
+  height: calc(240rpx + constant(safe-area-inset-bottom));
+  height: calc(240rpx + env(safe-area-inset-bottom));
+  padding-top: 32rpx;
+  padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
   background: #f4f4f4;
   text-align: center;
@@ -455,12 +738,32 @@ function goToGenerate() {
   width: 510rpx;
   height: 108rpx;
   border-radius: 999rpx;
-  background: #ffc58d;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 197, 129, 1) 0%,
+    rgba(255, 148, 50, 1) 100%
+  );
   color: #ffffff;
   font-size: 32rpx;
   line-height: 108rpx;
 }
 
+/* 未填完：不使用橙色渐变，改为中性灰底（仍可点击走校验提示） */
+.tips{
+	margin-top: 12rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	.tips-icon{
+		width: 20rpx;
+		height: 20rpx;
+	}
+	.tips-text{
+		font-size: 20rpx;
+		color: #9CA3AF ;
+		margin-left: 4rpx;
+	}
+}
 .next-btn::after {
   border: 0;
 }
@@ -479,6 +782,9 @@ function goToGenerate() {
   top: 0;
   bottom: 0;
   z-index: 50;
+  box-sizing: border-box;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
   background: rgba(0, 0, 0, 0.54);
   display: flex;
   align-items: flex-end;
@@ -486,6 +792,7 @@ function goToGenerate() {
 
 .industry-popup {
   width: 100%;
+  padding: 18rpx 30rpx calc(46rpx + constant(safe-area-inset-bottom));
   padding: 18rpx 30rpx calc(46rpx + env(safe-area-inset-bottom));
   border-radius: 0;
   background: #ffffff;

@@ -1,15 +1,12 @@
 <template>
   <!-- 一键成片 · 主营业务：按行业拉取类目树，逐级单选/展开（api/getBusinessCategories） -->
   <view class="business-page">
-    <view class="nav-bar">
+    <view class="nav-bar" :style="createNavBarStyle">
       <view class="nav-left" @tap="goBack">
-        <text class="back-icon">‹</text>
+        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
         <text>主营业务</text>
       </view>
-      <view class="capsule">
-        <text class="dot">•••</text>
-        <view class="circle"></view>
-      </view>
+      <view class="nav-bar__gap" aria-hidden="true" />
     </view>
 
     <view class="industry-title">
@@ -60,9 +57,18 @@
 /**
  * 【一键成片 · 主营业务选择】按接口 levels 动态渲染；选完回写 storage 并返回上页。
  */
-import { computed, ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { computed, ref, onMounted } from 'vue'
+import { onLoad, onReady } from '@dcloudio/uni-app'
 import { getBusinessCategories } from '@/api/create'
+import {
+  getCreateNavBarInlineStyle,
+  scheduleCreateNavBarStyleRefresh
+} from '@/utils/create-nav-bar-style'
+import createBackIcon from '@/static/create/create-back-icon.png'
+
+const createNavBarStyle = ref(getCreateNavBarInlineStyle())
+onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
+onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
 const industry = ref('餐饮')
 const categoryTree = ref([])
@@ -150,21 +156,29 @@ function confirmSelection() {
 <style lang="scss" scoped>
 .business-page {
   min-height: 100vh;
+  padding-bottom: calc(172rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(172rpx + env(safe-area-inset-bottom));
   background: #ffffff;
   color: #202633;
 }
 
 .nav-bar {
-  height: calc(112rpx + env(safe-area-inset-top));
-  padding: calc(30rpx + env(safe-area-inset-top)) 18rpx 16rpx;
-  background: linear-gradient(180deg, #ffd29f 0%, #ffffff 100%);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  padding-right: calc(18rpx + constant(safe-area-inset-right));
+  padding-right: calc(18rpx + env(safe-area-inset-right));
+  padding-left: calc(18rpx + constant(safe-area-inset-left));
+  padding-left: calc(18rpx + env(safe-area-inset-left));
+  padding-bottom: 16rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .nav-left {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   color: #1f2933;
@@ -172,33 +186,17 @@ function confirmSelection() {
 }
 
 .back-icon {
-  margin-right: 8rpx;
-  font-size: 52rpx;
-  line-height: 1;
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 12rpx;
+  display: block;
 }
 
-.capsule {
-  width: 172rpx;
-  height: 58rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.86);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-}
-
-.dot {
-  margin-top: -8rpx;
-  color: #111111;
-  font-size: 28rpx;
-  font-weight: 800;
-}
-
-.circle {
-  width: 24rpx;
-  height: 24rpx;
-  border: 4rpx solid #111111;
-  border-radius: 50%;
+.nav-bar__gap {
+  flex-shrink: 0;
+  width: 174rpx;
+  height: 32rpx;
 }
 
 .industry-title {
@@ -268,8 +266,10 @@ function confirmSelection() {
   left: 0;
   right: 0;
   bottom: 0;
+  height: calc(172rpx + constant(safe-area-inset-bottom));
   height: calc(172rpx + env(safe-area-inset-bottom));
   padding-top: 30rpx;
+  padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
   background: #f4f4f4;
   text-align: center;

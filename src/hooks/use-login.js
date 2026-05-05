@@ -44,10 +44,12 @@ function uniLoginWeixin() {
  */
 async function exchangeWechatCodeForSession() {
   const res = await uniLoginWeixin()
+
   const code = res && res.code
   if (!code) {
     throw new Error('微信登录 code 为空')
   }
+  console.info('[Yoke] uni.login code:', code)
   try {
     return await silentLogin({ code })
   } catch (e) {
@@ -57,6 +59,7 @@ async function exchangeWechatCodeForSession() {
       if (!code2) {
         throw new Error('微信登录 code 为空')
       }
+      console.info('[Yoke] uni.login code (retry):', code2)
       return await silentLogin({ code: code2 })
     }
     throw e
