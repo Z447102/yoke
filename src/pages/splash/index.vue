@@ -42,8 +42,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import splashImg from '@/static/splash/launch-screen.png'
+import { getApiBaseUrl } from '@/config/env'
+import { isApiEnabled } from '@/utils/request'
 import { hasPrivacyAgreed, setPrivacyAgreed } from '@/utils/privacy'
 import { silentLoginOnce } from '@/hooks/use-login'
+import { useUserStore } from '@/stores/user'
 
 /** 已同意隐私用户：首图展示时长后再出「登录」按钮（与设计节奏接近，可改 0 立即出） */
 const SPLASH_BEFORE_GATE_MS = 1200
@@ -51,6 +54,7 @@ const SPLASH_BEFORE_GATE_MS = 1200
 const showPrivacySheet = ref(false)
 const showLoginGate = ref(false)
 
+/** 使用 `reLaunch` 进入首页，失败时降级为 `redirectTo`。 */
 function goHome() {
   uni.reLaunch({
     url: '/pages/home/index',
@@ -60,15 +64,19 @@ function goHome() {
   })
 }
 
+/** 展示全屏启动图上的「登录」落地层（含底部按钮）。 */
 function openLoginGate() {
   showLoginGate.value = true
 }
 
+/** 用户点击落地页「登录」：进入应用首页。 */
 function onLoginEnter() {
   goHome()
 }
 
-/** 已同意隐私：静默登录 + 首图短暂展示后出现「登录」落地页 */
+/**
+ * 本地已同意隐私：先静默换 session，再延时展示「登录」落地页。
+ */
 async function bootAfterPrivacyOk() {
   try {
     await silentLoginOnce()
@@ -78,6 +86,9 @@ async function bootAfterPrivacyOk() {
   setTimeout(openLoginGate, SPLASH_BEFORE_GATE_MS)
 }
 
+/**
+ * 用户点击隐私弹层「允许」：写入同意标记、关闭弹层、静默登录后立刻展示落地页。
+ */
 async function onPrivacyAllow() {
   setPrivacyAgreed()
   showPrivacySheet.value = false
@@ -89,7 +100,18 @@ async function onPrivacyAllow() {
   openLoginGate()
 }
 
+/**
+ * 首屏挂载：打印接口开关诊断；按是否已同意隐私分支进入静默流程或展示隐私弹层。
+ */
 onMounted(() => {
+  const userStore = useUserStore()
+  const apiOn = isApiEnabled()
+  console.info(
+    `[Yoke] 后端请求: ${apiOn ? `已开启 → ${getApiBaseUrl()}` : '未开启（未把 VITE_API_BASE_URL 打进当前构建，走 Mock，Network 无 session）'}`
+  )
+  if (apiOn && userStore.token) {
+    console.info('[Yoke] 本地已有 token，silentLoginOnce 将跳过，不会发 session 请求')
+  }
   if (hasPrivacyAgreed()) {
     bootAfterPrivacyOk()
   } else {
@@ -97,6 +119,7 @@ onMounted(() => {
   }
 })
 
+/** 跳转《用户软件许可协议》页。 */
 function openUserAgreement() {
   uni.navigateTo({
     url: '/pages/legal/user-agreement',
@@ -106,6 +129,7 @@ function openUserAgreement() {
   })
 }
 
+/** 跳转《隐私政策》页。 */
 function openPrivacyPolicy() {
   uni.navigateTo({
     url: '/pages/legal/privacy',
@@ -115,6 +139,7 @@ function openPrivacyPolicy() {
   })
 }
 
+/** 用户拒绝隐私：提示必须同意后才能继续使用。 */
 function onPrivacyDeny() {
   uni.showModal({
     title: '提示',

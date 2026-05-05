@@ -5,8 +5,13 @@ import { silentLogin, bindPhoneByCode, logout as logoutApi } from '@/api/auth'
 import { isApiEnabled } from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 
+/** 进行中的静默登录 Promise，用于去重并发 `uni.login` */
 let silentLoginTask = null
 
+/**
+ * 将 session 接口归一化结果写入 user store（微信静默类型）。
+ * @param {{ token: string, profile: object, needBindPhone: boolean, points?: number, wxSessionUuid?: string }} data
+ */
 function applyWechatSilentPayload(data) {
   const store = useUserStore()
   store.setLoginState({
@@ -14,39 +19,53 @@ function applyWechatSilentPayload(data) {
     profile: data.profile,
     needBindPhone: Boolean(data.needBindPhone),
     loginType: 'wechat_silent',
-    points: data.points
+    points: data.points,
+    wxSessionUuid: data.wxSessionUuid != null ? String(data.wxSessionUuid) : ''
   })
 }
 
 /**
- * 调 uni.login 换后端静默登录态（不判断本地是否已有 token）
+ * 调用微信侧 `uni.login` 获取临时 `code`（小程序等价 `wx.login`）。
+ * @returns {Promise<{ code?: string, [key: string]: unknown }>}
  */
-function exchangeWechatCodeForSession() {
+function uniLoginWeixin() {
   return new Promise((resolve, reject) => {
     uni.login({
       provider: 'weixin',
-      success: async (res) => {
-        try {
-          const code = res && res.code
-          if (!code) {
-            throw new Error('微信登录 code 为空')
-          }
-          const data = await silentLogin({ code })
-          resolve(data)
-        } catch (e) {
-          reject(e)
-        }
-      },
-      fail: (err) => {
-        reject(err || new Error('uni.login 失败'))
-      }
+      success: (res) => resolve(res),
+      fail: (err) => reject(err || new Error('uni.login 失败'))
     })
   })
 }
 
 /**
- * 静默登录（可复用进行中的 Promise，避免并发重复 uni.login）
- * 已有 token 时直接 resolve，不打断冷启动。
+ * 先 `uni.login` 取 code，再请求 session；若业务码为 `WECHAT_CODE_INVALID` 则重新 login 重试一次。
+ * @returns {Promise<object>} 与 `silentLogin` 相同结构的归一化数据
+ */
+async function exchangeWechatCodeForSession() {
+  const res = await uniLoginWeixin()
+  const code = res && res.code
+  if (!code) {
+    throw new Error('微信登录 code 为空')
+  }
+  try {
+    return await silentLogin({ code })
+  } catch (e) {
+    if (e && e.code === 'WECHAT_CODE_INVALID') {
+      const res2 = await uniLoginWeixin()
+      const code2 = res2 && res2.code
+      if (!code2) {
+        throw new Error('微信登录 code 为空')
+      }
+      return await silentLogin({ code: code2 })
+    }
+    throw e
+  }
+}
+
+/**
+ * 静默登录：无 token 时 `uni.login` + session；有 token 时跳过；并发复用同一 Promise。
+ * @returns {Promise<object|{ skipped: boolean }>}
  */
 export function silentLoginOnce() {
   const store = useUserStore()
@@ -56,7 +75,7 @@ export function silentLoginOnce() {
   if (silentLoginTask) {
     return silentLoginTask
   }
-  silentLoginTask = exchangeWechatCodeForSession()
+  silentLoginTask = Promise.resolve(exchangeWechatCodeForSession())
     .then((data) => {
       applyWechatSilentPayload(data)
       return data
@@ -68,33 +87,41 @@ export function silentLoginOnce() {
 }
 
 /**
- * 登录页：始终拉取新 code 换票（即使用户本地已有 token，也允许刷新会话）
+ * 登录页「微信一键登录」：始终重新 `uni.login` 并换 session，不因已有 token 跳过。
+ * @returns {Promise<object>}
  */
 export function loginWithWechatExplicit() {
-  return exchangeWechatCodeForSession().then((data) => {
+  return Promise.resolve(exchangeWechatCodeForSession()).then((data) => {
     applyWechatSilentPayload(data)
     return data
   })
 }
 
 /**
- * 手机号授权回调里的 code 换登录态
+ * 手机号授权成功回调：用 `getPhoneNumber` 的 code + 本地 `wxSessionUuid` 调 mobile-login，并合并 profile/points。
+ * @param {string} phoneCode 微信组件返回的动态令牌
+ * @returns {Promise<object>}
  */
 export async function loginWithPhoneCode(phoneCode) {
   const store = useUserStore()
-  const data = await bindPhoneByCode({ phoneCode })
+  const wxSessionUuid = store.wxSessionUuid ? String(store.wxSessionUuid) : ''
+  const prevProfile = store.profile
+  const prevPoints = store.points
+  const data = await bindPhoneByCode({ phoneCode, wxSessionUuid })
   store.setLoginState({
     token: data.token,
-    profile: data.profile,
+    profile: data.profile != null ? data.profile : prevProfile,
     needBindPhone: Boolean(data.needBindPhone),
     loginType: 'phone',
-    points: data.points
+    points: data.points != null ? data.points : prevPoints,
+    wxSessionUuid: data.wxSessionUuid != null ? String(data.wxSessionUuid) : ''
   })
   return data
 }
 
 /**
- * 退出：尽量通知后端，再清理本地（后端失败仍清本地，docs §8）
+ * 退出登录：可选请求后端，再清空本地 store 与 Storage。
+ * @returns {Promise<void>}
  */
 export async function performLogout() {
   const store = useUserStore()

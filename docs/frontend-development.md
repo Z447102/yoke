@@ -778,6 +778,12 @@ export function logout() {
 }
 ```
 
+前端实现（`src/api/auth.js` + `src/config/env.js`）在配置 `VITE_API_BASE_URL` 后走真实请求：
+
+- **静默会话**：默认 **`POST /api/auth/wechat/session`**，请求体 `{ "code": "<uni.login 的微信 code>" }`；响应 `data` 含 `needPhoneAuthorization`、`uuid`、`loginResult.token` 等，归一化后写入 `user` store（含 `wxSessionUuid`）。路径可用 **`VITE_AUTH_WECHAT_SILENT_PATH`** 覆盖。
+- **手机号授权登录**：默认 **`POST /api/auth/wechat/mobile-login`**，请求体 `{ "uuid": "<session 返回的预登录会话 id>", "code": "<getPhoneNumber 的 code>" }`，**不携带** `Authorization`（仅 `uuid` + `code`）。成功 `data` 常见仅含 `token`、`expiresIn`、`newUser`；无 `profile` 时前端保留原 `profile` 与 `points`。路径可用 **`VITE_AUTH_WECHAT_MOBILE_LOGIN_PATH`** 覆盖。
+- 业务外壳成功码默认与后端 **`200`** 对齐，可通过 **`VITE_API_BIZ_CODE_SUCCESS`** 修改。
+
 静默登录请求参数建议：
 
 ```json
@@ -786,29 +792,26 @@ export function logout() {
 }
 ```
 
-手机号登录请求参数建议：
+手机号授权登录请求参数建议：
 
 ```json
 {
-  "code": "phone number code"
+  "uuid": "pre-login session id from /api/auth/wechat/session",
+  "code": "phone number code from getPhoneNumber"
 }
 ```
 
-统一返回结构建议：
+手机号登录成功 `data` 示例（可与静默登录全量结构不同）：
 
 ```json
 {
   "token": "token value",
-  "profile": {
-    "id": "user id",
-    "nickname": "用户昵称",
-    "avatar": "头像地址",
-    "phone": "手机号"
-  },
-  "needBindPhone": false,
-  "expiresIn": 7200
+  "expiresIn": 7200,
+  "newUser": false
 }
 ```
+
+若后端同时返回用户资料，可扩展为与静默登录一致的 `profile` 结构，前端归一化逻辑可继续补充。
 
 错误码建议：
 

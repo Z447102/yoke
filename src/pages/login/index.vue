@@ -62,20 +62,24 @@ const loadingWx = ref(false)
 const loadingPhone = ref(false)
 const redirect = ref('')
 
+/** 已登录且仍需手机号时，展示「授权手机号」按钮。 */
 const showPhoneBind = computed(
   () => userStore.isLogin && userStore.needBindPhone
 )
 
+/** 读取路由参数中的登录成功回跳地址。 */
 onLoad((query) => {
   redirect.value = query.redirect ? decodeURIComponent(query.redirect) : ''
 })
 
+/** 若已无需绑定手机则自动执行回跳或回首页。 */
 onShow(() => {
   if (userStore.isLogin && !userStore.needBindPhone) {
     tryNavigateAfterLogin()
   }
 })
 
+/** 点击「微信一键登录」：换 session 并 toast，按需跳转。 */
 async function onWechatLogin() {
   if (loadingWx.value) return
   loadingWx.value = true
@@ -94,6 +98,10 @@ async function onWechatLogin() {
   }
 }
 
+/**
+ * 手机号授权组件回调：校验 `errMsg` 后取 `detail.code` 调 mobile-login，再导航离开。
+ * @param {{ detail?: { errMsg?: string, code?: string } }} e 微信事件对象
+ */
 async function onGetPhoneNumber(e) {
   const ok = e.detail && e.detail.errMsg === 'getPhoneNumber:ok'
   if (!ok) {
@@ -122,14 +130,19 @@ async function onGetPhoneNumber(e) {
   }
 }
 
+/** 打开用户协议页。 */
 function openUserAgreement() {
   uni.navigateTo({ url: '/pages/legal/user-agreement' })
 }
 
+/** 打开隐私政策页。 */
 function openPrivacy() {
   uni.navigateTo({ url: '/pages/legal/privacy' })
 }
 
+/**
+ * 登录成功后的导航：优先 `redirectTo` 到 `redirect` 参数；否则栈深则 `navigateBack`，否则 `reLaunch` 首页。
+ */
 function tryNavigateAfterLogin() {
   const url = redirect.value
   if (url && url.startsWith('/')) {

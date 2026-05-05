@@ -1,14 +1,38 @@
 /**
  * 登录相关接口
- * - 未配置 `VITE_API_BASE_URL` 时走 Mock，便于本地与小程序预览
- * - 配置基址后走 `post` 真实请求（路径需与后端对齐）
+ * - 未配置 `VITE_API_BASE_URL` 时走 Mock
+ * - 静默登录：`POST /api/auth/wechat/session`（可用 `VITE_AUTH_WECHAT_SILENT_PATH` 覆盖）
+ * - 成功外壳：`{ code: 200, msg, data }`（成功码见 `VITE_API_BIZ_CODE_SUCCESS`，默认 200）
+ *
+ * data 约定（微信 session）：
+ * - needPhoneAuthorization → needBindPhone
+ * - uuid → wxSessionUuid（后续手机号等接口可携带）
+ * - loginResult.token → token；loginResult 内可含 user 等扩展字段
+ *
+ * 手机号授权登录：`POST /api/auth/wechat/mobile-login`
+ * - 请求体：`{ uuid, code }`（uuid 为 session 返回的预登录会话 id；code 为 getPhoneNumber 返回）；**不附带 Authorization**
+ * - 响应 data：常见含 `token`、`expiresIn`、`newUser`（无 profile 时保留本地原 profile）
  */
 import { isApiEnabled, post } from '@/utils/request'
+import {
+  getAuthWechatSilentPath,
+  getAuthWechatMobileLoginPath
+} from '@/config/env'
 
+/**
+ * 异步延迟，用于 Mock 模拟网络耗时。
+ * @param {number} ms 毫秒
+ * @returns {Promise<void>}
+ */
 function delay(ms) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+/**
+ * 静默登录本地 Mock：不请求后端。
+ * @param {{ code: string }} param0
+ * @returns {Promise<object>} 归一化后的会话对象
+ */
 async function silentLoginMock({ code }) {
   await delay(280)
   if (!code) {
@@ -25,10 +49,16 @@ async function silentLoginMock({ code }) {
       avatarUrl: ''
     },
     needBindPhone: true,
-    points: 344
+    points: 344,
+    wxSessionUuid: ''
   }
 }
 
+/**
+ * 手机号登录本地 Mock：不请求后端。
+ * @param {{ phoneCode: string }} param0
+ * @returns {Promise<object>}
+ */
 async function bindPhoneByCodeMock({ phoneCode }) {
   await delay(320)
   if (!phoneCode) {
@@ -45,47 +75,181 @@ async function bindPhoneByCodeMock({ phoneCode }) {
       avatarUrl: ''
     },
     needBindPhone: false,
-    points: 344
+    points: 344,
+    wxSessionUuid: ''
   }
 }
 
+/** 退出登录 Mock。 */
 async function logoutMock() {
   await delay(100)
   return { ok: true }
 }
 
 /**
- * 微信静默登录：用 code 换业务 token
+ * 将「微信 session」接口返回的 `data` 转为 Pinia 使用的会话结构。
+ * @param {Record<string, unknown>} raw 后端 data 对象
+ * @returns {{ token: string, profile: object, needBindPhone: boolean, points: number, wxSessionUuid: string }}
+ */
+function normalizeSessionPayload(raw) {
+  if (!raw || typeof raw !== 'object') {
+    const err = new Error('登录响应异常')
+    err.code = 'BAD_RESPONSE'
+    throw err
+  }
+
+  const loginResult =
+    raw.loginResult && typeof raw.loginResult === 'object'
+      ? raw.loginResult
+      : null
+
+  const token = String(
+    (loginResult && loginResult.token) ??
+      raw.token ??
+      raw.accessToken ??
+      raw.access_token ??
+      ''
+  ).trim()
+
+  const wxSessionUuid =
+    typeof raw.uuid === 'string' ? raw.uuid.trim() : ''
+
+  if (!token) {
+    const err = new Error(
+      wxSessionUuid
+        ? '登录未返回 token，请确认后端在需手机号时是否仍下发 loginResult.token'
+        : '登录成功但未返回 token'
+    )
+    err.code = 'NO_TOKEN'
+    throw err
+  }
+
+  const srcRaw =
+    raw.profile ??
+    raw.user ??
+    raw.userInfo ??
+    (loginResult && typeof loginResult === 'object'
+      ? loginResult.user ?? loginResult.profile
+      : null)
+  const src =
+    srcRaw && typeof srcRaw === 'object' ? srcRaw : {}
+
+  const profile = {
+    id: String(src.userId ?? src.id ?? src.userName ?? ''),
+    nickname: String(src.nickName ?? src.nickname ?? src.name ?? ''),
+    phone: String(src.phonenumber ?? src.phone ?? src.mobile ?? ''),
+    avatarUrl: String(src.avatar ?? src.avatarUrl ?? src.headImgUrl ?? '')
+  }
+
+  let needBindPhone
+  if (typeof raw.needPhoneAuthorization === 'boolean') {
+    needBindPhone = raw.needPhoneAuthorization
+  } else if (typeof raw.needBindPhone === 'boolean') {
+    needBindPhone = raw.needBindPhone
+  } else if (typeof raw.needBindMobile === 'boolean') {
+    needBindPhone = raw.needBindMobile
+  } else if (typeof raw.phoneRequired === 'boolean') {
+    needBindPhone = raw.phoneRequired
+  } else if (typeof raw.isBindPhone === 'boolean') {
+    needBindPhone = !raw.isBindPhone
+  } else {
+    needBindPhone = !profile.phone.trim()
+  }
+
+  const pointsRaw = raw.points ?? raw.score ?? raw.integral ?? raw.coin ?? 0
+  const pn = Number(pointsRaw)
+  const points = Number.isFinite(pn) ? Math.max(0, Math.floor(pn)) : 0
+
+  return {
+    token,
+    profile,
+    needBindPhone: Boolean(needBindPhone),
+    points,
+    wxSessionUuid
+  }
+}
+
+/**
+ * 将「手机号授权登录」接口返回的 `data` 转为最小会话结构（通常无 profile）。
+ * @param {Record<string, unknown>} raw 后端 data
+ * @returns {{ token: string, needBindPhone: boolean, wxSessionUuid: string }}
+ */
+function normalizeMobileLoginPayload(raw) {
+  if (!raw || typeof raw !== 'object') {
+    const err = new Error('手机号登录响应异常')
+    err.code = 'BAD_RESPONSE'
+    throw err
+  }
+  const token = String(
+    raw.token ?? raw.accessToken ?? raw.access_token ?? ''
+  ).trim()
+  if (!token) {
+    const err = new Error('手机号登录未返回 token')
+    err.code = 'NO_TOKEN'
+    throw err
+  }
+  return {
+    token,
+    needBindPhone: false,
+    wxSessionUuid: ''
+  }
+}
+
+/**
+ * 真实网络：微信 code → session。
  * @param {{ code: string }} param0
+ * @returns {Promise<object>}
+ */
+async function silentLoginRequest({ code }) {
+  const path = getAuthWechatSilentPath()
+  const raw = await post(path, { code }, { auth: false })
+  return normalizeSessionPayload(raw)
+}
+
+/**
+ * 微信静默会话：使用 `wx.login` 得到的 code 调后端换 token / uuid 等。
+ * @param {{ code: string }} param0
+ * @returns {Promise<object>} 归一化会话，供 `setLoginState` 使用
  */
 export async function silentLogin({ code }) {
   if (!isApiEnabled()) {
     return silentLoginMock({ code })
   }
-  return post(
-    '/auth/wechat/silent',
-    { code },
-    { auth: false }
-  )
+  return silentLoginRequest({ code })
 }
 
 /**
- * 手机号授权登录/绑定（新版 getPhoneNumber 返回的 code）
- * @param {{ phoneCode: string }} param0
+ * 真实网络：预登录 uuid + 手机号动态令牌 → 正式 token。
+ * @param {{ phoneCode: string, wxSessionUuid?: string }} param0
+ * @returns {Promise<object>}
  */
-export async function bindPhoneByCode({ phoneCode }) {
+async function mobileLoginRequest({ phoneCode, wxSessionUuid }) {
+  const path = getAuthWechatMobileLoginPath()
+  const uuid = wxSessionUuid && String(wxSessionUuid).trim()
+  if (!uuid) {
+    const err = new Error('缺少预登录会话，请重新进入后再授权手机号')
+    err.code = 'NO_WX_SESSION'
+    throw err
+  }
+  const raw = await post(path, { uuid, code: phoneCode }, { auth: false })
+  return normalizeMobileLoginPayload(raw)
+}
+
+/**
+ * 微信手机号授权登录（对外仍用函数名 `bindPhoneByCode` 以少改页面引用）。
+ * @param {{ phoneCode: string, wxSessionUuid?: string }} param0 phoneCode 为 getPhoneNumber 返回；wxSessionUuid 为 session 返回的 uuid
+ * @returns {Promise<object>}
+ */
+export async function bindPhoneByCode({ phoneCode, wxSessionUuid }) {
   if (!isApiEnabled()) {
     return bindPhoneByCodeMock({ phoneCode })
   }
-  return post(
-    '/auth/wechat/bind-phone',
-    { code: phoneCode },
-    { auth: true }
-  )
+  return mobileLoginRequest({ phoneCode, wxSessionUuid })
 }
 
 /**
- * 退出登录（需携带当前 token；路径与后端对齐）
+ * 退出登录：请求后端后由调用方或 store 清本地（此处仅发请求）。
+ * @returns {Promise<unknown>}
  */
 export async function logout() {
   if (!isApiEnabled()) {
