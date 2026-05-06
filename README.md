@@ -20,3 +20,4 @@ npm run build:mp-weixin
 ## 文档
 
 - [uni-app 小程序前端开发文档](docs/frontend-development.md)
+- [静态资源与图标规范（团队）](docs/static-assets-icons.md)

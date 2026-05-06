@@ -4,8 +4,7 @@
     <!-- 顶部导航 -->
     <view class="nav-bar" :style="createNavBarStyle">
       <view class="nav-left" @tap="goBack">
-        <!-- <image class="back-icon" :src="createBackIcon" mode="aspectFit" /> -->
-		<image class="back-icon" src="/src/static/create/create-back-icon.png" mode="aspectFill"></image>
+        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
         <text class="back-text">一键成片</text>
       </view>
       <!-- 避让微信原生右上角菜单区，非模拟胶囊 -->
@@ -15,7 +14,7 @@
     <!-- 引导文案 -->
     <view class="intro">
       <view class="intro-title">
-        <image class="wave-icon" src="/src/static/create/create-icon-wave-hand.png" mode="aspectFill"></image>
+        <image class="wave-icon" :src="createIconWaveHand" mode="aspectFill"></image>
         <text class="wave-text">欢迎您使用有客一键成片</text>
       </view>
       <text class="intro-desc">请先完善您的商业信息，以便为您精准成片</text>
@@ -32,7 +31,7 @@
           @tap="openIndustryPopup"
         >
           <text>{{ selectedIndustry || '行业' }}</text>
-          <image src="/src/static/create/create-icon-arrow-down.png" mode="aspectFill"></image>
+          <image :src="createIconArrowDown" mode="aspectFill"></image>
         </view>
       </view>
 
@@ -45,7 +44,7 @@
           @tap="goToBusiness"
         >
           <text>主营业务</text>
-          <image src="/src/static/create/create-icon-arrow-down.png" mode="aspectFill"></image>
+          <image :src="createIconArrowDown" mode="aspectFill"></image>
         </view>
       </view>
 
@@ -94,7 +93,7 @@
             :class="{ 'form-control--error': errorLocation }"
             @tap="goToLocation"
           >
-            <image src="/src/static/create/create-icon-map-pin.png" mode="aspectFill" />
+            <image :src="createIconMapPin" mode="aspectFill" />
             <text class="location-btn__text">地图选点</text>
           </view>
         </view>
@@ -115,11 +114,15 @@
 
     <!-- 底部：进入生成配置页 -->
     <view class="bottom-action">
-      <button class="next-btn" @tap="goToGenerate">
+      <button
+        class="next-btn"
+        :class="{ 'next-btn--ready': canProceedNext }"
+        @tap="goToGenerate"
+      >
         下一步
       </button>
 	  <view class="tips">
-		<image class="tips-icon" src="/src/static/create/create-icon-attention.png" mode="aspectFill"></image>
+		<image class="tips-icon" :src="createIconAttention" mode="aspectFill"></image>
 	  	<text class="tips-text"> 后续可在【我的 - 主营业务】内修改</text>
 	  </view>
       
@@ -154,13 +157,17 @@
  * 【一键成片 · 商户信息】pages/create/index.vue
  * 收集行业与店铺信息，跳转 generate；地图/主营业务回传见 onShow + storage。
  */
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { onShow, onReady } from '@dcloudio/uni-app'
 import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh
 } from '@/utils/create-nav-bar-style'
 import createBackIcon from '@/static/create/create-back-icon.png'
+import createIconWaveHand from '@/static/create/create-icon-wave-hand.png'
+import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
+import createIconMapPin from '@/static/create/create-icon-map-pin.png'
+import createIconAttention from '@/static/create/create-icon-attention.png'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
@@ -266,6 +273,15 @@ function isLocationValid() {
   )
 }
 
+/** 四项必填齐：按钮深色 #FF9432；否则浅色 #FFC581 */
+const canProceedNext = computed(
+  () =>
+    isIndustryValid() &&
+    isBusinessValid() &&
+    isShopValid() &&
+    isLocationValid()
+)
+
 function clearErrorsWhenFixed() {
   if (isIndustryValid()) errorIndustry.value = false
   if (isBusinessValid()) errorBusiness.value = false
@@ -357,8 +373,12 @@ function confirmIndustry() {
 }
 
 function goToBusiness() {
+  if (!String(selectedIndustry.value || '').trim()) {
+    uni.showToast({ title: '请选择行业', icon: 'none' })
+    return
+  }
   uni.navigateTo({
-    url: `/pages/create/business/index?industry=${encodeURIComponent(selectedIndustry.value || '餐饮')}`
+    url: `/pages/create/business/index?industry=${encodeURIComponent(selectedIndustry.value)}`
   })
 }
 
@@ -383,6 +403,26 @@ function goToGenerate() {
     uni.showToast({ title: '请完善信息后进行下一步', icon: 'none' })
     return
   }
+
+  uni.setStorageSync('create:merchant-draft', {
+    industry: String(selectedIndustry.value || '').trim(),
+    businessPath: businessPath.value.map((p) => ({
+      id: p.id != null ? String(p.id) : '',
+      name: String(p.name || '').trim()
+    })),
+    shopName: String(shopName.value || '').trim(),
+    location: locationPick.value
+      ? {
+          id: locationPick.value.id != null ? String(locationPick.value.id) : '',
+          name: String(locationPick.value.name || '').trim(),
+          address: String(locationPick.value.address || '').trim(),
+          distance:
+            locationPick.value.distance != null
+              ? String(locationPick.value.distance)
+              : ''
+        }
+      : null
+  })
 
   uni.navigateTo({
     url: '/pages/create/generate/index'
@@ -672,12 +712,7 @@ function goToGenerate() {
 
 /* 已选点后的展示块（卡片样式） */
 .location-display {
-  box-sizing: border-box;
   margin-top: 16rpx;
-  padding: 24rpx;
-  border-radius: 22rpx;
-  border: 1rpx solid #ffe2e2;
-  background-color: rgba(254, 249, 249, 1);
 }
 
 /* 未选点：仅一行灰色提示，不占整块输入框样式 */
@@ -738,17 +773,16 @@ function goToGenerate() {
   width: 510rpx;
   height: 108rpx;
   border-radius: 999rpx;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 197, 129, 1) 0%,
-    rgba(255, 148, 50, 1) 100%
-  );
+  background: #ffc581;
   color: #ffffff;
   font-size: 32rpx;
   line-height: 108rpx;
 }
 
-/* 未填完：不使用橙色渐变，改为中性灰底（仍可点击走校验提示） */
+.next-btn--ready {
+  background: #ff9432;
+}
+
 .tips{
 	margin-top: 12rpx;
 	display: flex;

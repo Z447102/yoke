@@ -4,14 +4,14 @@
     <view class="nav-bar" :style="createNavBarStyle">
       <view class="nav-left" @tap="goBack">
         <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text>主营业务</text>
+        <text class="back-text">主营业务</text>
       </view>
       <view class="nav-bar__gap" aria-hidden="true" />
     </view>
 
     <view class="industry-title">
-      <text>{{ industry }}</text>
-      <text class="title-arrow">⌄</text>
+      <text class="industry-text">{{ industry }}</text>
+      <image class="industry-icon" :src="createIconArrowDown" mode=""></image>
     </view>
 
     <view class="category-section">
@@ -42,13 +42,19 @@
     <view class="bottom-action">
       <button
         class="confirm-btn"
-        :class="{ active: canConfirm }"
-        :disabled="!canConfirm"
+        :class="{ 'confirm-btn--ready': canConfirm }"
         @tap="confirmSelection"
       >
         确定
       </button>
-      <text class="tip">◎ 后续可在【我的 - 商业信息】内修改</text>
+      <view class="tips">
+        <image
+          class="tips-icon"
+          :src="createIconAttention"
+          mode="aspectFill"
+        />
+        <text class="tips-text">后续可在【我的 - 商业信息】内修改</text>
+      </view>
     </view>
   </view>
 </template>
@@ -65,6 +71,8 @@ import {
   scheduleCreateNavBarStyleRefresh
 } from '@/utils/create-nav-bar-style'
 import createBackIcon from '@/static/create/create-back-icon.png'
+import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
+import createIconAttention from '@/static/create/create-icon-attention.png'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
@@ -187,12 +195,15 @@ function confirmSelection() {
 
 .back-icon {
   flex-shrink: 0;
-  width: 44rpx;
-  height: 44rpx;
+  width: 36rpx;
+  height: 36rpx;
   margin-right: 12rpx;
   display: block;
 }
-
+.back-text{
+	font-size: 30rpx;
+	font-family:OPPOSans-regular;
+}
 .nav-bar__gap {
   flex-shrink: 0;
   width: 174rpx;
@@ -208,6 +219,15 @@ function confirmSelection() {
   display: flex;
   align-items: center;
   justify-content: center;
+  .industry-text{
+	font-size: 28rpx;
+	color: #1F2937;
+  }
+  .industry-icon{
+	width: 28rpx;
+	height: 28rpx;
+	margin-left: 4rpx;
+  }
 }
 
 .title-arrow {
@@ -279,24 +299,35 @@ function confirmSelection() {
   width: 510rpx;
   height: 108rpx;
   border-radius: 999rpx;
-  background: #f6c99d;
+  background: #ffc581;
   color: #ffffff;
   font-size: 32rpx;
   line-height: 108rpx;
 }
 
-.confirm-btn.active {
-  background: linear-gradient(180deg, #ffc98f 0%, #ff9835 100%);
+.confirm-btn--ready {
+  background: #ff9432;
 }
 
 .confirm-btn::after {
   border: 0;
 }
 
-.tip {
-  display: block;
-  margin-top: 14rpx;
-  color: #a4abb5;
-  font-size: 22rpx;
+.tips {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .tips-icon {
+    width: 20rpx;
+    height: 20rpx;
+  }
+
+  .tips-text {
+    margin-left: 4rpx;
+    font-size: 20rpx;
+    color: #9ca3af;
+  }
 }
 </style>
