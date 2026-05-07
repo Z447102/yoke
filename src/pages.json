@@ -19,34 +19,6 @@
       }
     },
     {
-      "path": "pages/create/index",
-      "style": {
-        "navigationBarTitleText": "创作",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/create/business/index",
-      "style": {
-        "navigationBarTitleText": "主营业务",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/create/location/index",
-      "style": {
-        "navigationBarTitleText": "选择位置",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/create/generate/index",
-      "style": {
-        "navigationBarTitleText": "生成视频",
-        "navigationStyle": "custom"
-      }
-    },
-    {
       "path": "pages/mine/index",
       "style": {
         "navigationBarTitleText": "我的",
@@ -61,22 +33,70 @@
       "style": {
         "navigationBarTitleText": "登录"
       }
-    },
-    {
-      "path": "pages/legal/user-agreement",
-      "style": {
-        "navigationBarTitleText": "用户软件许可协议",
-        "backgroundColor": "#f7f7f7"
-      }
-    },
-    {
-      "path": "pages/legal/privacy",
-      "style": {
-        "navigationBarTitleText": "隐私政策",
-        "backgroundColor": "#f7f7f7"
-      }
     }
   ],
+  "subPackages": [
+    {
+      "root": "pages/create",
+      "name": "create",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "创作",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "business/index",
+          "style": {
+            "navigationBarTitleText": "主营业务",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "location/index",
+          "style": {
+            "navigationBarTitleText": "选择位置",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "generate/index",
+          "style": {
+            "navigationBarTitleText": "生成视频",
+            "navigationStyle": "custom"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/legal",
+      "name": "legal",
+      "pages": [
+        {
+          "path": "user-agreement",
+          "style": {
+            "navigationBarTitleText": "用户软件许可协议",
+            "backgroundColor": "#f7f7f7"
+          }
+        },
+        {
+          "path": "privacy",
+          "style": {
+            "navigationBarTitleText": "隐私政策",
+            "backgroundColor": "#f7f7f7"
+          }
+        }
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/home/index": {
+      "network": "all",
+      "packages": ["create"]
+    }
+  },
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "yoke",

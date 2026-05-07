@@ -14,12 +14,13 @@ let silentLoginTask = null
  */
 function applyWechatSilentPayload(data) {
   const store = useUserStore()
+  const pn = Number(data.points)
   store.setLoginState({
     token: data.token,
     profile: data.profile,
     needBindPhone: Boolean(data.needBindPhone),
     loginType: 'wechat_silent',
-    points: data.points,
+    points: Number.isFinite(pn) ? pn : 0,
     wxSessionUuid: data.wxSessionUuid != null ? String(data.wxSessionUuid) : ''
   })
 }
@@ -40,23 +41,44 @@ function uniLoginWeixin() {
 
 /**
  * 先 `uni.login` 取 code，再请求 session；若业务码为 `WECHAT_CODE_INVALID` 则重新 login 重试一次。
+ * H5 / 非微信环境常拿不到 code：在 **未接真实后端（Mock）** 时用合成 code 走本地静默，避免一直游客态。
  * @returns {Promise<object>} 与 `silentLogin` 相同结构的归一化数据
  */
 async function exchangeWechatCodeForSession() {
-  const res = await uniLoginWeixin()
-
-  const code = res && res.code
-  if (!code) {
-    throw new Error('微信登录 code 为空')
+  let code = ''
+  try {
+    const res = await uniLoginWeixin()
+    code = (res && res.code) || ''
+  } catch (err) {
+    console.warn('[Yoke] uni.login 失败（H5 或非微信端常见）', err)
   }
-  console.info('[Yoke] uni.login code:', code)
+
+  if (!code) {
+    if (!isApiEnabled()) {
+      code = `mock_silent_${Date.now()}`
+      console.info('[Yoke] 本地 Mock：无微信 code，使用合成 code 完成静默登录')
+    } else {
+      throw new Error('微信登录 code 为空')
+    }
+  } else {
+    console.info('[Yoke] uni.login code:', code)
+  }
+
   try {
     return await silentLogin({ code })
   } catch (e) {
     if (e && e.code === 'WECHAT_CODE_INVALID') {
-      const res2 = await uniLoginWeixin()
-      const code2 = res2 && res2.code
+      let code2 = ''
+      try {
+        const res2 = await uniLoginWeixin()
+        code2 = (res2 && res2.code) || ''
+      } catch (err2) {
+        console.warn('[Yoke] uni.login 重试失败', err2)
+      }
       if (!code2) {
+        if (!isApiEnabled()) {
+          return await silentLogin({ code: `mock_retry_${Date.now()}` })
+        }
         throw new Error('微信登录 code 为空')
       }
       console.info('[Yoke] uni.login code (retry):', code2)
@@ -68,6 +90,7 @@ async function exchangeWechatCodeForSession() {
 
 /**
  * 静默登录：无 token 时 `uni.login` + session；有 token 时跳过；并发复用同一 Promise。
+ * 注意：**不会**在此函数内请求 `mobile-login`；该接口仅在用户授权手机号后由 `loginWithPhoneCode` 触发。
  * @returns {Promise<object|{ skipped: boolean }>}
  */
 export function silentLoginOnce() {
@@ -81,6 +104,11 @@ export function silentLoginOnce() {
   silentLoginTask = Promise.resolve(exchangeWechatCodeForSession())
     .then((data) => {
       applyWechatSilentPayload(data)
+      if (import.meta.env.DEV && data.needBindPhone) {
+        console.info(
+          '[Yoke] 静默登录已完成 session；需绑定手机号时请打开登录页点「授权手机号」，届时将请求 /api/auth/wechat/mobile-login'
+        )
+      }
       return data
     })
     .finally(() => {

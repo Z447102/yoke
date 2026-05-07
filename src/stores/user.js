@@ -38,10 +38,32 @@ export const useUserStore = defineStore('user', {
   }),
 
   getters: {
-    /** 是否存在非空 token（视为已登录） */
-    isLogin: (state) => Boolean(state.token),
+    /**
+     * 已登录：含正式 JWT，或微信预登录已下发 uuid 且待绑定手机号（与 session 仅 uuid 场景一致）。
+     */
+    isLogin: (state) =>
+      Boolean(String(state.token || '').trim()) ||
+      (Boolean(state.needBindPhone) && Boolean(String(state.wxSessionUuid || '').trim())),
     /** profile 中是否包含非空手机号 */
-    hasPhone: (state) => Boolean(state.profile?.phone)
+    hasPhone: (state) => Boolean(state.profile?.phone),
+    /** 是否 VIP（后端 profile 字段约定：isVip / vip） */
+    isVip: (state) =>
+      Boolean(state.profile?.isVip === true || state.profile?.vip === true || state.profile?.vip === 1),
+    /**
+     * 是否仍属「首次开通会员」优惠价人群；未下发时默认可享首购（走设计二）。
+     * 后端可设 `firstVipSubscribe: false` 表示老用户走设计三。
+     */
+    isFirstVipSubscribeEligible: (state) => {
+      if (state.profile && typeof state.profile.firstVipSubscribe === 'boolean') {
+        return state.profile.firstVipSubscribe
+      }
+      return true
+    },
+    /**
+     * 点数充值是否走「活动价 / 8 折」样式（第一张设计图）。
+     * 需显式 `profile.pointsTopUpPromo === true` 为 true；未下发为 false（第二张原价图）。
+     */
+    pointsTopUpHasPromo: (state) => Boolean(state.profile?.pointsTopUpPromo === true)
   },
 
   actions: {
@@ -51,15 +73,18 @@ export const useUserStore = defineStore('user', {
      */
     hydrateFromStorage() {
       const raw = readPersistedAuth()
-      if (!raw || !raw.token) return
-      this.token = raw.token
+      if (!raw || typeof raw !== 'object') return
+      const hasToken = Boolean(String(raw.token || '').trim())
+      const uuid = typeof raw.wxSessionUuid === 'string' ? raw.wxSessionUuid.trim() : ''
+      const needBind = Boolean(raw.needBindPhone)
+      if (!hasToken && !(uuid && needBind)) return
+      this.token = hasToken ? String(raw.token).trim() : ''
       this.profile = raw.profile || null
-      this.needBindPhone = Boolean(raw.needBindPhone)
+      this.needBindPhone = needBind
       this.loginType = raw.loginType || ''
       const n = Number(raw.points)
       this.points = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0
-      this.wxSessionUuid =
-        typeof raw.wxSessionUuid === 'string' ? raw.wxSessionUuid : ''
+      this.wxSessionUuid = uuid
     },
 
     /**
@@ -102,6 +127,20 @@ export const useUserStore = defineStore('user', {
     setPoints(value) {
       const n = Number(value)
       this.points = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0
+      persistSlice(this)
+    },
+
+    /**
+     * 合并 profile 增量并写入本地缓存（支付回调或前端模拟开通 VIP 等）。
+     * @param {Record<string, unknown>} patch 与现有 profile 浅合并
+     */
+    mergeProfile(patch) {
+      if (!patch || typeof patch !== 'object') return
+      const base =
+        this.profile && typeof this.profile === 'object'
+          ? { ...this.profile }
+          : {}
+      this.profile = { ...base, ...patch }
       persistSlice(this)
     }
   }

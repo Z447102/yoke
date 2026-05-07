@@ -313,15 +313,28 @@
       :model-options="modelOptions"
       :selected-resolution="selectedResolution"
       :selected-model="selectedModel"
-      :video-duration-sec="30"
+      :video-duration-sec="selectedTemplateMeta.durationSec ?? 30"
       @close="closeQualityPopup"
       @resolution-tap="onPickResolution"
       @model-tap="selectModel"
       @generate="confirmGenerateFromPopup"
     />
 
-    <!-- 弹窗：VIP 套餐（点数不足等） -->
-    <VipSubscribeModal :show="showVipModal" @close="closeVipModal" @confirm="submitVipSubscribe" />
+    <VipSubscribeModal
+      :show="showVipModal"
+      :variant="vipModalVariant"
+      @close="closeVipModal"
+      @confirm="onVipSubscribeConfirm"
+      @aux-buy="onVipAuxBuy"
+    />
+
+    <PointsRechargeModal
+      :show="showPointsRechargeModal"
+      :deficit-points="pointsRechargeDeficit"
+      :has-promo="pointsRechargeHasPromo"
+      @close="closePointsRechargeModal"
+      @confirm="onPointsRechargeConfirm"
+    />
   </view>
 </template>
 
@@ -329,20 +342,20 @@
 /**
  * 【一键成片 · 生成配置页】pages/create/generate/index.vue
  *
- * 功能块：筛选与模板、素材与文案、底部成片操作、业务/平台弹窗、画质与模型子组件、VIP 套餐。
+ * 功能块：筛选与模板、素材与文案、底部成片操作、业务/平台弹窗、画质与模型子组件。
  * 规范：docs/frontend-development.md §10；常量 @/constants/create；接口 @/api/create。
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { getVideoGenerateCostPreview } from '@/api/create'
 import {
   CREATE_MODEL_OPTIONS,
   CREATE_RESOLUTION_OPTIONS,
-  HD_RESOLUTION_IDS,
-  VIDEO_GENERATE_COST_POINTS
+  computeVideoGenerateCostPoints
 } from '@/constants/create'
 import QualitySettingsSheet from '../components/QualitySettingsSheet.vue'
 import VipSubscribeModal from '../components/VipSubscribeModal.vue'
+import PointsRechargeModal from '../components/PointsRechargeModal.vue'
+import { supportsContinuousVipSubscription } from '@/utils/vip-subscription-platform'
 import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh
@@ -373,6 +386,8 @@ const templates = [
     desc: '吸引转化客户',
     tag: '探店',
     hot: '3.2w',
+    /** 成片时长（秒），参与计费；后续可由模板接口下发 */
+    durationSec: 30,
     image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=300&h=220&fit=crop'
   },
   {
@@ -381,6 +396,7 @@ const templates = [
     desc: '让客人看了更有食欲',
     tag: '菜品展示',
     hot: '2.1w',
+    durationSec: 15,
     image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&h=220&fit=crop'
   },
   {
@@ -389,6 +405,7 @@ const templates = [
     desc: '让老人都爱买真特色',
     tag: '团购引流',
     hot: '2.1w',
+    durationSec: 30,
     image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=220&fit=crop'
   }
 ]
@@ -493,22 +510,37 @@ function clearCopywriting() {
   copywriting.value = ''
 }
 
-// --- 用户态：点数用于成片前校验（高清档位、主按钮） ---
+// --- 用户态：点数用于「生成视频」前校验 ---
 const userStore = useUserStore()
 
 // --- 成片参数：分辨率 / 模型（与常量表一致，二者独立） ---
 const resolutionOptions = CREATE_RESOLUTION_OPTIONS
 const modelOptions = CREATE_MODEL_OPTIONS
 
-// --- 计费：单次消耗点数，进入页后尝试拉取接口预览，失败则沿用常量 ---
-const generateCostPoints = ref(VIDEO_GENERATE_COST_POINTS)
-
 const selectedResolution = ref('720p')
 const selectedModel = ref('seedance2')
 const showQualityPopup = ref(false)
 
-// --- VIP 套餐弹窗（点数不足等） ---
+const selectedTemplateMeta = computed(
+  () => templates.find((t) => t.id === selectedTemplate.value) || templates[0]
+)
+
+const generateCostPoints = computed(() =>
+  computeVideoGenerateCostPoints({
+    durationSec: selectedTemplateMeta.value?.durationSec ?? 30,
+    resolutionId: selectedResolution.value,
+    modelId: selectedModel.value
+  })
+)
+
 const showVipModal = ref(false)
+/** @type {import('vue').Ref<'continuous'|'first_time_once'|'standard_once'>} */
+const vipModalVariant = ref('continuous')
+
+const showPointsRechargeModal = ref(false)
+const pointsRechargeDeficit = ref(0)
+// 本地直出「有优惠活动」版充值弹窗；联调后改回 userStore.pointsTopUpHasPromo
+const pointsRechargeHasPromo = computed(() => true)
 
 /** 与商户信息页一致：用于「编辑」跳转主营业务子页 */
 const createFlowIndustry = ref('餐饮')
@@ -527,6 +559,11 @@ const currentResolution = computed(
   () => resolutionOptions.find((item) => item.id === selectedResolution.value) || resolutionOptions[0]
 )
 const currentModel = computed(() => modelOptions.find((item) => item.id === selectedModel.value) || modelOptions[0])
+
+/** 使用 VIP 分辨率或 VIP 模型时，生成前需校验会员 */
+const usesVipModule = computed(
+  () => Boolean(currentResolution.value?.vip || currentModel.value?.vip)
+)
 
 const displayAvatars = computed(() =>
   avatarSourceTab.value === 'official' ? avatarsOfficial : avatarsMine
@@ -577,17 +614,8 @@ function selectAvatar(id) {
   uni.setStorageSync(key, id)
 }
 
-// --- 成片计费预览（Mock API） ---
-onMounted(async () => {
+onMounted(() => {
   scheduleCreateNavBarStyleRefresh(createNavBarStyle)
-  try {
-    const data = await getVideoGenerateCostPreview()
-    if (data != null && typeof data.points === 'number' && data.points >= 0) {
-      generateCostPoints.value = data.points
-    }
-  } catch {
-    // 接口失败时沿用常量默认值
-  }
 })
 
 onReady(() => {
@@ -694,10 +722,6 @@ onShow(() => {
   }
 })
 
-function openVipPurchaseModal() {
-  showVipModal.value = true
-}
-
 // --- 页面导航 ---
 function goBack() {
   uni.navigateBack()
@@ -773,38 +797,109 @@ function selectResolution(id) {
   selectedResolution.value = id
 }
 
-/** 高清档位（1080p）：点数不足则弹出 VIP、不切分辨率；详见 constants HD_RESOLUTION_IDS */
+/** 选择分辨率：直接切换选中项；点数在「生成视频」时再校验 */
 function onPickResolution(item) {
-  const isHdResolution = HD_RESOLUTION_IDS.includes(item.id)
-  if (isHdResolution && userStore.points < generateCostPoints.value) {
-    openVipPurchaseModal()
-    return
-  }
   selectResolution(item.id)
-}
-
-// --- VIP 订阅（支付占位） ---
-function closeVipModal() {
-  showVipModal.value = false
-}
-
-/** @param {{ plan: 'month' | 'year' }} payload */
-function submitVipSubscribe(payload) {
-  uni.showToast({
-    title: `请接入微信支付（${payload.plan === 'year' ? '包年' : '包月'}）`,
-    icon: 'none'
-  })
-  // 下单成功：closeVipModal(); await refreshUserPoints(); userStore.setPoints(...)
 }
 
 function selectModel(id) {
   selectedModel.value = id
 }
 
-// --- 发起成片（弹窗内 / 主按钮均需点数充足） ---
+function resolveVipModalVariant() {
+  if (supportsContinuousVipSubscription()) return 'continuous'
+  return userStore.isFirstVipSubscribeEligible ? 'first_time_once' : 'standard_once'
+}
+
+/** 使用 VIP 模块且非会员：关闭画质弹窗并打开对应 VIP 弹窗 */
+function openVipRechargeForGenerate() {
+  closeQualityPopup()
+  vipModalVariant.value = resolveVipModalVariant()
+  showVipModal.value = true
+}
+
+function closeVipModal() {
+  showVipModal.value = false
+}
+
+async function onVipSubscribeConfirm(payload) {
+  /** 前端模拟：视为支付成功，写入 VIP 并持久化；联调后改为支付成功回调再 mergeProfile / 拉用户信息 */
+  userStore.mergeProfile({
+    isVip: true,
+    firstVipSubscribe: false
+  })
+  closeVipModal()
+  uni.showToast({
+    title: `VIP 已开通（模拟 · ${payload.plan === 'year' ? '年' : '月'}套餐）`,
+    icon: 'none',
+    duration: 1800
+  })
+  await nextTick()
+  pointsRechargeDeficit.value = Math.max(
+    0,
+    Math.ceil(generateCostPoints.value - userStore.points)
+  )
+  showPointsRechargeModal.value = true
+}
+
+function onVipAuxBuy(payload) {
+  uni.showToast({
+    title: `请接入单笔购买：${payload.kind}`,
+    icon: 'none'
+  })
+}
+
+/** 需使用 VIP 能力且当前非会员时拦截为 false */
+function ensureVipForGenerate() {
+  if (!usesVipModule.value) return true
+  if (userStore.isVip) return true
+  openVipRechargeForGenerate()
+  return false
+}
+
+/** 已是 VIP 但点数不足成片：关画质弹窗并打开点数充值（有/无活动由 profile.pointsTopUpPromo 控制） */
+function openPointsRechargeForGenerate() {
+  safeHideKeyboard()
+  closeQualityPopup()
+  pointsRechargeDeficit.value = Math.max(
+    0,
+    Math.ceil(generateCostPoints.value - userStore.points)
+  )
+  showPointsRechargeModal.value = true
+}
+
+function closePointsRechargeModal() {
+  showPointsRechargeModal.value = false
+}
+
+function onPointsRechargeConfirm(payload) {
+  safeHideKeyboard()
+  uni.showToast({
+    title: `请接入支付 ¥${payload.payYuan} / ${payload.points}点`,
+    icon: 'none'
+  })
+  closePointsRechargeModal()
+}
+
+function safeHideKeyboard() {
+  try {
+    if (typeof uni !== 'undefined' && typeof uni.hideKeyboard === 'function') {
+      uni.hideKeyboard()
+    }
+  } catch {
+    // ignore
+  }
+}
+
+// --- 发起成片（弹窗内 / 主按钮：VIP 模块先校验会员；已是 VIP 且点数不足则弹出充值点数） ---
 function confirmGenerateFromPopup() {
+  if (!ensureVipForGenerate()) return
   if (userStore.points < generateCostPoints.value) {
-    openVipPurchaseModal()
+    if (userStore.isVip) {
+      openPointsRechargeForGenerate()
+    } else {
+      uni.showToast({ title: '点数不足', icon: 'none' })
+    }
     return
   }
   closeQualityPopup()
@@ -812,8 +907,13 @@ function confirmGenerateFromPopup() {
 }
 
 function generateVideo() {
+  if (!ensureVipForGenerate()) return
   if (userStore.points < generateCostPoints.value) {
-    openVipPurchaseModal()
+    if (userStore.isVip) {
+      openPointsRechargeForGenerate()
+    } else {
+      uni.showToast({ title: '点数不足', icon: 'none' })
+    }
     return
   }
   uni.showToast({

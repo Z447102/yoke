@@ -10,6 +10,11 @@
  * - uuid → wxSessionUuid（后续手机号等接口可携带）
  * - loginResult.token → token；loginResult 内可含 user 等扩展字段
  *
+ * 【与 mobile-login 的关系】静默登录 **只** 调 session，**不会**自动请求 mobile-login。
+ * mobile-login 需要微信组件 `getPhoneNumber` 返回的 **phoneCode**，只能由用户在
+ * `pages/login` 点击「授权手机号」后，经 `loginWithPhoneCode` → `bindPhoneByCode` 发起
+ * `POST /api/auth/wechat/mobile-login`（见 `hooks/use-login.js`）。
+ *
  * 手机号授权登录：`POST /api/auth/wechat/mobile-login`
  * - 请求体：`{ uuid, phoneCode }`（uuid 为 session 返回的预登录会话 id；phoneCode 为 getPhoneNumber 返回）；**不附带 Authorization**
  * - 响应 data：常见含 `token`、`expiresIn`、`newUser`（无 profile 时保留本地原 profile）
@@ -27,6 +32,14 @@ import {
  */
 function delay(ms) {
   return new Promise((r) => setTimeout(r, ms))
+}
+
+/** 将 uuid 等字段规范为 trim 后的字符串（兼容 number） */
+function asSessionId(v) {
+  if (v == null) return ''
+  if (typeof v === 'number' && Number.isFinite(v)) return String(Math.trunc(v))
+  if (typeof v === 'string') return v.trim()
+  return ''
 }
 
 /**
@@ -47,11 +60,18 @@ async function silentLoginMock({ code }) {
       id: 'wx_mock_1',
       nickname: '微信用户',
       phone: '',
-      avatarUrl: ''
+      avatarUrl: '',
+      /** Mock：默认非 VIP，便于一键成片走 VIP 开通链路 */
+      isVip: false,
+      /** 本地模拟：首充点数享优惠活动，展示充值弹窗活动样式 */
+      pointsTopUpPromo: true,
+      /** 本地模拟：默认视为可享「首次开通 VIP」优惠，用于 VIP 弹窗设计二 */
+      firstVipSubscribe: true
     },
     needBindPhone: true,
-    points: 344,
-    wxSessionUuid: ''
+    points: 50,
+    /** 与真实 session 对齐：后续 mobile-login 需携带 uuid */
+    wxSessionUuid: `mock_wx_session_${Date.now()}`
   }
 }
 
@@ -73,10 +93,13 @@ async function bindPhoneByCodeMock({ phoneCode }) {
       id: 'wx_mock_1',
       nickname: '微信用户',
       phone: '138****0000',
-      avatarUrl: ''
+      avatarUrl: '',
+      isVip: false,
+      pointsTopUpPromo: true,
+      firstVipSubscribe: true
     },
     needBindPhone: false,
-    points: 344,
+    points: 50,
     wxSessionUuid: ''
   }
 }
@@ -109,18 +132,61 @@ function normalizeSessionPayload(raw) {
       raw.token ??
       raw.accessToken ??
       raw.access_token ??
+      raw.sessionToken ??
+      raw.tempToken ??
+      raw.temporaryToken ??
+      raw.preLoginToken ??
       ''
   ).trim()
 
   const wxSessionUuid =
-    typeof raw.uuid === 'string' ? raw.uuid.trim() : ''
+    asSessionId(raw.uuid) ||
+    asSessionId(raw.sessionUuid) ||
+    asSessionId(raw.wxSessionUuid) ||
+    asSessionId(loginResult && loginResult.uuid)
 
+  /**
+   * 预登录：部分后端在需绑定手机号阶段只下发 uuid、暂不下发 JWT。
+   * 此时不再抛错，返回空 token + uuid，由前端 isLogin（含预登录）与后续 mobile-login 衔接。
+   */
   if (!token) {
-    const err = new Error(
-      wxSessionUuid
-        ? '登录未返回 token，请确认后端在需手机号时是否仍下发 loginResult.token'
-        : '登录成功但未返回 token'
-    )
+    if (wxSessionUuid) {
+      const preNeed =
+        typeof raw.needPhoneAuthorization === 'boolean'
+          ? raw.needPhoneAuthorization
+          : typeof raw.needBindPhone === 'boolean'
+            ? raw.needBindPhone
+            : typeof raw.needBindMobile === 'boolean'
+              ? raw.needBindMobile
+              : typeof raw.phoneRequired === 'boolean'
+                ? raw.phoneRequired
+                : true
+      const srcRawPre =
+        raw.profile ??
+        raw.user ??
+        raw.userInfo ??
+        (loginResult && typeof loginResult === 'object'
+          ? loginResult.user ?? loginResult.profile
+          : null)
+      const srcPre = srcRawPre && typeof srcRawPre === 'object' ? srcRawPre : {}
+      const profilePre = {
+        id: String(srcPre.userId ?? srcPre.id ?? srcPre.userName ?? ''),
+        nickname: String(srcPre.nickName ?? srcPre.nickname ?? srcPre.name ?? ''),
+        phone: String(srcPre.phonenumber ?? srcPre.phone ?? srcPre.mobile ?? ''),
+        avatarUrl: String(srcPre.avatar ?? srcPre.avatarUrl ?? srcPre.headImgUrl ?? '')
+      }
+      const pointsRawPre = raw.points ?? raw.score ?? raw.integral ?? raw.coin ?? 0
+      const pnPre = Number(pointsRawPre)
+      const pointsPre = Number.isFinite(pnPre) ? Math.max(0, Math.floor(pnPre)) : 0
+      return {
+        token: '',
+        profile: profilePre,
+        needBindPhone: Boolean(preNeed),
+        points: pointsPre,
+        wxSessionUuid
+      }
+    }
+    const err = new Error('登录成功但未返回 token 或 uuid')
     err.code = 'NO_TOKEN'
     throw err
   }

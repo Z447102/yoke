@@ -28,8 +28,10 @@
               mode="aspectFit"
             />
           </view>
-          <text class="resolution-label">{{ item.label }}</text>
-          <text class="resolution-hint">{{ item.hint }}</text>
+          <view class="resolution-card__body">
+            <text class="resolution-label">{{ item.label }}</text>
+            <text class="resolution-hint">{{ item.hint }}</text>
+          </view>
         </view>
       </view>
 
@@ -57,8 +59,10 @@
               mode="aspectFit"
             />
           </view>
-          <text class="model-label">{{ item.label }}</text>
-          <text class="model-hint">{{ item.hint }}</text>
+          <view class="model-card__body">
+            <text class="model-label">{{ item.label }}</text>
+            <text class="model-hint">{{ item.hint }}</text>
+          </view>
         </view>
       </view>
 
@@ -129,7 +133,7 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   max-height: 88vh;
   padding: 16rpx 24rpx calc(24rpx + constant(safe-area-inset-bottom));
   padding: 16rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
-  border-radius: 26rpx 26rpx 0 0;
+  border-radius: 60rpx 60rpx 0rpx 0rpx;
   background: #ffffff;
   box-sizing: border-box;
 }
@@ -172,27 +176,43 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   height: 140rpx;
   min-width: 0;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
   overflow: hidden;
 }
 
 .resolution-card {
-  padding: 14rpx 14rpx 14rpx 14rpx;
   border-radius: 16rpx;
-  background: #faf6f0;
+  background-color: rgba(253, 238, 219, 1);
   color: #4d5560;
 }
 
-/* 有 VIP：右上角预留区；固定 140rpx 高，内边距略收紧 */
-.resolution-card--vip {
-  padding: 44rpx 88rpx 10rpx 12rpx;
+/* 文案区铺满卡片并在内边距盒内水平垂直居中；VIP 卡通过加大上/右侧内边距避开角标后再居中 */
+.resolution-card__body,
+.model-card__body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  padding: 14rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.resolution-card--vip .resolution-card__body,
+.model-card--vip .model-card__body {
+  // padding: 40rpx 80rpx 12rpx 14rpx;
 }
 
 .resolution-card.active {
-  background: linear-gradient(160deg, #ffc98f 0%, #ff9835 100%);
+  background: linear-gradient(
+    156.23deg,
+    rgba(255, 197, 129, 1) 8.94%,
+    rgba(255, 148, 50, 1) 85.54%
+  );
   color: #ffffff;
 }
 
@@ -238,30 +258,35 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
 }
 
 .resolution-label {
+  width: 100%;
+  box-sizing: border-box;
   font-size: 32rpx;
   font-weight: 800;
   line-height: 1.2;
+  text-align: center;
 }
 
 .resolution-hint {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 6rpx;
   font-size: 20rpx;
   color: #7a8490;
+  text-align: center;
 }
 
 .model-card {
-  padding: 14rpx 14rpx 14rpx 14rpx;
   border-radius: 16rpx;
-  background: #ebebeb;
+  background-color: rgba(244, 244, 244, 1);
   color: #4d5560;
 }
 
-.model-card--vip {
-  padding: 44rpx 88rpx 10rpx 12rpx;
-}
-
 .model-card.active {
-  background: linear-gradient(165deg, #5a6b7c 0%, #2c3844 100%);
+  background: linear-gradient(
+    156.23deg,
+    rgba(210, 214, 223, 1) 8.94%,
+    rgba(68, 87, 115, 1) 85.54%
+  );
   color: #ffffff;
 }
 
@@ -270,17 +295,22 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
 }
 
 .model-label {
-  font-size: 26rpx;
-  font-weight: 700;
-  line-height: 1.3;
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
 }
 
 .model-hint {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 6rpx;
   font-size: 20rpx;
   color: #7a8490;
+  text-align: center;
 }
 
 .quality-duration {

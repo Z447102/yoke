@@ -67,17 +67,44 @@ npm run build:mp-weixin
 3. 配置 AppID、基础库版本和合法域名。
 4. 真机预览核心页面和授权、支付、定位等平台能力。
 
+**微信开发者工具导入目录（CLI 工程）**：执行 `npm run dev:mp-weixin` 后，必须导入 **`dist/dev/mp-weixin`**（开发）或执行 `npm run build:mp-weixin` 后导入 **`dist/build/mp-weixin`**（发行包预览）。导入仓库根目录或 `src` 会导致无法识别小程序结构、无法启动模拟器。
+
 ## 4. 基础配置约定
 
-### 4.1 页面路由
+### 4.1 页面路由与分包（微信小程序）
 
-页面统一在 `src/pages.json` 中维护：
+页面统一在 `src/pages.json` 中维护。**主包 + 分包** 需符合微信体积与加载规范，新增页面前先判断应落在主包还是分包。
 
-- 主包页面放在 `pages`。
-- 业务体量较大的模块优先使用 `subPackages`。
-- 页面标题、导航栏颜色、下拉刷新等配置应靠近页面声明维护。
+#### 4.1.1 主包 `pages`（首包，控制体积）
 
-示例：
+- 数组**第一项**为小程序入口页（当前为 `pages/splash/index`），勿随意调整顺序。
+- 放**冷启动必经**、**高频 tab 入口**（若使用微信原生 `tabBar`）、**登录**等轻量页，避免把大模块、大量静态资源堆进主包。
+- 当前主包页面：`pages/splash/index`、`pages/home/index`、`pages/mine/index`、`pages/login/index`。
+
+#### 4.1.2 分包 `subPackages`
+
+- 业务链路长、页面多、静态资源重的模块，整段目录挂到一个 `root` 下，使用 `name` 便于 `preloadRule` 引用。
+- 分包内 `path` 为相对 `root` 的路径，**不要**写 `pages/` 前缀；与 `root` 拼接后与代码里 `uni.navigateTo({ url: '/pages/...' })` 的完整路径一致即可。
+- **当前分包约定**（后续新增模块可并列增加 `subPackages` 项）：
+
+| 分包 `name` | `root` | 说明 |
+| --- | --- | --- |
+| `create` | `pages/create` | 一键成片：商户信息、类目、位置、生成配置等 |
+| `legal` | `pages/legal` | 协议与隐私政策（低频，利于主包瘦身） |
+
+#### 4.1.3 预下载 `preloadRule`
+
+- 在用户可能进入分包前，由微信在空闲时预拉取分包代码（见 `pages.json` 顶层 `preloadRule`）。
+- 当前：进入 `pages/home/index` 后预下载 `create` 分包，减少从首页点「一键成片」的首跳等待。
+- 新增 `preloadRule` 时注意 `packages` 填的是分包 **`name`**，且勿对低频页过度预载，以免浪费流量。
+
+#### 4.1.4 开发时注意点
+
+- 路由跳转仍使用**完整路径**（如 `/pages/create/index`），与是否分包无关。
+- 若后续启用微信原生 **`tabBar`**：`tabBar.list` 里的 `pagePath` **必须**写在主包 `pages` 中，**不能**放在分包（微信限制）。自定义底部栏（组件内 `redirectTo`）不受此限，但若改为原生 tab，需把对应页迁回主包或调整产品结构。
+- 新增「大功能」时优先：**新建分包 root** 或归入现有业务分包，并在本文档表格中补一行，避免主包膨胀。
+
+示例（主包仅示意一项）：
 
 ```json
 {
@@ -87,6 +114,20 @@ npm run build:mp-weixin
       "style": {
         "navigationBarTitleText": "首页"
       }
+    }
+  ],
+  "subPackages": [
+    {
+      "root": "pages/example-module",
+      "name": "example",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "示例"
+          }
+        }
+      ]
     }
   ]
 }
@@ -159,7 +200,7 @@ npm run build:mp-weixin
 
 注意事项：
 
-- `tabBar.list` 中的 `pagePath` 必须已在 `pages` 中声明。
+- `tabBar.list` 中的 `pagePath` 必须已在主包 `pages` 中声明（不能为分包页，见 §4.1.4）。
 - 图标建议放在 `src/static/tabbar`，保持普通态和选中态成对命名。
 - 小程序 tabBar 通常支持 2 到 5 个入口，后续新增入口时需同步页面路由和图标资源。
 

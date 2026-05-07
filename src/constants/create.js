@@ -22,5 +22,22 @@ export const CREATE_MODEL_OPTIONS = [
   { id: 'seedance2', label: 'Seedance2.0', hint: '效果极为逼真', vip: true }
 ]
 
-// --- 交互策略：高清档位（当前仅 1080P）点数不足则引导 VIP ---
-export const HD_RESOLUTION_IDS = ['1080p']
+/**
+ * 成片消耗点数（与模板成片时长、分辨率、模型相关；联调后可由接口覆盖规则）。
+ * @param {{ durationSec?: number, resolutionId?: string, modelId?: string }} params
+ * @returns {number}
+ */
+export function computeVideoGenerateCostPoints(params = {}) {
+  const durationSec = Math.max(1, Math.floor(Number(params.durationSec) || 30))
+  const resolutionId = params.resolutionId || '720p'
+  const modelId = params.modelId || 'happy-horse'
+
+  const res = CREATE_RESOLUTION_OPTIONS.find((r) => r.id === resolutionId)
+  const mod = CREATE_MODEL_OPTIONS.find((m) => m.id === modelId)
+
+  let pts = VIDEO_GENERATE_COST_POINTS
+  pts += Math.ceil(durationSec / 15) * 2
+  if (res?.vip) pts += 10
+  if (mod?.vip) pts += 10
+  return Math.max(1, pts)
+}
