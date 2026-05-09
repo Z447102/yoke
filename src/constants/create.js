@@ -22,6 +22,38 @@ export const CREATE_MODEL_OPTIONS = [
   { id: 'seedance2', label: 'Seedance2.0', hint: '效果极为逼真', vip: true }
 ]
 
+/** 一键成片可选行业（与商户信息页一致；接口下发后可替换数据源） */
+export const CREATE_INDUSTRY_OPTIONS = [
+  '餐饮',
+  '美业',
+  '健身',
+  '医疗',
+  '医美',
+  '大健康',
+  '教育',
+  '宠物',
+  '母婴',
+  '设计',
+  '零售',
+  '娱乐',
+  '酒店',
+  '旅游',
+  '摄影',
+  '策划',
+  '创意',
+  '自媒体',
+  '金融',
+  '保险',
+  '装修业',
+  '家居',
+  '建材',
+  '地产',
+  '制造业',
+  '互联网',
+  '服务类',
+  '生活类'
+]
+
 /**
  * 成片消耗点数（与模板成片时长、分辨率、模型相关；联调后可由接口覆盖规则）。
  * @param {{ durationSec?: number, resolutionId?: string, modelId?: string }} params

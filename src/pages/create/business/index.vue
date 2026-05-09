@@ -9,12 +9,16 @@
       <view class="nav-bar__gap" aria-hidden="true" />
     </view>
 
-    <view class="industry-title">
-      <text class="industry-text">{{ industry }}</text>
-      <image class="industry-icon" :src="createIconArrowDown" mode=""></image>
+    <view class="industry-trigger" @tap="openIndustryPicker">
+      <text class="industry-trigger__text">{{ industryRowLabel }}</text>
+      <image
+        class="industry-trigger__arrow"
+        :src="createIconArrowDown"
+        mode="aspectFit"
+      />
     </view>
 
-    <view class="category-section">
+    <view v-if="showCategorySection" class="category-section">
       <view
         v-for="(level, levelIndex) in visibleLevels"
         :key="levelIndex"
@@ -56,6 +60,25 @@
         <text class="tips-text">后续可在【我的 - 商业信息】内修改</text>
       </view>
     </view>
+
+    <view v-if="showIndustryPopup" class="industry-sheet-mask" @tap="closeIndustryPicker">
+      <view class="industry-sheet" @tap.stop>
+        <view class="industry-sheet__handle"></view>
+        <view class="industry-sheet__title">选择行业</view>
+        <view class="industry-sheet__grid">
+          <view
+            v-for="name in CREATE_INDUSTRY_OPTIONS"
+            :key="name"
+            class="industry-sheet__item"
+            :class="{ 'industry-sheet__item--active': tempIndustry === name }"
+            @tap="tempIndustry = name"
+          >
+            {{ name }}
+          </view>
+        </view>
+        <button class="industry-sheet__confirm" @tap="confirmIndustryPicker">确定</button>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -66,10 +89,15 @@
 import { computed, ref, onMounted } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
 import { getBusinessCategories } from '@/api/create'
+import { CREATE_INDUSTRY_OPTIONS } from '@/constants/create'
 import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh
 } from '@/utils/create-nav-bar-style'
+import {
+  hidePageLoading,
+  showPageLoading
+} from '@/utils/page-loading'
 import createBackIcon from '@/static/create/create-back-icon.png'
 import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
 import createIconAttention from '@/static/create/create-icon-attention.png'
@@ -79,8 +107,27 @@ onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
 const industry = ref('餐饮')
+/** add / edit：均可点行或底部面板更换行业 */
+const pageIntent = ref('add')
+/**
+ * 一键成片生成页 · 新增主营业务：不传行业，不预勾选类目；选完行业后才能操作一二级标签
+ * （来自 ?from=generate-add）
+ */
+const freshAddFromGenerate = ref(false)
 const categoryTree = ref([])
 const selectedPath = ref([])
+const showIndustryPopup = ref(false)
+const tempIndustry = ref('')
+
+/** 展示 URL/当前选中的行业（一键成片初始页已选行业会随 query 带入）；无值时兜底「选择行业」 */
+const industryRowLabel = computed(() => {
+  const t = String(industry.value || '').trim()
+  return t || '选择行业'
+})
+
+const showCategorySection = computed(
+  () => String(industry.value || '').trim().length > 0
+)
 
 const visibleLevels = computed(() => {
   const levels = []
@@ -112,9 +159,24 @@ const canConfirm = computed(() => {
 })
 
 onLoad((query = {}) => {
-  if (query.industry) {
-    industry.value = decodeURIComponent(query.industry)
+  const rawIntent = typeof query.intent === 'string' ? query.intent : ''
+  pageIntent.value = rawIntent.toLowerCase() === 'edit' ? 'edit' : 'add'
+
+  freshAddFromGenerate.value =
+    pageIntent.value === 'add' &&
+    String(query.from || '').toLowerCase() === 'generate-add'
+
+  if (freshAddFromGenerate.value) {
+    industry.value = ''
+    categoryTree.value = []
+    selectedPath.value = []
+    return
   }
+
+  if (query.industry) {
+    industry.value = decodeURIComponent(String(query.industry))
+  }
+
   fetchCategoryTree()
 })
 
@@ -123,9 +185,64 @@ function goBack() {
 }
 
 async function fetchCategoryTree() {
-  const data = await getBusinessCategories(industry.value)
-  categoryTree.value = data.levels || []
-  selectedPath.value = []
+  const key = String(industry.value || '').trim()
+  if (!key) {
+    categoryTree.value = []
+    selectedPath.value = []
+    return
+  }
+
+  showPageLoading()
+  try {
+    const data = await getBusinessCategories(key)
+    categoryTree.value = data.levels || []
+    selectedPath.value = []
+
+    /** 仅「一键成片初始页」等带行业的 add：默认选第一条到叶子；生成页新增主营业务不做默认勾选 */
+    const useAddDefaults =
+      pageIntent.value === 'add' && !freshAddFromGenerate.value
+    if (useAddDefaults) {
+      applyFirstBranchLeafPath(categoryTree.value)
+    }
+  } finally {
+    hidePageLoading()
+  }
+}
+
+/** 自上而下取每级的第一个选项，直达叶子节点 */
+function applyFirstBranchLeafPath(nodes) {
+  if (!Array.isArray(nodes) || !nodes.length) return
+  const path = []
+  let cursor = nodes[0]
+  while (cursor) {
+    path.push(cursor)
+    const children = cursor.children
+    if (!children?.length) break
+    cursor = children[0]
+  }
+  selectedPath.value = path
+}
+
+function openIndustryPicker() {
+  const cur = String(industry.value || '').trim()
+  tempIndustry.value =
+    cur && CREATE_INDUSTRY_OPTIONS.includes(cur)
+      ? cur
+      : CREATE_INDUSTRY_OPTIONS[0]
+  showIndustryPopup.value = true
+}
+
+function closeIndustryPicker() {
+  showIndustryPopup.value = false
+}
+
+async function confirmIndustryPicker() {
+  const pick = CREATE_INDUSTRY_OPTIONS.includes(tempIndustry.value)
+    ? tempIndustry.value
+    : CREATE_INDUSTRY_OPTIONS[0]
+  industry.value = pick
+  showIndustryPopup.value = false
+  await fetchCategoryTree()
 }
 
 function selectCategory(levelIndex, category) {
@@ -134,6 +251,10 @@ function selectCategory(levelIndex, category) {
 }
 
 function confirmSelection() {
+  if (!String(industry.value || '').trim()) {
+    uni.showToast({ title: '请先选择行业', icon: 'none' })
+    return
+  }
   if (!canConfirm.value) {
     uni.showToast({
       title: '请完成主营业务选择',
@@ -210,24 +331,27 @@ function confirmSelection() {
   height: 32rpx;
 }
 
-.industry-title {
+.industry-trigger {
   height: 86rpx;
   border-bottom: 1rpx solid #eeeeee;
-  color: #1f2933;
-  font-size: 28rpx;
-  font-weight: 700;
+  box-sizing: border-box;
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  .industry-text{
-	font-size: 28rpx;
-	color: #1F2937;
-  }
-  .industry-icon{
-	width: 28rpx;
-	height: 28rpx;
-	margin-left: 4rpx;
-  }
+  gap: 8rpx;
+}
+
+.industry-trigger__text {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.industry-trigger__arrow {
+  width: 28rpx;
+  height: 28rpx;
+  flex-shrink: 0;
 }
 
 .title-arrow {
@@ -329,5 +453,88 @@ function confirmSelection() {
     font-size: 20rpx;
     color: #9ca3af;
   }
+}
+
+.industry-sheet-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  box-sizing: border-box;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  background: rgba(0, 0, 0, 0.54);
+  display: flex;
+  align-items: flex-end;
+}
+
+.industry-sheet {
+  width: 100%;
+  padding: 18rpx 30rpx calc(46rpx + constant(safe-area-inset-bottom));
+  padding: 18rpx 30rpx calc(46rpx + env(safe-area-inset-bottom));
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.industry-sheet__handle {
+  width: 52rpx;
+  height: 8rpx;
+  margin: 0 auto 30rpx;
+  border-radius: 999rpx;
+  background: #d8d8d8;
+}
+
+.industry-sheet__title {
+  color: #1f2933;
+  font-size: 30rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.industry-sheet__grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-top: 36rpx;
+}
+
+.industry-sheet__item {
+  width: 157rpx;
+  height: 68rpx;
+  margin-right: 20rpx;
+  margin-bottom: 24rpx;
+  box-sizing: border-box;
+  border: 1rpx solid #e3e5ea;
+  border-radius: 14rpx;
+  color: #a4abb5;
+  font-size: 26rpx;
+  line-height: 68rpx;
+  text-align: center;
+  background: #ffffff;
+}
+
+.industry-sheet__item:nth-child(4n) {
+  margin-right: 0;
+}
+
+.industry-sheet__item--active {
+  border-color: #ff8e24;
+  color: #ff8e24;
+  background: #fff6ed;
+  font-weight: 700;
+}
+
+.industry-sheet__confirm {
+  width: 510rpx;
+  height: 108rpx;
+  margin: 48rpx auto 0;
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #ffbd72 0%, #ff963a 100%);
+  color: #ffffff;
+  font-size: 32rpx;
+  line-height: 108rpx;
+}
+
+.industry-sheet__confirm::after {
+  border: 0;
 }
 </style>

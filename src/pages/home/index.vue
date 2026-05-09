@@ -49,6 +49,7 @@
  */
 import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useHomeStore } from '@/stores/home'
+import { hidePageLoading, showPageLoading } from '@/utils/page-loading'
 import HomeHeader from './components/HomeHeader.vue'
 import TodayScoreCard from './components/TodayScoreCard.vue'
 import HotContentList from './components/HotContentList.vue'
@@ -61,8 +62,13 @@ import heroTopSkinBg from '@/static/home/home-top-skin-bg.png'
 
 const homeStore = useHomeStore()
 
-onLoad(() => {
-  homeStore.fetchDashboard()
+onLoad(async () => {
+  showPageLoading()
+  try {
+    await homeStore.fetchDashboard()
+  } finally {
+    hidePageLoading()
+  }
 })
 
 onPullDownRefresh(async () => {

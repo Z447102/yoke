@@ -15,7 +15,7 @@
       <view class="filter-group">
         <text class="filter-label">主营业务</text>
         <view class="filter-pill" @tap="openBusinessPopup">
-          <text>{{ currentBusiness.name }}</text>
+          <text>{{ currentBusinessSlotTitle }}</text>
           <image
             class="filter-pill__arrow"
             :src="createIconArrowDown"
@@ -59,7 +59,8 @@
               mode="aspectFit"
             />
           </view>
-          <text class="view-works-btn__label">查看成片</text>
+          <!-- 小程序里 text 作 flex 子项易竖排，用 view 保证图标与文案同一行 -->
+          <view class="view-works-btn__label">查看成片</view>
         </view>
       </view>
       <scroll-view scroll-x class="template-scroll" :show-scrollbar="false">
@@ -252,14 +253,16 @@
 
         <view class="business-list">
           <view
-            v-for="business in businessOptions"
+            v-for="(business, businessIndex) in businessOptions"
             :key="business.id"
             class="business-option"
             :class="{ active: tempBusiness === business.id }"
             @tap="selectBusiness(business.id)"
           >
             <view class="business-info">
-              <text class="business-name">{{ business.name }}</text>
+              <text class="business-name">{{
+                businessSlotTitle(businessIndex)
+              }}</text>
               <text class="business-desc">{{ business.desc }}</text>
             </view>
             <view class="business-edit" @tap.stop="onBusinessEdit(business)">
@@ -278,7 +281,14 @@
           </view>
         </view>
 
-        <view class="business-add">＋ 新增主营业务</view>
+        <view class="business-add" @tap.stop="onBusinessAdd">
+          <!-- 小程序 <image> 对 SVG 兼容性差，改用 view 绘制 + 保证必显 -->
+          <view class="business-add__icon-plus" aria-hidden="true">
+            <view class="business-add__icon-bar business-add__icon-bar--v" />
+            <view class="business-add__icon-bar business-add__icon-bar--h" />
+          </view>
+          <text>新增主营业务</text>
+        </view>
         <button class="popup-confirm" @tap="confirmBusiness">确定</button>
       </view>
     </view>
@@ -335,6 +345,11 @@
       @close="closePointsRechargeModal"
       @confirm="onPointsRechargeConfirm"
     />
+
+    <GenerateWarmTipModal
+      :show="showGenerateWarmTipModal"
+      @confirm="onGenerateWarmTipConfirm"
+    />
   </view>
 </template>
 
@@ -355,6 +370,7 @@ import {
 import QualitySettingsSheet from '../components/QualitySettingsSheet.vue'
 import VipSubscribeModal from '../components/VipSubscribeModal.vue'
 import PointsRechargeModal from '../components/PointsRechargeModal.vue'
+import GenerateWarmTipModal from '../components/GenerateWarmTipModal.vue'
 import { supportsContinuousVipSubscription } from '@/utils/vip-subscription-platform'
 import {
   getCreateNavBarInlineStyle,
@@ -378,7 +394,7 @@ const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 const PRIMARY_BUSINESS_ID = 'primary'
 
 // --- 页面静态配置：模板、标签、照片槽、数字人形象（Mock，后续接接口） ---
-const businessTags = ref(['新派粤菜', '家宴', '客家菜', '活鲜', '粤菜', '融合菜'])
+const businessTags = ref([])
 const templates = [
   {
     id: 'store',
@@ -413,6 +429,8 @@ const photoSlots = ['门头照片', '内部环境', '菜品照片', '其他照�
 const STORAGE_AVATAR_TAB = 'create:generate-avatar-tab'
 const STORAGE_AVATAR_ID_OFFICIAL = 'create:generate-avatar-id-official'
 const STORAGE_AVATAR_ID_MINE = 'create:generate-avatar-id-mine'
+/** 生成前「温馨提示」勾选「下次不再提示」后写入 */
+const STORAGE_SKIP_GENERATE_WARM_TIP = 'create:skip-generate-warm-tip'
 
 const avatarsOfficial = [
   {
@@ -478,13 +496,15 @@ const businessOptions = ref([
     id: 'business1',
     name: '主营业务1',
     path: '餐饮-火锅',
-    desc: '餐饮-火锅'
+    desc: '餐饮-火锅',
+    tagLabels: ['餐饮', '火锅']
   },
   {
     id: 'business2',
     name: '主营业务2',
     path: '餐饮-正餐(家常菜 / 酒楼)...',
-    desc: '餐饮-正餐(家常菜 / 酒楼)...'
+    desc: '餐饮-正餐(家常菜 / 酒楼)...',
+    tagLabels: ['餐饮', '正餐(家常菜 / 酒楼)']
   }
 ])
 const platformOptions = [
@@ -539,6 +559,7 @@ const vipModalVariant = ref('continuous')
 
 const showPointsRechargeModal = ref(false)
 const pointsRechargeDeficit = ref(0)
+const showGenerateWarmTipModal = ref(false)
 // 本地直出「有优惠活动」版充值弹窗；联调后改回 userStore.pointsTopUpHasPromo
 const pointsRechargeHasPromo = computed(() => true)
 
@@ -546,6 +567,8 @@ const pointsRechargeHasPromo = computed(() => true)
 const createFlowIndustry = ref('餐饮')
 /** 从弹窗点「编辑」进入子页返回后，用于写回对应条目 */
 const editingBusinessId = ref('')
+/** 「新增主营业务」跳转选择页返回后追加一条到下拉选项 */
+const pendingAddNewBusiness = ref(false)
 
 // --- 展示用 computed ---
 const currentBusiness = computed(
@@ -553,6 +576,19 @@ const currentBusiness = computed(
     businessOptions.value.find((item) => item.id === selectedBusiness.value) ||
     businessOptions.value[0]
 )
+
+/** 筛选项与弹窗列表统一：按顺序展示「主营业务1 / 2 / 3…」 */
+function businessSlotTitle(index) {
+  const n = Number(index) + 1
+  return Number.isFinite(n) && n > 0 ? `主营业务${n}` : '主营业务'
+}
+
+const currentBusinessSlotTitle = computed(() => {
+  const list = businessOptions.value
+  const idx = list.findIndex((b) => b.id === selectedBusiness.value)
+  return idx >= 0 ? businessSlotTitle(idx) : businessSlotTitle(0)
+})
+
 const currentPlatform = computed(() => platformOptions.find((item) => item.id === selectedPlatform.value) || platformOptions[0])
 
 const currentResolution = computed(
@@ -616,6 +652,10 @@ function selectAvatar(id) {
 
 onMounted(() => {
   scheduleCreateNavBarStyleRefresh(createNavBarStyle)
+  const biz = businessOptions.value.find(
+    (b) => b.id === selectedBusiness.value
+  )
+  businessTags.value = tagLabelsForBusiness(biz || {})
 })
 
 onReady(() => {
@@ -657,6 +697,25 @@ function pathLabelsFromPayload(path) {
     .filter(Boolean)
 }
 
+/** 头部标签行与每条主营业务绑定；无上送 tagLabels 时从 desc/path 推导 */
+function tagLabelsForBusiness(business) {
+  if (!business || typeof business !== 'object') return []
+  const preset = business.tagLabels
+  if (Array.isArray(preset) && preset.length > 0) {
+    return preset.map((t) => String(t).trim()).filter(Boolean)
+  }
+  const raw = String(business.desc || business.path || '').trim()
+  if (!raw) return []
+  if (raw.includes(' - ')) {
+    return raw.split(' - ').map((s) => s.trim()).filter(Boolean)
+  }
+  const pieces = raw
+    .split(/[-–—]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return pieces.length > 1 ? pieces : [raw]
+}
+
 function applyMerchantDraft(draft) {
   const industry = String(draft.industry || '').trim() || '餐饮'
   createFlowIndustry.value = industry
@@ -668,14 +727,13 @@ function applyMerchantDraft(draft) {
       id: PRIMARY_BUSINESS_ID,
       name: shortName,
       path: desc,
-      desc
+      desc,
+      tagLabels: labels.length ? [...labels] : []
     }
   ]
   selectedBusiness.value = PRIMARY_BUSINESS_ID
   tempBusiness.value = PRIMARY_BUSINESS_ID
-  if (labels.length) {
-    businessTags.value = labels
-  }
+  businessTags.value = labels.length ? [...labels] : []
 }
 
 function applySelectedBusiness(payload) {
@@ -685,6 +743,30 @@ function applySelectedBusiness(payload) {
     String(payload.displayName || '').trim() ||
     '未选择'
   const shortName = labels[labels.length - 1] || '主营业务'
+
+  if (pendingAddNewBusiness.value) {
+    pendingAddNewBusiness.value = false
+    const newId = `biz_${Date.now()}`
+    businessOptions.value.push({
+      id: newId,
+      name: shortName,
+      path: desc,
+      desc,
+      tagLabels: labels.length ? [...labels] : []
+    })
+    selectedBusiness.value = newId
+    tempBusiness.value = newId
+    if (labels.length) {
+      businessTags.value = labels
+    }
+    if (payload.industry) {
+      createFlowIndustry.value =
+        String(payload.industry).trim() || createFlowIndustry.value
+    }
+    editingBusinessId.value = ''
+    return
+  }
+
   const id = editingBusinessId.value || selectedBusiness.value
   const list = businessOptions.value
   const idx = list.findIndex((b) => b.id === id)
@@ -693,16 +775,26 @@ function applySelectedBusiness(payload) {
       ...list[idx],
       name: shortName,
       path: desc,
-      desc
+      desc,
+      tagLabels:
+        labels.length > 0 ? [...labels] : list[idx].tagLabels
     }
   } else if (list.length) {
-    list[0] = { ...list[0], name: shortName, path: desc, desc }
+    list[0] = {
+      ...list[0],
+      name: shortName,
+      path: desc,
+      desc,
+      tagLabels:
+        labels.length > 0 ? [...labels] : list[0].tagLabels
+    }
   }
   if (labels.length) {
     businessTags.value = labels
   }
   if (payload.industry) {
-    createFlowIndustry.value = String(payload.industry).trim() || createFlowIndustry.value
+    createFlowIndustry.value =
+      String(payload.industry).trim() || createFlowIndustry.value
   }
   editingBusinessId.value = ''
 }
@@ -715,6 +807,7 @@ onShow(() => {
     uni.removeStorageSync('create:selected-business')
     return
   }
+  pendingAddNewBusiness.value = false
   const draft = readMerchantDraft()
   if (draft) {
     applyMerchantDraft(draft)
@@ -727,9 +820,14 @@ function goBack() {
   uni.navigateBack()
 }
 
-/** 查看已生成成片（列表页接入后改为 navigateTo） */
+/** 查看成片：跳转列表页（当前用 `mock=1` 拉 Mock 有数据列表；接入真实接口后去掉 query） */
 function openViewFinishedVideos() {
-  uni.showToast({ title: '成片列表即将上线', icon: 'none' })
+  uni.navigateTo({
+    url: '/pages/create/works/index?mock=1',
+    fail: () => {
+      uni.showToast({ title: '页面打开失败', icon: 'none' })
+    }
+  })
 }
 
 function openShootingTips() {
@@ -752,6 +850,10 @@ function selectBusiness(id) {
 
 function confirmBusiness() {
   selectedBusiness.value = tempBusiness.value
+  const biz = businessOptions.value.find(
+    (b) => b.id === selectedBusiness.value
+  )
+  businessTags.value = tagLabelsForBusiness(biz || {})
   closeBusinessPopup()
 }
 
@@ -759,9 +861,20 @@ function confirmBusiness() {
 function onBusinessEdit(business) {
   const industry = String(createFlowIndustry.value || '').trim() || '餐饮'
   editingBusinessId.value = business?.id != null ? String(business.id) : ''
+  pendingAddNewBusiness.value = false
   closeBusinessPopup()
   uni.navigateTo({
-    url: `/pages/create/business/index?industry=${encodeURIComponent(industry)}`
+    url: `/pages/create/business/index?industry=${encodeURIComponent(industry)}&intent=edit`
+  })
+}
+
+/** 新增主营业务：与设计稿一致进入「主营业务」选择页 */
+function onBusinessAdd() {
+  editingBusinessId.value = ''
+  pendingAddNewBusiness.value = true
+  closeBusinessPopup()
+  uni.navigateTo({
+    url: '/pages/create/business/index?intent=add&from=generate-add'
   })
 }
 
@@ -903,7 +1016,44 @@ function confirmGenerateFromPopup() {
     return
   }
   closeQualityPopup()
-  generateVideo()
+  openGenerateWarmTipOrRun()
+}
+
+function shouldSkipGenerateWarmTip() {
+  try {
+    return uni.getStorageSync(STORAGE_SKIP_GENERATE_WARM_TIP) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** 已通过 VIP / 点数校验后：按需弹出「温馨提示」，再进入生成流程 */
+function openGenerateWarmTipOrRun() {
+  if (shouldSkipGenerateWarmTip()) {
+    runGenerateSuccessFlow()
+    return
+  }
+  safeHideKeyboard()
+  showGenerateWarmTipModal.value = true
+}
+
+function onGenerateWarmTipConfirm(payload) {
+  if (payload?.skipNextTime) {
+    try {
+      uni.setStorageSync(STORAGE_SKIP_GENERATE_WARM_TIP, '1')
+    } catch {
+      // ignore
+    }
+  }
+  showGenerateWarmTipModal.value = false
+  runGenerateSuccessFlow()
+}
+
+function runGenerateSuccessFlow() {
+  uni.showToast({
+    title: '开始生成视频',
+    icon: 'none'
+  })
 }
 
 function generateVideo() {
@@ -916,10 +1066,7 @@ function generateVideo() {
     }
     return
   }
-  uni.showToast({
-    title: '开始生成视频',
-    icon: 'none'
-  })
+  openGenerateWarmTipOrRun()
 }
 </script>
 
@@ -1075,7 +1222,9 @@ function generateVideo() {
   background: linear-gradient(180deg, rgba(255, 197, 129, 1) 0%, rgba(255, 148, 50, 1) 100%);
   display: flex;
   flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: center;
   position: relative;
 }
 
@@ -1098,11 +1247,13 @@ function generateVideo() {
 }
 
 .view-works-btn__label {
+  flex-shrink: 0;
   font-size: 24rpx;
   font-weight: 600;
-  color: #FFFFFF;
-  line-height: 1;
+  color: #ffffff;
+  line-height: 1.2;
   margin-left: 10rpx;
+  white-space: nowrap;
 }
 
 .tips {
@@ -1641,8 +1792,37 @@ function generateVideo() {
   color: #1f2933;
   font-size: 28rpx;
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
+  gap: 10rpx;
+}
+
+/* 32rpx 圆角「+」，与 #f2f2f2 底对比足够（非 SVG，避免微信小程序 image 不显） */
+.business-add__icon-plus {
+  position: relative;
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
+}
+
+.business-add__icon-bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: #4b5563;
+  border-radius: 3rpx;
+  transform: translate(-50%, -50%);
+}
+
+.business-add__icon-bar--v {
+  width: 4rpx;
+  height: 20rpx;
+}
+
+.business-add__icon-bar--h {
+  width: 20rpx;
+  height: 4rpx;
 }
 
 .popup-confirm {

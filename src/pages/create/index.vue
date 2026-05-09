@@ -168,42 +168,13 @@ import createIconWaveHand from '@/static/create/create-icon-wave-hand.png'
 import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
 import createIconMapPin from '@/static/create/create-icon-map-pin.png'
 import createIconAttention from '@/static/create/create-icon-attention.png'
+import { CREATE_INDUSTRY_OPTIONS } from '@/constants/create'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
-// --- 行业列表（本地枚举；后续可接口下发） ---
-const industryOptions = [
-  '餐饮',
-  '美业',
-  '健身',
-  '医疗',
-  '医美',
-  '大健康',
-  '教育',
-  '宠物',
-  '母婴',
-  '设计',
-  '零售',
-  '娱乐',
-  '酒店',
-  '旅游',
-  '摄影',
-  '策划',
-  '创意',
-  '自媒体',
-  '金融',
-  '保险',
-  '装修业',
-  '家居',
-  '建材',
-  '地产',
-  '制造业',
-  '互联网',
-  '服务类',
-  '生活类'
-]
+const industryOptions = CREATE_INDUSTRY_OPTIONS
 
 const selectedIndustry = ref('')
 const tempIndustry = ref('')

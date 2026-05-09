@@ -67,6 +67,21 @@
             "navigationBarTitleText": "生成视频",
             "navigationStyle": "custom"
           }
+        },
+        {
+          "path": "works/index",
+          "style": {
+            "navigationBarTitleText": "查看成片",
+            "navigationStyle": "custom",
+            "enablePullDownRefresh": false
+          }
+        },
+        {
+          "path": "works/detail",
+          "style": {
+            "navigationBarTitleText": "成片详情",
+            "navigationStyle": "custom"
+          }
         }
       ]
     },

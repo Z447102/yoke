@@ -182,6 +182,7 @@ import { onPullDownRefresh, onReady, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { performLogout } from '@/hooks/use-login'
 import { getMinePageData } from '@/api/mine'
+import { hidePageLoading, showPageLoading } from '@/utils/page-loading'
 import HomeTabBar from '@/pages/home/components/HomeTabBar.vue'
 import mineHeaderBg from '@/static/mine/mine-header-bg.png'
 import iconPoints from '@/static/mine/icon-points.png'
@@ -277,9 +278,14 @@ function scheduleHeroLayoutSync() {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
   scheduleHeroLayoutSync()
-  loadMineWorks()
+  showPageLoading()
+  try {
+    await loadMineWorks()
+  } finally {
+    hidePageLoading()
+  }
 })
 
 onReady(() => {
