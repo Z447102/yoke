@@ -93,42 +93,65 @@
       </scroll-view>
     </view>
 
-    <!-- 素材：上传照片 -->
+    <!-- 素材：上传照片（设计：四格 + 每格下「示例」+ 顶部照片示例入口） -->
     <view class="section upload-section">
-      <view class="section-header">
+      <view class="section-header upload-section-header">
         <view class="section-title">请上传照片</view>
-        <view class="tips tips--shooting" @tap.stop="openShootingTips">
+        <view class="photo-examples-link" @tap.stop="openPhotoExamples">
           <image
-            class="tips-icon-img"
+            class="photo-examples-link__icon"
             :src="createIconUploadHelp"
             mode="aspectFit"
           />
-          <text>拍摄技巧</text>
+          <text class="photo-examples-link__text">照片示例</text>
           <image
-            class="tips-chevron"
-            :src="iconChevronRightLight"
+            class="photo-examples-link__chevron"
+            :src="createPhotoExamplesChevron"
             mode="aspectFit"
           />
         </view>
       </view>
 
+      <view class="upload-warning">
+        <text class="upload-warning__alert">* 重要提示</text>
+        <text class="upload-warning__rest">请参照 </text>
+        <text
+          class="upload-warning__rest upload-warning__link"
+          @tap.stop="openPhotoExamples"
+        >[照片示例]</text>
+        <text class="upload-warning__rest"> 拍摄照片</text>
+      </view>
+
+      <!-- 与旧版一致：默认可视约 3 格 + 露出一截下一格，横向滑动看剩余 -->
       <view class="photo-scroll-outer">
         <scroll-view
           scroll-x
-          class="photo-list-scroll"
+          class="photo-upload-scroll"
           :show-scrollbar="false"
           enable-flex
         >
-          <view class="photo-list">
-            <view v-for="photo in photoSlots" :key="photo" class="photo-slot">
-              <view class="photo-slot__circle">
-                <image
-                  class="photo-slot__plus"
-                  :src="createIconPhotoPlus"
-                  mode="aspectFit"
-                />
+          <view class="photo-upload-list">
+            <view
+              v-for="slot in photoSlotList"
+              :key="slot.key"
+              class="upload-photo-slide"
+            >
+              <view class="photo-slot-box" @tap="onPickPhoto(slot.key)">
+                <view class="photo-slot-box__circle">
+                  <image
+                    class="photo-slot-box__plus"
+                    :src="createIconPhotoPlus"
+                    mode="aspectFit"
+                  />
+                </view>
+                <text class="photo-slot-box__label">{{ slot.label }}</text>
               </view>
-              <text class="photo-slot__label">{{ photo }}</text>
+              <view
+                class="photo-example-pill"
+                @tap.stop="openPhotoSlotExample(slot.key)"
+              >
+                示例
+              </view>
             </view>
           </view>
         </scroll-view>
@@ -187,28 +210,30 @@
       </view>
     </view>
 
-    <!-- 口播/展示文案 -->
+    <!-- 视频口播文案：多行独立输入（字数限制按设计稿） -->
     <view class="section copy-section">
-      <view class="section-title">视频文案</view>
-      <view class="copy-card">
-        <textarea
-          v-model="copywriting"
-          class="copy-textarea"
-          maxlength="500"
-          placeholder="请输入视频文案"
-          placeholder-class="placeholder"
-        />
-        <view class="copy-footer">
-          <text>{{ copywriting.length }}/500字</text>
-          <button
-            class="clear-btn"
-            :class="{ 'clear-btn--empty': !hasCopywriting }"
-            size="mini"
-            :disabled="!hasCopywriting"
-            @tap="clearCopywriting"
-          >
-            清空
-          </button>
+      <view class="section-title copy-section-title">视频口播文案</view>
+      <view class="copy-lines">
+        <view
+          v-for="line in scriptLines"
+          :key="line.key"
+          class="copy-line-row"
+          :class="
+            line.maxLen > 0 ? 'copy-line-row--editable' : 'copy-line-row--static'
+          "
+        >
+          <template v-if="line.maxLen > 0">
+            <input
+              v-model="line.text"
+              class="copy-line-input"
+              type="text"
+              :maxlength="line.maxLen"
+            />
+            <text class="copy-line-count">
+              {{ line.text.length }}/{{ line.maxLen }}字
+            </text>
+          </template>
+          <text v-else class="copy-line-static-text">{{ line.text }}</text>
         </view>
       </view>
     </view>
@@ -381,7 +406,7 @@ import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
 import createIconViewFilm from '@/static/create/create-icon-view-film.png'
 import createIconTemplateCheck from '@/static/create/create-icon-template-check.png'
 import createIconUploadHelp from '@/static/create/create-icon-upload-help.png'
-import iconChevronRightLight from '@/static/mine/icon-chevron-right-light.svg'
+import createPhotoExamplesChevron from '@/static/create/create-icon-business-edit-chevron.png'
 import createIconPhotoPlus from '@/static/create/create-icon-photo-plus.png'
 import createIconStack from '@/static/create/create-icon-stack.png'
 import createIconBusinessEdit from '@/static/create/create-icon-business-edit.png'
@@ -425,7 +450,13 @@ const templates = [
     image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=220&fit=crop'
   }
 ]
-const photoSlots = ['门头照片', '内部环境', '菜品照片', '其他照片']
+/** 上传槽位：与设计稿「门头 / 菜品 / 环境01 / 环境02」一致 */
+const photoSlotList = [
+  { key: 'facade', label: '门头照片' },
+  { key: 'dish', label: '菜品照片' },
+  { key: 'env1', label: '环境照片01' },
+  { key: 'env2', label: '环境照片02' }
+]
 const STORAGE_AVATAR_TAB = 'create:generate-avatar-tab'
 const STORAGE_AVATAR_ID_OFFICIAL = 'create:generate-avatar-id-official'
 const STORAGE_AVATAR_ID_MINE = 'create:generate-avatar-id-mine'
@@ -519,16 +550,21 @@ const showBusinessPopup = ref(false)
 const selectedPlatform = ref('douyin')
 const tempPlatform = ref('douyin')
 const showPlatformPopup = ref(false)
-const copywriting = ref('重庆老火锅，这味道太顶了！兄弟们，这家重庆老火锅我真的要安利一下。锅底一上来就开始翻滚，那个牛油香味直接冲上来。你看这个毛肚，七上八下，脆到不行。还有这个肥牛，一口下去全是香味。')
-
-const hasCopywriting = computed(
-  () => String(copywriting.value || '').trim().length > 0
-)
-
-function clearCopywriting() {
-  if (!hasCopywriting.value) return
-  copywriting.value = ''
-}
+/**
+ * 口播文案分行：maxLen>0 时为可编辑输入框 + 字数；maxLen===0 时为只读展示文案（白底无框）
+ */
+const scriptLines = ref([
+  { key: 's1', text: '重庆老火锅', maxLen: 10 },
+  { key: 's2', text: '这味道太顶了！', maxLen: 0 },
+  { key: 's3', text: '惠州的宝藏正宗重庆老火锅店', maxLen: 20 },
+  {
+    key: 's4',
+    text: '食材新鲜，现吃现切，锅底麻辣鲜香，直接封神！',
+    maxLen: 0
+  },
+  { key: 's5', text: '爱吃重庆老火锅的直接闭眼冲！', maxLen: 0 },
+  { key: 's6', text: '满满一大桌6荤8素，仅需168', maxLen: 20 }
+])
 
 // --- 用户态：点数用于「生成视频」前校验 ---
 const userStore = useUserStore()
@@ -830,8 +866,31 @@ function openViewFinishedVideos() {
   })
 }
 
-function openShootingTips() {
-  uni.showToast({ title: '拍摄技巧即将上线', icon: 'none' })
+/** 跳转照片示例页；槽位「示例」带 tab 预选对齐门头/菜品/环境 */
+function openPhotoExamples() {
+  uni.navigateTo({
+    url: '/pages/create/photo-examples/index',
+    fail: () => uni.showToast({ title: '页面打开失败', icon: 'none' })
+  })
+}
+
+function openPhotoSlotExample(key) {
+  const q = key ? `?tab=${encodeURIComponent(String(key))}` : ''
+  uni.navigateTo({
+    url: `/pages/create/photo-examples/index${q}`,
+    fail: () => uni.showToast({ title: '页面打开失败', icon: 'none' })
+  })
+}
+
+function onPickPhoto() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['album', 'camera'],
+    success: () => {
+      uni.showToast({ title: '已添加照片', icon: 'none' })
+    }
+  })
 }
 
 // --- 主营业务弹窗 ---
@@ -1074,10 +1133,10 @@ function generateVideo() {
 /* 【一键成片 · 生成页】区块样式：导航 / 筛选 / 卡片 / 底栏 / 业务与平台弹窗 */
 
 .generate-page {
-  min-height: 100vh;
+  // min-height: 100vh;
   /* 固定底栏：画质+生成按钮同排或竖向换行、下方 AI 提示；栏高会变高，留白不足会把最后一屏内容与底栏重合，滚动末尾显示不全 */
-  padding-bottom: calc(400rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(400rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(240rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(240rpx + env(safe-area-inset-bottom));
   background: #ffffff;
   color: #202633;
   box-sizing: border-box;
@@ -1186,7 +1245,7 @@ function generateVideo() {
 
 .section {
   padding: 26rpx 20rpx 18rpx;
-  border-bottom: 1rpx solid #f1f1f1;
+  // border-bottom: 1rpx solid #f1f1f1;
 }
 
 .section-title {
@@ -1402,22 +1461,81 @@ function generateVideo() {
   font-size: 17rpx;
 }
 
-/* 与屏幕内容区等宽横滑：抵消 section 左右 padding，默认可视约 3 格 + 下一格露出；共 4 个模块 */
+.upload-section-header {
+  align-items: center;
+  min-height: 52rpx;
+}
+
+.photo-examples-link {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8rpx;
+  flex-shrink: 0;
+}
+
+.photo-examples-link__icon {
+  width: 28rpx;
+  height: 28rpx;
+  flex-shrink: 0;
+  display: block;
+}
+
+.photo-examples-link__text {
+  line-height: 42rpx;
+  color: rgba(156, 163, 175, 1);
+  font-size: 28rpx;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+  font-weight: 400;
+}
+
+.photo-examples-link__chevron {
+  width: 24rpx;
+  height: 24rpx;
+  flex-shrink: 0;
+  display: block;
+}
+
+.upload-warning {
+  margin-top: 14rpx;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  line-height: 1.55;
+}
+
+.upload-warning__alert {
+  margin-right: 18rpx;
+  font-size: 24rpx;
+  color: #ff705a;
+}
+
+.upload-warning__rest {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+/* 可点击，与说明文案同色 */
+.upload-warning__link {
+  padding: 0 2rpx;
+}
+
 .photo-scroll-outer {
-  margin-top: 20rpx;
+  margin-top: 22rpx;
   margin-left: -20rpx;
   margin-right: -20rpx;
   width: calc(100% + 40rpx);
   box-sizing: border-box;
 }
 
-.photo-list-scroll {
+.photo-upload-scroll {
   width: 100%;
   white-space: nowrap;
   box-sizing: border-box;
 }
 
-.photo-list {
+.photo-upload-list {
   display: inline-flex;
   flex-direction: row;
   align-items: flex-start;
@@ -1426,9 +1544,17 @@ function generateVideo() {
   box-sizing: border-box;
 }
 
-.photo-slot {
-  box-sizing: border-box;
+.upload-photo-slide {
   flex-shrink: 0;
+  width: 180rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 上传方格：与改版前 .photo-slot 一致（浅粉底 + 描边 + 圆形容器上的加号） */
+.photo-slot-box {
+  box-sizing: border-box;
   width: 180rpx;
   height: 180rpx;
   border: 1rpx solid #ffe2e2;
@@ -1441,7 +1567,7 @@ function generateVideo() {
   gap: 16rpx;
 }
 
-.photo-slot__circle {
+.photo-slot-box__circle {
   width: 64rpx;
   height: 64rpx;
   border-radius: 50%;
@@ -1453,12 +1579,12 @@ function generateVideo() {
   flex-shrink: 0;
 }
 
-.photo-slot__plus {
+.photo-slot-box__plus {
   width: 24rpx;
   height: 24rpx;
 }
 
-.photo-slot__label {
+.photo-slot-box__label {
   color: #c7a6a6;
   font-size: 21rpx;
   line-height: 1.3;
@@ -1467,6 +1593,24 @@ function generateVideo() {
   box-sizing: border-box;
   white-space: normal;
   width: 100%;
+}
+
+.photo-example-pill {
+  margin-top: 20rpx;
+  width: 100%;
+  max-width: 132rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #ffffff;
+  font-weight: 500;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 197, 129, 1) 0%,
+    rgba(255, 148, 50, 1) 100%
+  );
 }
 
 .segment {
@@ -1529,48 +1673,88 @@ function generateVideo() {
   white-space: nowrap;
 }
 
-.copy-card {
-  margin-top: 22rpx;
-  padding: 22rpx;
-  border-radius: 18rpx;
-  background: #fff9f9;
+.copy-section {
+  background-color: rgba(255, 255, 255, 1);
 }
 
-.copy-textarea {
-  width: 100%;
-  height: 196rpx;
-  color: #5d6672;
-  font-size: 25rpx;
-  line-height: 1.7;
+.copy-section-title {
+  margin-bottom: 0;
 }
 
-.copy-footer {
+.copy-lines {
+  margin-top: 26rpx;
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.copy-line-row {
+  box-sizing: border-box;
+  margin-top: 16rpx;
+}
+
+.copy-line-row:first-child {
+  margin-top: 0;
+}
+
+.copy-line-row--editable {
+  width: 710rpx;
+  max-width: 100%;
+  height: 56rpx;
+  box-sizing: border-box;
+  padding: 0 24rpx;
+  border-radius: 12rpx;
+  background-color: rgba(254, 249, 249, 1);
+  border: 1rpx solid rgba(252, 240, 240, 1);
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
-  gap: 14rpx;
-  color: #a4abb5;
+  gap: 16rpx;
+}
+
+.copy-line-row--static {
+  width: 710rpx;
+  max-width: 100%;
+  height: 56rpx;
+  box-sizing: border-box;
+  /* 与带框行同宽高；透明边线占位 + 左右 24rpx，与 input 对齐 */
+  padding: 0 24rpx;
+  border: 1rpx solid transparent;
+  border-radius: 12rpx;
+  background-color: rgba(255, 255, 255, 1);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.copy-line-input {
+  flex: 1;
+  min-width: 0;
+  height: 56rpx;
+  line-height: 56rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+}
+
+.copy-line-count {
+  flex-shrink: 0;
   font-size: 22rpx;
+  color: #9ca3af;
+  line-height: 56rpx;
 }
 
-.clear-btn {
-  width: 86rpx;
-  height: 38rpx;
-  margin: 0;
-  padding: 0;
-  border-radius: 999rpx;
-  background: #9ca3af;
-  color: #ffffff;
-  font-size: 20rpx;
-  line-height: 38rpx;
+.copy-line-static-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: #6b7280;
+  line-height: 56rpx;
+  height: 56rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.clear-btn--empty {
-  background: rgba(156, 163, 175, 0.5);
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.clear-btn::after,
 .generate-btn::after {
   border: 0;
 }

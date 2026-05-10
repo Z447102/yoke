@@ -1,0 +1,29 @@
+---
+description: 微信小程序 / uni-app（mp-weixin）兼容要求，编写与修改代码时必须遵守
+globs: src/**/*.vue
+alwaysApply: false
+---
+
+# 微信小程序兼容（重要）
+
+本项目使用 **uni-app 编译到微信小程序（mp-weixin）**。实现或修改功能时，默认以 **真机与基础库表现为准**，不能只在微信开发者工具里“能跑”就认为完成。
+
+## 布局与滚动
+
+- **`scroll-view`（尤其纵向）**：避免依赖 `height: 0` + `flex: 1` 且不给出父级明确高度；父级使用 **`min-height`/`height`（如 `100vh`）** 等可追溯高度，再给子级 `flex: 1`。
+- **嵌套滚动**：注意小程序对嵌套 `scroll-view` 的限制与性能，优先设计单一主滚动区。
+- **`scroll-left` 等属性**：避免向 WXML 写入小程序不接受的类型；慎用 `undefined`/非常规值；条件不绑定时查文档与多端表现。
+
+## 模板与节点
+
+- **列表渲染**：优先使用 **`<block v-for>`**（或单根 `view`），避免使用在小程序端易出问题的 **`<template v-for>`** 写法。
+- **属性**：不写小程序/WXML 不认或非必要的 DOM 属性（例如 **`aria-*`**、`role` 等），除非确认目标端支持。
+
+## API 与运行时
+
+- **`createSelectorQuery().in(instance)`**、`getCurrentInstance`、`enhanced` 等与端强相关的 API，改完后应用 **`npm run build:mp-weixin`** 并关注真机差异。
+- **样式**：注意 `gap`、`aspect-ratio`、部分 `calc` 等在低版本基础库的表现；关键视觉用已验证的写法兜底。
+
+## 自检
+
+- 改动涉及 **页面结构、滚动、条件渲染、分包页** 时：**本地执行 `npm run build:mp-weixin`**，并在说明中提醒 **真机预览** 验证。

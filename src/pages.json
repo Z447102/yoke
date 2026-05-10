@@ -31,7 +31,9 @@
     {
       "path": "pages/login/index",
       "style": {
-        "navigationBarTitleText": "登录"
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom",
+        "backgroundColor": "#f7f7f7"
       }
     }
   ],
@@ -66,6 +68,14 @@
           "style": {
             "navigationBarTitleText": "生成视频",
             "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "photo-examples/index",
+          "style": {
+            "navigationBarTitleText": "照片示例",
+            "navigationStyle": "custom",
+            "backgroundColor": "#ffffff"
           }
         },
         {
