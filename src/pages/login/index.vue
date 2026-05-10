@@ -166,7 +166,12 @@ function tryNavigateAfterLogin() {
 <style lang="scss" scoped>
 .login-page {
   min-height: 100vh;
-  padding: 120rpx 48rpx 80rpx;
+  /* 无系统导航栏：仅用安全区顶部留白（去掉默认顶栏「模拟手机标题栏」观感） */
+  padding-top: calc(constant(safe-area-inset-top) + 80rpx);
+  padding-top: calc(env(safe-area-inset-top) + 80rpx);
+  padding-right: 48rpx;
+  padding-bottom: 80rpx;
+  padding-left: 48rpx;
   background: linear-gradient(180deg, #fff7ed 0%, #f7f7f7 42%, #f7f7f7 100%);
   box-sizing: border-box;
 }

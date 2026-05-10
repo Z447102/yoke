@@ -18,6 +18,8 @@
  * 手机号授权登录：`POST /api/auth/wechat/mobile-login`
  * - 请求体：`{ uuid, phoneCode }`（uuid 为 session 返回的预登录会话 id；phoneCode 为 getPhoneNumber 返回）；**不附带 Authorization**
  * - 响应 data：常见含 `token`、`expiresIn`、`newUser`（无 profile 时保留本地原 profile）
+ *
+ * 其它认证（与 OpenAPI 一致）：`POST /api/auth/send-code`、`POST /api/auth/login`；登出 `POST /api/auth/logout`。
  */
 import { isApiEnabled, post } from '@/utils/request'
 import {
@@ -318,9 +320,46 @@ export async function bindPhoneByCode({ phoneCode, wxSessionUuid }) {
  * 退出登录：请求后端后由调用方或 store 清本地（此处仅发请求）。
  * @returns {Promise<unknown>}
  */
+/**
+ * 发送短信验证码（登录用）
+ * POST /api/auth/send-code
+ * @param {{ mobile: string }} param0 11 位手机号
+ * @returns {Promise<void>}
+ */
+export async function sendSmsCode({ mobile }) {
+  if (!isApiEnabled()) {
+    await delay(200)
+    return
+  }
+  await post('/api/auth/send-code', { mobile }, { auth: false })
+}
+
+/**
+ * 短信验证码登录
+ * POST /api/auth/login
+ * @param {{ mobile: string, code: string }} param0
+ * @returns {Promise<{ token: string, expiresIn?: number, newUser?: boolean }>}
+ */
+export async function loginWithSms({ mobile, code }) {
+  if (!isApiEnabled()) {
+    await delay(280)
+    if (!mobile || !code) {
+      const err = new Error('请输入手机号与验证码')
+      err.code = 'INVALID_INPUT'
+      throw err
+    }
+    return {
+      token: `sms_${mobile.slice(-4)}_${Date.now()}`,
+      expiresIn: 7200,
+      newUser: false
+    }
+  }
+  return post('/api/auth/login', { mobile, code }, { auth: false })
+}
+
 export async function logout() {
   if (!isApiEnabled()) {
     return logoutMock()
   }
-  return post('/auth/logout', {}, { auth: true })
+  return post('/api/auth/logout', {}, { auth: true })
 }
