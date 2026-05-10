@@ -4,6 +4,18 @@ page {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
 }
 
+/*
+ * 自定义导航栏（各页 class="nav-bar"）：页面级滚动时保持在顶部不随内容滚走。
+ * 使用 !important 覆盖各页 scoped 内的 position:relative / overflow 等。
+ * 发布成片等页可在 scoped 内单独覆盖 background-color。
+ */
+.nav-bar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 500 !important;
+  background-color: #ffffff;
+}
+
 view,
 text,
 scroll-view,

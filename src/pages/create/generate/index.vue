@@ -1075,11 +1075,12 @@ function generateVideo() {
 
 .generate-page {
   min-height: 100vh;
-  /* 底栏为两行（操作行 + 提示文案），固定 height 过小会导致内容溢出盖住上方；预留与底栏实际高度一致 */
-  padding-bottom: calc(268rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(268rpx + env(safe-area-inset-bottom));
+  /* 固定底栏：画质+生成按钮同排或竖向换行、下方 AI 提示；栏高会变高，留白不足会把最后一屏内容与底栏重合，滚动末尾显示不全 */
+  padding-bottom: calc(400rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(400rpx + env(safe-area-inset-bottom));
   background: #ffffff;
   color: #202633;
+  box-sizing: border-box;
 }
 
 .nav-bar {
@@ -1581,13 +1582,15 @@ function generateVideo() {
   right: 0;
   bottom: 0;
   z-index: 20;
-  min-height: calc(178rpx + constant(safe-area-inset-bottom));
-  min-height: calc(178rpx + env(safe-area-inset-bottom));
-  padding: 28rpx 30rpx constant(safe-area-inset-bottom);
-  padding: 28rpx 30rpx env(safe-area-inset-bottom);
+  padding-top: 28rpx;
+  padding-left: 30rpx;
+  padding-right: 30rpx;
+  padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   background: #f4f4f4;
   gap: 18rpx;
   flex-wrap: wrap;
+  align-content: flex-start;
 }
 
 .quality-select {

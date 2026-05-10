@@ -1729,7 +1729,7 @@ uni.navigateTo({
 - 图片命名使用语义化英文，例如 `icon-user-default.png`。
 - 避免提交未压缩的大体积图片。
 
-**图标与符号图（团队必读）**：为避免「黑底白标」「白底浅线」等与页面底色冲突导致图标不显示或糊成一团，新增或替换图标须遵守 **[静态资源与图标规范](./static-assets-icons.md)**（导出透明底、命名目录、小程序真机验收等）。提交 PR 前请对照该文档第五节自检清单。
+**图标与符号图（团队必读）**：为避免「黑底白标」「白底浅线」等与页面底色冲突导致图标不显示或糊成一团，新增或替换图标须遵守 **[静态资源与图标规范](./static-assets-icons.md)**（导出透明底、命名目录、小程序真机验收等）。提交 PR 前请对照该文档第五节自检清单；**成片 / 发布页** 专用图标清单见该文档 **第六节**。
 
 ## 15. 开发到上线流程
 
@@ -1880,4 +1880,46 @@ npm run build:mp-weixin
 - 上线检查模板
 - 回滚操作记录模板
 - 常见问题
+
+## 18. 成片列表、发布成片页与全局顶栏（维护说明）
+
+本节记录「一键成片」分包内 **成片链路相关页面** 与 **全项目顶栏行为** 的实现要点，便于联调与回归；接口字段以后端为准，此处侧重结构与前端约定。
+
+### 18.1 路由与入口
+
+| 路径 | 说明 |
+| --- | --- |
+| `pages/create/works/index` | 查看成片列表（自定义导航 `navigationStyle: custom`） |
+| `pages/create/works/detail` | 成片详情 |
+| `pages/create/works/publish` | 发布成片（从列表「发布」跳转，可带 `id` / `cover` / `duration` 等 query） |
+
+首页「查看成片」等入口使用 `uni.navigateTo` 打开上述路径（完整路径以 `pages.json` 为准）。
+
+### 18.2 成片列表页 `pages/create/works/index.vue`
+
+- **接口**：`src/api/finished-videos.js` 中 `getFinishedVideoList`。默认 **`mock` 不为 `true` 时返回空列表**（空态页）；调试有数据列表可在开发者工具或真机 URL 加 **`?mock=1`**，内部传 `mock: true` 走本地分页 Mock。
+- **真机空白**：曾出现「仅导航可见、中间全白」——原因为首屏 **`loading === true` 且 `list.length === 0`** 时，空态条件写了 `!loading`，列表条件写了 `list.length > 0`，两段都不成立。已改为三段分支：**加载中 / 空态 / 列表**。
+- **`scroll-view`**：微信小程序 **`scroll-y` 需要明确高度**。列表区域使用 **`createSelectorQuery`** 测量 `.nav-bar` 底部到窗口底部，给 `scroll-view` 绑定 **`height`（px）**，并设初始兜底高度；数据就绪后再 **`watch` 复测**。
+- **顶栏**：使用自定义 **`nav-bar`**，吸顶规则见 §18.5。
+
+### 18.3 发布成片页 `pages/create/works/publish.vue`
+
+- **布局概要**：顶部封面与元信息 → AI 效果预估卡片 → 发布建议（三列）→ 发布内容（标题条 / 文案+标签条，含右侧复制条与竖分割线）→ 提升到店率建议（双卡片 + icon）→ 发布步骤（1/2/3 图标 + 说明文案）→ 底部固定操作区。
+- **复制**：标题、正文（描述 + `#` 标签）使用 `uni.setClipboardData`；局部样式（间距、圆角、阴影、分割线颜色 `#ebebeb` 等）以页面内注释与设计标注为准。
+- **静态资源**：见 [静态资源与图标规范](./static-assets-icons.md) 第六节「成片链路相关资源清单」。
+
+### 18.4 生成配置页底栏与页面留白 `pages/create/generate/index.vue`
+
+- 底部 **画质 + 生成按钮 + AI 提示** 为 **`position: fixed`**，正文区域需预留 **`padding-bottom`**（含较大安全余量），避免最后一屏内容被底栏遮挡；若改版底栏高度，需同步改 `.generate-page` 的 `padding-bottom` 估算。
+
+### 18.5 全局自定义导航栏吸顶
+
+- **`src/styles/common.scss`**：对 **`class="nav-bar"`** 统一设置 **`position: sticky`**、`top: 0`、`z-index`、`默认白底`，并用 **`!important`** 覆盖各页 scoped 内的 `position: relative`，使 **商户表单页、生成页、主营业务页、成片列表、成片详情** 等在 **页面级滚动** 时顶栏不随内容滚走。
+- **发布成片页**：导航与 **`scroll-view`** 为兄弟节点，导航本就不参与正文滚动；全局规则仍可增强在某些端的叠层表现。
+- **首页**：无 `.nav-bar`，顶区品牌在 **`HomeHeader.vue`** 内单独 **`sticky`**，底色与橙色顶区一致（`#ff9d34`），避免下方内容上滑穿透。
+- **协议页**（`pages/legal/*`）使用 **微信原生导航栏**，系统自带固定顶栏，无需上述 class。
+
+### 18.6 文档同步约定
+
+- 修改成片链路页面结构、接口 Mock 行为、全局 `nav-bar` 样式或 `src/static/create/` 成片相关图标时，应同步更新 **本节** 与 **[static-assets-icons.md](./static-assets-icons.md)** 第六节表格。
 

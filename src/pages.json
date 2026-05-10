@@ -82,6 +82,13 @@
             "navigationBarTitleText": "成片详情",
             "navigationStyle": "custom"
           }
+        },
+        {
+          "path": "works/publish",
+          "style": {
+            "navigationBarTitleText": "发布成片",
+            "navigationStyle": "custom"
+          }
         }
       ]
     },

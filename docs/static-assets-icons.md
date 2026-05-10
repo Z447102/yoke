@@ -52,6 +52,22 @@
 - [ ] **微信小程序** 目标页已真机或开发者工具预览通过。
 - [ ] 命名、目录符合 **第 2 节**，未引入无关超大文件。
 
-## 6. 文档维护
+## 6. 成片链路相关资源清单（`src/static/create/`）
+
+以下为成片列表 / 发布页 / 生成步骤等页面新增或固定使用的本地 PNG（命名随迭代可增加，提交 PR 时请在本节补充一行）。
+
+| 文件 | 用途简述 |
+| --- | --- |
+| `publish-meta-icon-*.png` | 发布成片页封面旁：时长、清晰度、广告标识等 |
+| `publish-suggest-icon-douyin.png` / `publish-suggest-icon-trend.png` | 「发布建议」抖音 icon、趋势 icon |
+| `publish-content-icon-copy.png` | 「发布内容」标题区 / 文案区右侧灰底复制条图标 |
+| `publish-visit-tip-icon-location.png` / `publish-visit-tip-icon-chat.png` | 「提升到店率建议」左：地图钉；右：对话气泡 |
+| `publish-step-icon-1.png` ~ `publish-step-icon-3.png` | 「发布步骤」1 / 2 / 3 序号圆标 |
+| `works-btn-publish-icon.png`、`works-empty-list-icon.png`、`works-icon-*.png` | 成片列表：发布按钮、空态、工具栏与删除等 |
+
+图标接入仍遵守上文透明底、小程序 `mode` 与真机验收要求。
+
+## 7. 文档维护
 
 - 本规范随项目实践迭代；若与 `frontend-development.md` 中静态资源条目冲突，**以本文图标专项约定为准**，并同步更新总文档中的引用说明。
+- **新增或重命名** `src/static/create/` 下图标时，请同步更新 **§6 表格**，便于设计与排查域名白名单问题。

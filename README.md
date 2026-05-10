@@ -32,5 +32,7 @@ npm run build:mp-weixin
 
 ## 文档
 
-- [uni-app 小程序前端开发文档](docs/frontend-development.md)
+- [uni-app 小程序前端开发文档](docs/frontend-development.md)（含一键成片、成片列表、发布页、全局顶栏吸顶等维护说明）
 - [静态资源与图标规范（团队）](docs/static-assets-icons.md)
+
+功能迭代时请同步更新上述文档对应章节，避免真机表现与设计-only 记忆散落在聊天记录中。

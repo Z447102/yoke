@@ -57,6 +57,11 @@ const headerPadStyle = computed(() => {
   padding-bottom: 16rpx;
   padding-left: 0;
   padding-right: env(safe-area-inset-right);
+  /* 首页向下滚动时顶栏固定；底色与 home-top-skin 橙区一致，避免下方内容上滑透出 */
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background-color: #ff9d34;
 }
 
 .brand {

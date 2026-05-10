@@ -381,9 +381,14 @@ function onAllowNotify() {
 }
 
 function onPublish(item) {
-  uni.showToast({
-    title: `发布「${item.durationLabel}」接入中`,
-    icon: 'none'
+  const q = [
+    `id=${encodeURIComponent(String(item.id || ''))}`,
+    `cover=${encodeURIComponent(String(item.cover || ''))}`,
+    `duration=${encodeURIComponent(String(item.durationLabel || '30s'))}`
+  ].join('&')
+  uni.navigateTo({
+    url: `/pages/create/works/publish?${q}`,
+    fail: () => uni.showToast({ title: '页面打开失败', icon: 'none' })
   })
 }
 
@@ -871,7 +876,7 @@ function openDetail(item) {
 }
 
 .thumb-meta--time {
-  font-size: 20rpx;
+  font-size: 18rpx;
   opacity: 1;
 }
 
