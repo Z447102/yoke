@@ -42,7 +42,7 @@ defineProps({
 
 <style lang="scss" scoped>
 .video-section {
-  padding: 0 20rpx;
+  padding: 0 24rpx;
 }
 
 .creator-card {

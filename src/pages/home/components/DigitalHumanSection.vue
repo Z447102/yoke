@@ -49,7 +49,7 @@ defineEmits(['create'])
   flex-direction: row;
   align-items: stretch;
   height: 202rpx;
-  padding: 0 20rpx;
+  padding: 0 24rpx;
 }
 
 /* 微信小程序 WXSS 不支持 `.parent > * + *` 中的通配符，改用相邻兄弟选择器 */

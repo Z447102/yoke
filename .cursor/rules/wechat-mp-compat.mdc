@@ -19,6 +19,11 @@ alwaysApply: false
 - **列表渲染**：优先使用 **`<block v-for>`**（或单根 `view`），避免使用在小程序端易出问题的 **`<template v-for>`** 写法。
 - **属性**：不写小程序/WXML 不认或非必要的 DOM 属性（例如 **`aria-*`**、`role` 等），除非确认目标端支持。
 
+## 成片列表（`pages/create/works`）
+
+- **`getFinishedVideoList`**：在真实接口未接好前，**非 `mock: true` 时固定返回空数组**；真机若从非「生成页」入口进入且未带 `?mock=1`、又不是开发构建，会看到「暂无成片」或仅顶栏（若再配合滚动区高度问题会更像白屏）。联调后改为走真实接口；需验空列表时用 **`?mock=0`**。
+- **页面根高度**：列表态使用纵向 `scroll-view` 时，父级须 **`height` + `min-height`（如 `100vh`）**，避免仅 `min-height` 导致子级 `flex:1` + `height:0` 在真机高度为 0。
+
 ## API 与运行时
 
 - **`createSelectorQuery().in(instance)`**、`getCurrentInstance`、`enhanced` 等与端强相关的 API，改完后应用 **`npm run build:mp-weixin`** 并关注真机差异。

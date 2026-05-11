@@ -57,11 +57,11 @@ defineEmits(['select'])
 </script>
 
 <style lang="scss" scoped>
-/* 与屏宽对齐：左右各 20rpx 内边距，3 列均分剩余宽度（约 228rpx/格） */
-$tool-side-pad: 20rpx;
+/* 与首页顶区一致：左右各 24rpx，3 列均分剩余宽度（约 226rpx/格） */
+$tool-side-pad: 24rpx;
 $tool-gap: 12rpx;
-/* (750 - 2*20 - 2*12) / 3 ≈ 228.67 */
-$tool-cell: 228rpx;
+/* (750 - 2*24 - 2*12) / 3 = 226 */
+$tool-cell: 226rpx;
 
 .tool-section {
   padding-bottom: 24rpx;
@@ -141,7 +141,7 @@ $tool-cell: 228rpx;
   width: 560rpx;
   height: 42rpx;
   margin: 18rpx auto 0;
-  padding: 0 22rpx;
+  padding: 0 24rpx;
   border-radius: 999rpx;
   background: linear-gradient(90deg, #ff9831, #ffc760);
   color: #ffffff;

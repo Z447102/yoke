@@ -1,6 +1,9 @@
 <template>
   <!-- 一键成片 · 生成配置页 | docs §10：导航 → 筛选 → 模板/标签 → 照片/形象/文案 → 底栏 → 弹窗 -->
-  <view class="generate-page">
+  <view
+    class="generate-page"
+    :class="{ 'generate-page--sensitive-banner': hasScriptSensitiveHit }"
+  >
     <!-- 顶部导航 -->
     <view class="nav-bar" :style="createNavBarStyle">
       <view class="nav-left" @tap="goBack">
@@ -223,17 +226,40 @@
           "
         >
           <template v-if="line.maxLen > 0">
-            <input
-              v-model="line.text"
-              class="copy-line-input"
-              type="text"
-              :maxlength="line.maxLen"
-            />
-            <text class="copy-line-count">
-              {{ line.text.length }}/{{ line.maxLen }}字
-            </text>
+            <view class="copy-line-input-wrap">
+              <view class="copy-line-highlight">
+                <block
+                  v-for="(seg, si) in scriptLineSegments(line)"
+                  :key="line.key + '-seg-' + si"
+                >
+                  <text
+                    class="copy-line-seg"
+                    :class="{ 'copy-line-seg--sensitive': seg.sensitive }"
+                  >{{ seg.text }}</text>
+                </block>
+              </view>
+              <input
+                v-model="line.text"
+                class="copy-line-input copy-line-input--overlay"
+                type="text"
+                :maxlength="SCRIPT_INPUT_MAX_LEN"
+              />
+            </view>
+            <view class="copy-line-count">
+              <text
+                class="copy-line-count__cur"
+                :class="{ 'copy-line-count__cur--danger': scriptLineCountDanger(line) }"
+              >{{ line.text.length }}</text>
+              <text class="copy-line-count__rest">/{{ line.maxLen }}字</text>
+            </view>
           </template>
           <text v-else class="copy-line-static-text">{{ line.text }}</text>
+        </view>
+      </view>
+      <view v-if="hasScriptSensitiveHit" class="copy-sensitive-banner">
+        <text class="copy-sensitive-banner__title">* 敏感词提示：</text>
+        <view class="copy-sensitive-banner__body-wrap">
+          <text class="copy-sensitive-banner__body">识别到口播文案中出现广告极限词，请您更改后生成视频。</text>
         </view>
       </view>
     </view>
@@ -382,7 +408,7 @@
 /**
  * 【一键成片 · 生成配置页】pages/create/generate/index.vue
  *
- * 功能块：筛选与模板、素材与文案、底部成片操作、业务/平台弹窗、画质与模型子组件。
+ * 功能块：筛选与模板、素材与文案（含口播敏感词高亮与提示条）、底部成片操作、业务/平台弹窗、画质与模型子组件。
  * 规范：docs/frontend-development.md §10；常量 @/constants/create；接口 @/api/create。
  */
 import { computed, nextTick, onMounted, ref } from 'vue'
@@ -392,6 +418,10 @@ import {
   CREATE_RESOLUTION_OPTIONS,
   computeVideoGenerateCostPoints
 } from '@/constants/create'
+import {
+  CREATE_SELECTED_PLATFORM_STORAGE_KEY,
+  PLATFORM_OPTIONS
+} from '@/constants/create-selected-platform'
 import QualitySettingsSheet from '../components/QualitySettingsSheet.vue'
 import VipSubscribeModal from '../components/VipSubscribeModal.vue'
 import PointsRechargeModal from '../components/PointsRechargeModal.vue'
@@ -401,6 +431,10 @@ import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh
 } from '@/utils/create-nav-bar-style'
+import {
+  splitTextBySensitiveWords,
+  textContainsSensitive
+} from '@/utils/script-sensitive-words'
 import createBackIcon from '@/static/create/create-back-icon.png'
 import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
 import createIconViewFilm from '@/static/create/create-icon-view-film.png'
@@ -538,12 +572,8 @@ const businessOptions = ref([
     tagLabels: ['餐饮', '正餐(家常菜 / 酒楼)']
   }
 ])
-const platformOptions = [
-  { id: 'douyin', name: '抖音' },
-  { id: 'kuaishou', name: '快手' },
-  { id: 'shipinhao', name: '视频号' },
-  { id: 'xiaohongshu', name: '小红书' }
-]
+
+const platformOptions = PLATFORM_OPTIONS
 const selectedBusiness = ref('business1')
 const tempBusiness = ref('business1')
 const showBusinessPopup = ref(false)
@@ -563,8 +593,65 @@ const scriptLines = ref([
     maxLen: 0
   },
   { key: 's5', text: '爱吃重庆老火锅的直接闭眼冲！', maxLen: 0 },
-  { key: 's6', text: '满满一大桌6荤8素，仅需168', maxLen: 20 }
+  {
+    key: 's6',
+    text: '满满一大桌6荤8素，全惠州最便宜，套餐仅需168',
+    maxLen: 20
+  }
 ])
+
+/** 口播单行输入长度上限（大于设计 maxLen，便于标红超限；生成前仍会校验 maxLen） */
+const SCRIPT_INPUT_MAX_LEN = 200
+
+/**
+ * 敏感词表（演示）；联调后由接口拉取字典并赋值给本 ref。
+ * @type {import('vue').Ref<string[]>}
+ */
+const sensitiveWordList = ref([
+  '全惠州最便宜',
+  '国家级',
+  '全网第一',
+  '史无前例',
+  '永久',
+  '疗效最佳',
+  '根治',
+  '百分百'
+])
+
+const hasScriptSensitiveHit = computed(() =>
+  scriptLines.value.some(
+    (line) =>
+      line.maxLen > 0 &&
+      textContainsSensitive(line.text, sensitiveWordList.value)
+  )
+)
+
+function scriptLineSegments(line) {
+  return splitTextBySensitiveWords(line.text, sensitiveWordList.value)
+}
+
+function scriptLineCountDanger(line) {
+  return (
+    line.text.length > line.maxLen ||
+    textContainsSensitive(line.text, sensitiveWordList.value)
+  )
+}
+
+function scriptLineOverLimit(line) {
+  return line.maxLen > 0 && line.text.length > line.maxLen
+}
+
+function assertScriptReadyForGenerate() {
+  if (hasScriptSensitiveHit.value) {
+    uni.showToast({ title: '请先修改口播文案中的敏感词', icon: 'none' })
+    return false
+  }
+  if (scriptLines.value.some((l) => scriptLineOverLimit(l))) {
+    uni.showToast({ title: '口播文案超出字数限制，请精简后再试', icon: 'none' })
+    return false
+  }
+  return true
+}
 
 // --- 用户态：点数用于「生成视频」前校验 ---
 const userStore = useUserStore()
@@ -688,6 +775,15 @@ function selectAvatar(id) {
 
 onMounted(() => {
   scheduleCreateNavBarStyleRefresh(createNavBarStyle)
+  try {
+    const savedPlat = uni.getStorageSync(CREATE_SELECTED_PLATFORM_STORAGE_KEY)
+    if (savedPlat && platformOptions.some((p) => p.id === savedPlat)) {
+      selectedPlatform.value = savedPlat
+      tempPlatform.value = savedPlat
+    }
+  } catch (_) {
+    /* 忽略 */
+  }
   const biz = businessOptions.value.find(
     (b) => b.id === selectedBusiness.value
   )
@@ -953,6 +1049,11 @@ function selectPlatform(id) {
 
 function confirmPlatform() {
   selectedPlatform.value = tempPlatform.value
+  try {
+    uni.setStorageSync(CREATE_SELECTED_PLATFORM_STORAGE_KEY, tempPlatform.value)
+  } catch (_) {
+    /* 非 uni 环境忽略 */
+  }
   closePlatformPopup()
 }
 
@@ -1066,6 +1167,7 @@ function safeHideKeyboard() {
 // --- 发起成片（弹窗内 / 主按钮：VIP 模块先校验会员；已是 VIP 且点数不足则弹出充值点数） ---
 function confirmGenerateFromPopup() {
   if (!ensureVipForGenerate()) return
+  if (!assertScriptReadyForGenerate()) return
   if (userStore.points < generateCostPoints.value) {
     if (userStore.isVip) {
       openPointsRechargeForGenerate()
@@ -1117,6 +1219,7 @@ function runGenerateSuccessFlow() {
 
 function generateVideo() {
   if (!ensureVipForGenerate()) return
+  if (!assertScriptReadyForGenerate()) return
   if (userStore.points < generateCostPoints.value) {
     if (userStore.isVip) {
       openPointsRechargeForGenerate()
@@ -1140,6 +1243,11 @@ function generateVideo() {
   background: #ffffff;
   color: #202633;
   box-sizing: border-box;
+}
+
+.generate-page--sensitive-banner {
+  padding-bottom: calc(360rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(360rpx + env(safe-area-inset-bottom));
 }
 
 .nav-bar {
@@ -1710,6 +1818,50 @@ function generateVideo() {
   gap: 16rpx;
 }
 
+.copy-line-input-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  height: 56rpx;
+}
+
+.copy-line-input-wrap .copy-line-input {
+  flex: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.copy-line-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.copy-line-seg {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  line-height: 56rpx;
+  color: #6b7280;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+}
+
+.copy-line-seg--sensitive {
+  background-color: #ef4444;
+  border-radius: 4rpx;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+
 .copy-line-row--static {
   width: 710rpx;
   max-width: 100%;
@@ -1731,16 +1883,77 @@ function generateVideo() {
   height: 56rpx;
   line-height: 56rpx;
   font-size: 24rpx;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   color: #6b7280;
   background: transparent;
   border: none;
 }
 
+.copy-line-input--overlay {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  color: transparent;
+  caret-color: #374151;
+}
+
 .copy-line-count {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   font-size: 22rpx;
-  color: #9ca3af;
   line-height: 56rpx;
+}
+
+.copy-line-count__cur {
+  color: #9ca3af;
+}
+
+.copy-line-count__cur--danger {
+  color: #ef4444;
+}
+
+.copy-line-count__rest {
+  color: #9ca3af;
+}
+
+.copy-sensitive-banner {
+  width: 750rpx;
+  height: 126rpx;
+  box-sizing: border-box;
+  margin-top: 20rpx;
+  /* 与 .section 左右 20rpx 内边距对齐，铺满 750rpx 屏宽 */
+  margin-left: -20rpx;
+  padding: 20rpx 30rpx;
+  background-color: rgba(255, 94, 69, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.copy-sensitive-banner__title {
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.35;
+  color: #ffffff;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+  font-weight: 500;
+}
+
+.copy-sensitive-banner__body-wrap {
+  margin-top: 6rpx;
+}
+
+.copy-sensitive-banner__body {
+  display: block;
+  font-size: 24rpx;
+  line-height: 26rpx;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .copy-line-static-text {

@@ -40,7 +40,7 @@ defineEmits(['more'])
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 28rpx 22rpx 14rpx;
+  margin: 28rpx 24rpx 14rpx;
 
   &__left {
     display: flex;
@@ -54,9 +54,10 @@ defineEmits(['more'])
   }
 
   &__text {
-    color: #222222;
+    font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+    color: #1f2937;
     font-size: 30rpx;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   &__tag {
@@ -68,7 +69,8 @@ defineEmits(['more'])
   &__more {
     display: flex;
     align-items: center;
-    color: #999999;
+    font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+    color: #6b7280;
     font-size: 22rpx;
   }
 

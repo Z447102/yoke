@@ -103,25 +103,37 @@
         </view>
         <view class="suggest-row">
           <view class="suggest-item">
-            <view class="suggest-platform">
-              <image class="suggest-icon-douyin" :src="publishSuggestIconDouyin" mode="aspectFit" />
-              <view class="suggest-platform__txt">
-                <text class="suggest-t">推荐平台</text>
-                <text class="suggest-v suggest-v--platform">抖音</text>
+            <view class="suggest-item__main">
+              <view class="suggest-platform">
+                <image
+                  class="suggest-platform__ico"
+                  :src="currentPublishActionIcon"
+                  mode="aspectFit"
+                />
+                <view class="suggest-platform__txt">
+                  <text class="suggest-t">推荐平台</text>
+                  <text class="suggest-v suggest-v--platform">{{
+                    currentPublishPlatform.name
+                  }}</text>
+                </view>
               </view>
             </view>
-            <text class="suggest-tip">当前视频内容最适合</text>
+            <text class="suggest-tip">与一键成片所选平台一致</text>
           </view>
           <view class="suggest-item">
-            <text class="suggest-t">最佳发布时间</text>
-            <text class="suggest-v">15:00-17:00</text>
+            <view class="suggest-item__main">
+              <text class="suggest-t">最佳发布时间</text>
+              <text class="suggest-v">15:00-17:00</text>
+            </view>
             <text class="suggest-tip">平台流量高峰期</text>
           </view>
           <view class="suggest-item">
-            <text class="suggest-t">当前发布成功率</text>
-            <view class="suggest-success">
-              <image class="suggest-icon-trend" :src="publishSuggestIconTrend" mode="aspectFit" />
-              <text class="suggest-v">较高</text>
+            <view class="suggest-item__main">
+              <text class="suggest-t">当前发布成功率</text>
+              <view class="suggest-success">
+                <image class="suggest-icon-trend" :src="publishSuggestIconTrend" mode="aspectFit" />
+                <text class="suggest-v">较高</text>
+              </view>
             </view>
             <text class="suggest-tip">建议您尽快发布</text>
           </view>
@@ -223,7 +235,7 @@
           <view class="step-item">
             <view class="step-head">
               <image class="step-num-icon" :src="publishStepIcon3" mode="aspectFit" />
-              <text class="step-v">打开抖音</text>
+              <text class="step-v">打开{{ currentPublishPlatform.name }}</text>
             </view>
             <text class="suggest-tip">点击“+”开始发布</text>
           </view>
@@ -239,12 +251,16 @@
           <image class="act-save__icon" :src="publishActionIconSave" mode="aspectFit" />
           <text>保存视频</text>
         </view>
-        <view class="act act--dark" @tap="onToDouyin">
+        <view class="act act--dark" @tap="onPublishToPlatform">
           <view class="act-dy">
-            <image class="act-dy__icon" :src="publishActionIconDouyin" mode="aspectFit" />
+            <image
+              class="act-dy__icon"
+              :src="currentPublishActionIcon"
+              mode="aspectFit"
+            />
             <view class="act-dy__split" />
             <view class="act-dy__txt">
-              <text class="act-dy__main">去抖音发布</text>
+              <text class="act-dy__main">去{{ currentPublishPlatform.name }}发布</text>
               <text class="act-dy__sub">发布前建议复制文案</text>
             </view>
           </view>
@@ -259,22 +275,28 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
+import {
+  CREATE_SELECTED_PLATFORM_STORAGE_KEY,
+  PLATFORM_OPTIONS
+} from '@/constants/create-selected-platform'
 import createBackIcon from '@/static/create/create-back-icon.png'
 import publishMetaIconTime from '@/static/create/publish-meta-icon-time.png'
 import publishMetaIconDuration from '@/static/create/publish-meta-icon-duration.png'
 import publishMetaIconHd from '@/static/create/publish-meta-icon-hd.png'
 import publishMetaIconAd from '@/static/create/publish-meta-icon-ad.png'
 import publishMetaIconSuggestTime from '@/static/create/publish-meta-icon-suggest-time.png'
-import publishSuggestIconDouyin from '@/static/create/publish-suggest-icon-douyin.png'
 import publishSuggestIconTrend from '@/static/create/publish-suggest-icon-trend.png'
+import publishPlatformDouyin from '@/static/create/publish-platform-douyin.png'
+import publishPlatformKuaishou from '@/static/create/publish-platform-kuaishou.png'
+import publishPlatformShipinhao from '@/static/create/publish-platform-shipinhao.png'
+import publishPlatformXiaohongshu from '@/static/create/publish-platform-xiaohongshu.png'
 import publishContentIconCopy from '@/static/create/publish-content-icon-copy.png'
 import publishVisitTipIconLocation from '@/static/create/publish-visit-tip-icon-location.png'
 import publishVisitTipIconChat from '@/static/create/publish-visit-tip-icon-chat.png'
 import publishStepIcon1 from '@/static/create/publish-step-icon-1.png'
 import publishActionIconSave from '@/static/create/publish-action-icon-save.png'
-import publishActionIconDouyin from '@/static/create/publish-action-icon-douyin.png'
 import publishStepIcon2 from '@/static/create/publish-step-icon-2.png'
 import publishStepIcon3 from '@/static/create/publish-step-icon-3.png'
 import {
@@ -283,6 +305,27 @@ import {
 } from '@/utils/create-nav-bar-style'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
+
+const platformOptions = PLATFORM_OPTIONS
+
+const platformIconById = {
+  douyin: publishPlatformDouyin,
+  kuaishou: publishPlatformKuaishou,
+  shipinhao: publishPlatformShipinhao,
+  xiaohongshu: publishPlatformXiaohongshu
+}
+
+const selectedPlatformId = ref('douyin')
+
+const currentPublishPlatform = computed(() => {
+  const hit = platformOptions.find((p) => p.id === selectedPlatformId.value)
+  return hit || platformOptions[0]
+})
+
+const currentPublishActionIcon = computed(
+  () => platformIconById[currentPublishPlatform.value.id] || publishPlatformDouyin
+)
+
 const cover = ref('https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=400&h=300&fit=crop')
 const durationLabel = ref('30s')
 /** 文案标签区：上文案描述（可接接口） */
@@ -297,7 +340,23 @@ const publishTitleText = ref('藏在巷子里的神仙咖啡，终于被我找�
 onLoad((query = {}) => {
   if (query.cover) cover.value = decodeURIComponent(query.cover)
   if (query.duration) durationLabel.value = decodeURIComponent(query.duration)
+  if (query.platform) {
+    const pid = decodeURIComponent(String(query.platform))
+    if (platformOptions.some((p) => p.id === pid)) {
+      selectedPlatformId.value = pid
+    }
+  } else {
+    try {
+      const saved = uni.getStorageSync(CREATE_SELECTED_PLATFORM_STORAGE_KEY)
+      if (saved && platformOptions.some((p) => p.id === saved)) {
+        selectedPlatformId.value = saved
+      }
+    } catch (_) {
+      /* 忽略 */
+    }
+  }
 })
+
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
@@ -307,8 +366,9 @@ function goBack() {
 function onSave() {
   uni.showToast({ title: '视频已保存', icon: 'none' })
 }
-function onToDouyin() {
-  uni.showToast({ title: '即将打开抖音发布', icon: 'none' })
+function onPublishToPlatform() {
+  const name = currentPublishPlatform.value?.name || '平台'
+  uni.showToast({ title: `即将打开${name}发布`, icon: 'none' })
 }
 
 function onCopyPublishTitle() {
@@ -513,6 +573,12 @@ function onCopyPublishCaption() {
 .kpi-item:nth-child(1) { width: 192rpx; }
 .kpi-item:nth-child(2) { width: 192rpx; }
 .kpi-item:nth-child(3) { width: 280rpx; }
+
+/* 预转化率、推荐人群：与左侧竖向分隔线间距 34rpx */
+.kpi-item:nth-child(2),
+.kpi-item:nth-child(3) {
+  padding-left: 34rpx;
+}
 .kpi-item:not(:last-child) {
   border-right: none;
 }
@@ -538,9 +604,59 @@ function onCopyPublishCaption() {
   padding: 14rpx;
 }
 
-/* 发布建议：三列模块顶部内边距 */
+/* 发布建议：三列模块顶部内边距；上区垂直居中、左对齐，底标签单行省略 */
 .card--pink .suggest-item {
   padding-top: 26rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+}
+
+/* 发布建议·第一列：平台区整体距列左 30rpx（列本身仍为 14rpx 内边距，底标签左距与其它列一致） */
+.card--pink .suggest-item:first-child .suggest-platform {
+  margin-left: 16rpx; /* 14 + 16 = 30 */
+}
+
+.card--pink .suggest-item__main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.card--pink .suggest-item__main .suggest-t,
+.card--pink .suggest-item__main .suggest-v {
+  text-align: left;
+  width: 100%;
+}
+
+.suggest-platform {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 6rpx;
+}
+
+.suggest-platform__txt {
+  display: flex;
+  flex-direction: column;
+}
+
+.suggest-v--platform {
+  margin-top: 4rpx;
+}
+
+.suggest-platform__ico {
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  display: block;
 }
 .kpi-name { display:block; font-size: 18rpx; color: #1f2937; }
 .kpi-value { display:flex; align-items:flex-end; gap:2rpx; margin-top:12rpx; color:#1f2937;margin-bottom: 14rpx; }
@@ -552,15 +668,11 @@ function onCopyPublishCaption() {
 .kpi-tip__value { font-size:18rpx; color:#ed903c; line-height:1; }
 .suggest-t { display:block; color:#6b7280; font-size:20rpx; }
 .suggest-v { display:block; margin-top:6rpx; color:#1f2937; font-size:30rpx; font-weight:700; line-height:1.1; }
-.suggest-platform { display: flex; align-items: center; gap: 14rpx; margin-top: 6rpx; }
-.suggest-platform__txt { display: flex; flex-direction: column; }
-.suggest-v--platform { margin-top: 4rpx; }
-.suggest-icon-douyin { width: 70rpx; height: 70rpx; display: block; margin-top: 0; }
 .suggest-success { display: flex; align-items: center; gap: 8rpx; margin-top: 6rpx; }
 .suggest-icon-trend { width: 34rpx; height: 34rpx; display: block; flex-shrink: 0; }
 .suggest-success .suggest-v { margin-top: 0; }
 /* 发布建议·最佳发布时间下方时段：行高 40rpx，与上文案间距 6rpx */
-.card--pink .suggest-item:nth-child(2) > .suggest-v {
+.card--pink .suggest-item:nth-child(2) .suggest-item__main > .suggest-v {
   line-height: 40rpx;
   margin-top: 6rpx;
 }
@@ -578,8 +690,20 @@ function onCopyPublishCaption() {
   box-sizing: border-box;
 }
 
+/* 发布建议：底标签左对齐、单行省略；宽度随卡片内边距占满 */
+.card--pink .suggest-tip {
+  width: 100%;
+  max-width: 100%;
+  padding: 0 8rpx;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 发布建议：底部标签与上方主内容间距 */
 .card--pink .suggest-item > .suggest-tip {
+  flex-shrink: 0;
   margin-top: 20rpx;
 }
 /* 发布步骤：说明文案无标签底，纯文本 */
@@ -881,7 +1005,7 @@ function onCopyPublishCaption() {
   margin-right: 30rpx;
   flex-shrink: 0;
   box-sizing: border-box;
-  background-color: rgba(255, 255, 255, 1);
+  background-color: rgba(255, 255, 255, 0.5);
 }
 .act-dy__txt { display:flex; flex-direction:column; line-height:1; }
 .act-dy__main {

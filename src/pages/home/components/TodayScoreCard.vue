@@ -87,7 +87,11 @@
     <view class="score-card__content">
       <view class="score-card__score">
         <text class="score-card__number">{{ summary.score }}</text>
-        <text class="score-card__fire">🔥</text>
+        <image
+          class="score-card__fire-img"
+          :src="scoreFlameIcon"
+          mode="aspectFit"
+        />
       </view>
       <view class="score-card__metrics">
         <view class="score-card__metric">
@@ -109,9 +113,19 @@
 
     <view class="score-card__bottom">
       <view class="score-card__loc-pill" @tap.stop="onRequestLocation">
-        <text class="score-card__loc-icon">📍</text>
+        <image
+          class="score-card__loc-icon-img"
+          :src="HOME_LOC_PIN_SRC"
+          mode="aspectFit"
+          :lazy-load="false"
+        />
         <text class="score-card__loc-text">获取位置</text>
-        <text class="score-card__loc-chev">＞</text>
+        <image
+          class="score-card__loc-chev-img"
+          :src="HOME_LOC_CHEVRON_SRC"
+          mode="aspectFit"
+          :lazy-load="false"
+        />
       </view>
       <view class="score-card__tip-wrap">
         <view class="score-card__tip">{{ tipDisplay }}</view>
@@ -125,6 +139,11 @@
 import { computed, ref } from 'vue'
 import { useHomeStore } from '@/stores/home'
 import arrowIcon from '@/static/home/icon-score-select-arrow.png'
+import scoreFlameIcon from '@/static/home/icon-title-hot-flame.png'
+
+/** 小程序端用根路径静态资源，避免组件内 import 在部分真机/分包下 src 异常 */
+const HOME_LOC_PIN_SRC = '/static/home/home-loc-pin.png'
+const HOME_LOC_CHEVRON_SRC = '/static/home/home-loc-chevron.png'
 
 const props = defineProps({
   summary: {
@@ -198,17 +217,23 @@ async function selectIndustry(val) {
 .score-card {
   position: relative;
   box-sizing: border-box;
+  width: 710rpx;
+  min-height: 256rpx;
+  height: auto;
   margin: 6rpx 0 0;
-  padding: 20rpx 24rpx 16rpx 20rpx;
+  padding: 20rpx 24rpx 16rpx 24rpx;
   overflow: hidden;
-  border: 1rpx solid rgba(255, 255, 255, 1);
-  border-radius: 22rpx;
-  background-color: rgba(255, 241, 226, 1);
-  box-shadow: 0 8rpx 20rpx rgba(190, 101, 0, 0.12);
+  border: 1rpx solid rgba(255, 255, 255, 0.09);
+  border-radius: 44rpx;
+  background-color: rgba(255, 241, 226, 0.3);
+  display: flex;
+  flex-direction: column;
 }
 
+/* 展开时允许菜单超出卡片圆角区域，并压过下方「今日爆款内容」等板块 */
 .score-card--dropdown-open {
-  z-index: 100;
+  z-index: 500;
+  overflow: visible;
 }
 
 .score-card__mask {
@@ -234,6 +259,7 @@ async function selectIndustry(val) {
   position: relative;
   z-index: 1000;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .score-card__title-wrap {
@@ -265,13 +291,12 @@ async function selectIndustry(val) {
 }
 
 .score-card__select {
-  min-width: 118rpx;
-  height: 44rpx;
-  border-radius: 24rpx;
-  background: #ffe4bc;
-  color: #6c4a24;
-  font-size: 22rpx;
-  line-height: 44rpx;
+  box-sizing: border-box;
+  width: 168rpx;
+  height: 56rpx;
+  border-radius: 30rpx;
+  background-color: rgba(255, 255, 255, 0.22);
+  line-height: 56rpx;
   text-align: center;
 }
 
@@ -280,24 +305,25 @@ async function selectIndustry(val) {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: 0 10rpx 0 14rpx;
-  line-height: 44rpx;
+  padding: 0 12rpx 0 16rpx;
+  line-height: 56rpx;
 }
 
 .score-card__select-text {
-  max-width: 88rpx;
+  max-width: 90rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 22rpx;
-  color: #6c4a24;
+  font-size: 26rpx;
+  color: #1f2937;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .score-card__select-arrow {
-  width: 18rpx;
-  height: 18rpx;
+  width: 28rpx;
+  height: 28rpx;
   flex-shrink: 0;
-  margin-left: 6rpx;
+  margin-left: 22rpx;
   transition: transform 0.2s ease;
 }
 
@@ -309,6 +335,7 @@ async function selectIndustry(val) {
   position: absolute;
   top: 100%;
   left: 0;
+  z-index: 502;
   margin-top: 8rpx;
   min-width: 100%;
   padding: 8rpx 0;
@@ -334,23 +361,29 @@ async function selectIndustry(val) {
   justify-content: space-between;
   align-items: flex-end;
   margin-top: 14rpx;
+  min-height: 0;
 }
 
 .score-card__score {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .score-card__number {
-  color: #25364b;
-  font-size: 60rpx;
-  font-weight: 800;
+  display: block;
+  text-align: left;
+  font-size: 72rpx;
   line-height: 1;
+  color: #1f2937;
+  font-family: OPPOSans-black, OPPOSans, -apple-system, sans-serif;
+  font-weight: 400;
 }
 
-.score-card__fire {
+.score-card__fire-img {
+  width: 34rpx;
+  height: 34rpx;
+  flex-shrink: 0;
   margin-left: 4rpx;
-  font-size: 26rpx;
 }
 
 .score-card__metrics {
@@ -389,39 +422,39 @@ async function selectIndustry(val) {
 .score-card__bottom {
   justify-content: space-between;
   align-items: center;
-  margin-top: 16rpx;
+  flex-shrink: 0;
+  margin-top: auto;
   padding-top: 4rpx;
 }
 
 .score-card__loc-pill {
   display: flex;
+  flex-direction: row;
   flex-shrink: 0;
   align-items: center;
   box-sizing: border-box;
-  padding: 8rpx 14rpx 8rpx 12rpx;
-  border-radius: 999rpx;
-  background: rgba(61, 45, 31, 0.28);
-  color: rgba(255, 252, 248, 0.96);
-  font-size: 20rpx;
-  line-height: 1.2;
+  padding: 0;
+  background: transparent;
 }
 
-.score-card__loc-icon {
-  margin-right: 4rpx;
-  font-size: 18rpx;
-  line-height: 1;
+.score-card__loc-icon-img,
+.score-card__loc-chev-img {
+  width: 28rpx;
+  height: 28rpx;
+  min-width: 28rpx;
+  min-height: 28rpx;
+  flex-shrink: 0;
+  display: block;
 }
 
 .score-card__loc-text {
-  font-size: 20rpx;
-  color: rgba(255, 252, 248, 0.96);
-}
-
-.score-card__loc-chev {
-  margin-left: 2rpx;
-  font-size: 18rpx;
-  line-height: 1;
-  opacity: 0.92;
+  display: block;
+  margin: 0 8rpx;
+  font-size: 28rpx;
+  line-height: 1.2;
+  text-align: left;
+  color: #ffffff;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .score-card__tip-wrap {

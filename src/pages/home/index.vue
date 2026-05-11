@@ -46,6 +46,7 @@
 <script setup>
 /**
  * 【首页】登录后工作台：数据由 homeStore 拉取（api/home Mock），下拉刷新见 onPullDownRefresh。
+ * 水平边距：顶区 hero / 快捷入口 / 分区标题与卡片统一 24rpx；安全区同时写 constant + env。
  */
 import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useHomeStore } from '@/stores/home'
@@ -80,8 +81,10 @@ onPullDownRefresh(async () => {
 <style lang="scss" scoped>
 .home-page {
   min-height: 100vh;
+  padding-bottom: calc(150rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
   background: #f7f7f7;
+  box-sizing: border-box;
 }
 
 /* 最顶部 → AI一键成片 / 引流数据：整段共用顶图，左下圆角 */
@@ -116,6 +119,7 @@ onPullDownRefresh(async () => {
   padding-top: 0;
   padding-bottom: 20rpx;
   padding-left: 24rpx;
+  padding-right: calc(24rpx + constant(safe-area-inset-right));
   padding-right: calc(24rpx + env(safe-area-inset-right));
 }
 

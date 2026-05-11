@@ -1,7 +1,49 @@
+/* OPPO Sans 4.0：文件见 src/static/fonts/OPPOSans-4.0.ttf */
+@font-face {
+  font-family: 'OPPOSans';
+  /* 小程序端以项目根为基准，与 dist/.../mp-weixin/static/fonts 一致 */
+  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OPPOSans-regular';
+  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OPPOSans-medium';
+  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OPPOSans-bold';
+  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 page {
   background: #f7f7f7;
   color: #222222;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    OPPOSans-regular,
+    OPPOSans,
+    -apple-system,
+    BlinkMacSystemFont,
+    'PingFang SC',
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
 }
 
 /*

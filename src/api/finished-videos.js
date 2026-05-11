@@ -1,6 +1,9 @@
 /**
  * 【一键成片 · 成片列表】接口层
  * 与设计稿对齐：摘要条（生成中进度）、徽章、九宫格成片；联调后改为真实 GET。
+ *
+ * 真机「查看成片」为空常见原因：params.mock !== true 时本模块固定返回空 list（空态或白屏感）。
+ * 演示数据须 mock:true；页面侧开发构建会默认 mock，生产须接真实 GET 或显式 ?mock=1 仅作演示。
  */
 
 const MOCK_COVERS = [
@@ -18,7 +21,7 @@ const MOCK_TOTAL_ITEMS = 30
 const MOCK_GENERATING_COUNT = 3
 
 /**
- * @typedef {{ id: string, title?: string, cover: string, durationLabel: string, dateLabel: string, status: 'processing'|'completed'|'failed', progress?: number, videoUrl?: string }} FinishedVideoItem
+ * @typedef {{ id: string, title?: string, cover: string, durationLabel: string, dateLabel: string, status: 'processing'|'completed'|'failed', progress?: number, failReason?: string, videoUrl?: string }} FinishedVideoItem
  */
 
 function buildSummary() {
@@ -29,7 +32,7 @@ function buildSummary() {
   }
 }
 
-function buildMockItem(globalIndex, status, progressOpt) {
+function buildMockItem(globalIndex, status, progressOpt, failReasonOpt) {
   const i = globalIndex + 1
   const durations = ['30s', '15s', '30s']
   return {
@@ -40,6 +43,11 @@ function buildMockItem(globalIndex, status, progressOpt) {
     dateLabel: '26-4-20 16:24',
     status,
     progress: status === 'processing' ? progressOpt ?? 45 : undefined,
+    failReason:
+      status === 'failed'
+        ? failReasonOpt ||
+          '部分素材清晰度较低，影响了视频效果。\n建议您更换清晰的素材后重试'
+        : undefined,
     videoUrl: ''
   }
 }
@@ -73,9 +81,20 @@ export function getFinishedVideoList(params = {}) {
   const start = (page - 1) * pageSize
   for (let i = 0; i < pageSize && start + i < MOCK_TOTAL_ITEMS; i++) {
     const idx = start + i
-    const status = idx < MOCK_GENERATING_COUNT ? 'processing' : 'completed'
+    /** 设计稿：九宫格左上角为失败；其右三张为生成中 */
+    const isPage1TopLeftFailed = page === 1 && idx === 0
+    const isProcessingSlot =
+      idx >= 1 && idx <= MOCK_GENERATING_COUNT
+    let status
+    if (isPage1TopLeftFailed) {
+      status = 'failed'
+    } else if (isProcessingSlot) {
+      status = 'processing'
+    } else {
+      status = 'completed'
+    }
     const progress =
-      status === 'processing' ? progresses[idx % MOCK_GENERATING_COUNT] : undefined
+      status === 'processing' ? progresses[(idx - 1) % MOCK_GENERATING_COUNT] : undefined
     list.push(buildMockItem(idx, status, progress))
   }
 

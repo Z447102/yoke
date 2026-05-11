@@ -31,7 +31,7 @@ function handleClick(name) {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  padding: 16rpx 20rpx;
+  padding: 16rpx 24rpx;
 }
 
 .quick-card {
