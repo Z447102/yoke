@@ -60,13 +60,14 @@ if (!fs.existsSync(MP_APP_WXSS)) {
     'OPPOSans-regular',
     'OPPOSans-medium',
     'OPPOSans-bold',
+    'OPPOSans-light',
     'font-family:OPPOSans'
   ]
   for (const s of needles) {
     if (!wxss.includes(s)) bad(`app.wxss 缺少:「${s}」`)
   }
   if (!needles.some((s) => !wxss.includes(s))) {
-    ok('app.wxss 中含 @font-face、字体文件名与四套 font-family')
+    ok('app.wxss 中含 @font-face、字体文件名与五套 font-family')
   }
 }
 

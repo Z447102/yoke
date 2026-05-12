@@ -1,7 +1,14 @@
 <template>
   <view class="section-title">
     <view class="section-title__left">
-      <text class="section-title__icon">{{ icon }}</text>
+      <image
+        v-if="iconSrc"
+        class="section-title__icon-img"
+        :src="iconSrc"
+        mode="aspectFit"
+        :lazy-load="false"
+      />
+      <text v-else-if="icon" class="section-title__icon">{{ icon }}</text>
       <text class="section-title__text">{{ title }}</text>
       <text v-if="tag" class="section-title__tag">{{ tag }}</text>
     </view>
@@ -14,6 +21,10 @@
 
 <script setup>
 defineProps({
+  iconSrc: {
+    type: String,
+    default: ''
+  },
   icon: {
     type: String,
     default: ''
@@ -53,11 +64,19 @@ defineEmits(['more'])
     font-size: 28rpx;
   }
 
+  &__icon-img {
+    width: 38rpx;
+    height: 28rpx;
+    margin-right: 10rpx;
+    flex-shrink: 0;
+    display: block;
+  }
+
   &__text {
     font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
     color: #1f2937;
-    font-size: 30rpx;
-    font-weight: 600;
+    font-size: 32rpx;
+    font-weight: 500;
   }
 
   &__tag {

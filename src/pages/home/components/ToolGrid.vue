@@ -1,47 +1,68 @@
 <template>
   <view class="tool-section">
-    <SectionTitle :title="title" />
+    <SectionTitle :title="title" :icon-src="titleIconSrc" />
 
-    <!-- 默认一屏约 3 个入口宽度，横向滑动查看全部 -->
-    <scroll-view
-      v-if="tools.length"
-      class="tool-scroll"
-      scroll-x
-      :show-scrollbar="false"
-      :enable-flex="true"
-    >
+    <view v-if="displayedTools.length" class="tool-track">
       <view class="tool-row">
         <view
-          v-for="tool in tools"
+          v-for="(tool, index) in displayedTools"
           :key="tool.key"
           class="tool-item"
           @tap="$emit('select', tool)"
         >
+          <view class="tool-item__text">
+            <text class="tool-name">{{ tool.name }}</text>
+            <text class="tool-desc">{{ tool.desc }}</text>
+          </view>
           <view class="tool-icon">
-            <text>{{ tool.icon }}</text>
+            <image
+              v-if="moduleIconAt(index)"
+              class="tool-icon__img"
+              :src="moduleIconAt(index)"
+              mode="aspectFit"
+              :lazy-load="false"
+            />
+            <text v-else class="tool-icon__emoji">{{ tool.icon }}</text>
             <view v-if="tool.badge" class="tool-badge">{{ tool.badge }}</view>
           </view>
-          <text class="tool-name">{{ tool.name }}</text>
-          <text class="tool-desc">{{ tool.desc }}</text>
         </view>
       </view>
-    </scroll-view>
+    </view>
 
-    <view class="tool-cta">
-      <text>‹‹</text>
-      <text>{{ ctaText }}</text>
-      <text class="tool-cta__circle">○</text>
+    <view class="tool-cta" :style="ctaBarStyle">
+      <text class="tool-cta__lead">‹‹</text>
+      <text class="tool-cta__text">{{ ctaText }}</text>
+      <view class="tool-cta__tray">
+        <image
+          class="tool-cta__arrow-img"
+          :src="toolGridCtaArrow"
+          mode="aspectFit"
+          :lazy-load="false"
+        />
+      </view>
     </view>
   </view>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import SectionTitle from './SectionTitle.vue'
+import toolGridCtaBg from '@/static/home/home-tool-grid-cta-bg.png'
+import toolGridCtaArrow from '@/static/home/home-tool-grid-cta-arrow.png'
 
-defineProps({
+const props = defineProps({
   title: {
     type: String,
     required: true
+  },
+  titleIconSrc: {
+    type: String,
+    default: ''
+  },
+  /** 各区块前三项模块图（智能工具库 / 文案工作站等），与 `tools` 前 3 条顺序一致 */
+  moduleIconSrcs: {
+    type: Array,
+    default: () => []
   },
   tools: {
     type: Array,
@@ -54,65 +75,100 @@ defineProps({
 })
 
 defineEmits(['select'])
+
+const displayedTools = computed(() => (props.tools || []).slice(0, 3))
+
+/** 小程序端用 import + 内联 background，避免 wxss 里 url(@/static/...) 不生效 */
+const ctaBarStyle = {
+  backgroundImage: `url(${toolGridCtaBg})`,
+  backgroundSize: '100% 100%',
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'center'
+}
+
+function moduleIconAt(index) {
+  const list = props.moduleIconSrcs || []
+  return list[index] || ''
+}
 </script>
 
 <style lang="scss" scoped>
-/* 与首页顶区一致：左右各 24rpx，3 列均分剩余宽度（约 226rpx/格） */
 $tool-side-pad: 24rpx;
-$tool-gap: 12rpx;
-/* (750 - 2*24 - 2*12) / 3 = 226 */
-$tool-cell: 226rpx;
+$tool-gap: 15rpx;
+$tool-cell-w: 224rpx;
+$tool-cell-h: 248rpx;
 
 .tool-section {
+  margin-top: 40rpx;
   padding-bottom: 24rpx;
 }
 
-.tool-scroll {
+.tool-track {
   width: 100%;
-  height: 218rpx;
-  white-space: nowrap;
+  padding-top: 10rpx;
 }
 
 .tool-row {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
-  padding: 10rpx $tool-side-pad 0;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0 $tool-side-pad;
   box-sizing: border-box;
-}
-
-.tool-row .tool-item + .tool-item {
-  margin-left: $tool-gap;
+  gap: $tool-gap;
 }
 
 .tool-item {
-  flex: 0 0 $tool-cell;
-  width: $tool-cell;
+  position: relative;
+  flex: 0 0 $tool-cell-w;
+  width: $tool-cell-w;
+  height: $tool-cell-h;
   box-sizing: border-box;
-  min-height: 118rpx;
-  padding: 12rpx 4rpx 8rpx;
-  border-radius: 20rpx;
-  background: transparent;
-  text-align: center;
+  padding: 0;
+  border-radius: 44rpx;
+  background: linear-gradient(
+    136.53deg,
+    rgba(247, 247, 247, 1) 2.39%,
+    rgba(237, 237, 237, 0) 50.27%,
+    rgba(247, 247, 247, 1) 96.26%
+  );
+}
+
+.tool-item__text {
+  position: absolute;
+  top: 26rpx;
+  left: 30rpx;
+  max-width: 124rpx;
+  text-align: left;
 }
 
 .tool-icon {
-  position: relative;
-  width: 52rpx;
-  height: 52rpx;
-  margin: 0 auto 10rpx;
-  border-radius: 16rpx;
-  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
+  position: absolute;
+  right: 32rpx;
+  bottom: 30rpx;
+  width: 84rpx;
+  height: 84rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-icon__img {
+  width: 84rpx;
+  height: 84rpx;
+  display: block;
+}
+
+.tool-icon__emoji {
+  font-size: 44rpx;
+  line-height: 1;
   color: #ff922f;
-  font-size: 31rpx;
-  line-height: 52rpx;
-  box-shadow: 0 8rpx 22rpx rgba(20, 20, 20, 0.06);
 }
 
 .tool-badge {
   position: absolute;
-  top: -8rpx;
-  right: -12rpx;
+  top: -6rpx;
+  right: -10rpx;
   padding: 2rpx 8rpx;
   border-radius: 999rpx;
   background: #ff8e24;
@@ -126,32 +182,56 @@ $tool-cell: 226rpx;
   color: #3a3a3a;
   font-size: 20rpx;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .tool-desc {
   display: block;
-  margin-top: 6rpx;
+  margin-top: 8rpx;
   color: #b0b0b0;
   font-size: 14rpx;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .tool-cta {
-  width: 560rpx;
-  height: 42rpx;
+  width: 520rpx;
+  height: 88rpx;
   margin: 18rpx auto 0;
-  padding: 0 24rpx;
-  border-radius: 999rpx;
-  background: linear-gradient(90deg, #ff9831, #ffc760);
-  color: #ffffff;
-  font-size: 22rpx;
+  padding: 0 32rpx;
+  box-sizing: border-box;
+  border-radius: 44rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.tool-cta__circle {
-  font-size: 28rpx;
+.tool-cta__lead {
+  color: #ffffff;
+  font-size: 26rpx;
+  line-height: 1;
+}
+
+.tool-cta__text {
+  font-size: 26rpx;
+  color: #ffffff;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+}
+
+.tool-cta__tray {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0rpx 4rpx 12rpx 0rpx rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tool-cta__arrow-img {
+  width: 40rpx;
+  height: 40rpx;
+  display: block;
 }
 </style>

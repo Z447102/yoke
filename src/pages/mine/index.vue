@@ -52,7 +52,7 @@
             <text class="stats-title">我的点数</text>
             <text class="stats-value">{{ pointsDisplay }}</text>
           </view>
-          <image class="stats-chev" :src="iconChevronRight" mode="aspectFit" />
+          <image class="stats-chev" :src="iconStatsChevronRight" mode="aspectFit" />
         </view>
         <view class="stats-divider" />
         <view class="stats-col right" @tap="goBusiness">
@@ -61,33 +61,58 @@
             <text class="stats-title">主营业务</text>
             <text class="stats-placeholder"> </text>
           </view>
-          <image class="stats-chev" :src="iconChevronRight" mode="aspectFit" />
+          <image class="stats-chev" :src="iconStatsChevronRight" mode="aspectFit" />
         </view>
       </view>
 
       <view class="promo-row">
-        <view class="promo-card promo-card--vip" @tap="onVipTap">
+        <view
+          class="promo-card promo-card--vip"
+          :style="vipPromoBgStyle"
+          @tap="onVipTap"
+        >
           <view class="promo-card__text">
-            <text class="promo-card__title">VIP 会员中心</text>
-            <text class="promo-card__sub">当前立省 ¥99 送1000</text>
+            <view class="promo-card__title-row">
+              <image
+                class="promo-card__vip-badge"
+                :src="minePromoVipBadge"
+                mode="aspectFit"
+                :lazy-load="false"
+              />
+              <text class="promo-card__title">会员中心</text>
+            </view>
+            <view class="promo-card__sub-vip">
+              <text class="promo-card__sub-vip-txt">当前立省 ¥</text>
+              <text class="promo-card__sub-vip-txt promo-card__sub-vip-txt--bold">99</text>
+              <text class="promo-card__sub-vip-txt"> 送</text>
+              <text class="promo-card__sub-vip-txt promo-card__sub-vip-txt--bold">1000</text>
+              <text class="promo-card__sub-vip-txt">点</text>
+            </view>
           </view>
           <view class="promo-card__circle">
             <image
               class="promo-card__arrow"
-              :src="iconNextInCircle"
+              :src="iconPromoNext"
               mode="aspectFit"
             />
           </view>
         </view>
-        <view class="promo-card promo-card--points" @tap="onRechargeTap">
+        <view
+          class="promo-card promo-card--points"
+          :style="pointsPromoBgStyle"
+          @tap="onRechargeTap"
+        >
           <view class="promo-card__text">
             <text class="promo-card__title">点数充值</text>
-            <text class="promo-card__sub">首充8折 限时优惠</text>
+            <view class="promo-card__sub-points">
+              <text class="promo-card__sub-points-txt">首充8折</text>
+              <text class="promo-card__sub-points-txt">限时优惠</text>
+            </view>
           </view>
           <view class="promo-card__circle promo-card__circle--dark">
             <image
               class="promo-card__arrow"
-              :src="iconNextInCircle"
+              :src="iconPromoNext"
               mode="aspectFit"
             />
           </view>
@@ -96,17 +121,19 @@
 
       <view class="tools-panel">
         <view class="tools-row">
-          <view class="tools-item" @tap="toastSoon('学习中心')">
-            <view class="tools-icon">▣</view>
-            <text class="tools-label">学习中心</text>
-          </view>
-          <view class="tools-item" @tap="toastSoon('通知与反馈')">
-            <view class="tools-icon">◇</view>
-            <text class="tools-label">通知与反馈</text>
-          </view>
-          <view class="tools-item" @tap="toastSoon('联系客服')">
-            <view class="tools-icon">◎</view>
-            <text class="tools-label">联系客服</text>
+          <view
+            v-for="item in mineQuickTools"
+            :key="item.key"
+            class="tools-item"
+            @tap="toastSoon(item.label)"
+          >
+            <image
+              class="tools-icon-img"
+              :src="item.icon"
+              mode="aspectFit"
+              :lazy-load="false"
+            />
+            <text class="tools-label">{{ item.label }}</text>
           </view>
         </view>
       </view>
@@ -187,11 +214,25 @@ import HomeTabBar from '@/pages/home/components/HomeTabBar.vue'
 import mineHeaderBg from '@/static/mine/mine-header-bg.png'
 import iconPoints from '@/static/mine/icon-points.png'
 import iconBusiness from '@/static/mine/icon-business.png'
-import iconChevronRight from '@/static/mine/icon-chevron-right.svg'
+import iconStatsChevronRight from '@/static/mine/mine-stats-chevron-right.png'
 import iconChevronRightLight from '@/static/mine/icon-chevron-right-light.svg'
-import iconNextInCircle from '@/static/mine/icon-next-in-circle.svg'
+import iconPromoNext from '@/static/mine/mine-promo-next-icon.png'
+import minePromoVipBg from '@/static/mine/mine-promo-vip-bg.png'
+import minePromoVipBadge from '@/static/mine/mine-promo-vip-badge.png'
+import minePromoPointsBg from '@/static/mine/mine-promo-points-bg.png'
+import mineToolDigitalHuman from '@/static/mine/mine-tool-digital-human.png'
+import mineToolLearning from '@/static/mine/mine-tool-learning.png'
+import mineToolNotice from '@/static/mine/mine-tool-notice.png'
+import mineToolService from '@/static/mine/mine-tool-service.png'
 
 const userStore = useUserStore()
+
+const mineQuickTools = [
+  { key: 'digital', label: '我的数字人', icon: mineToolDigitalHuman },
+  { key: 'learning', label: '学习中心', icon: mineToolLearning },
+  { key: 'notice', label: '通知与反馈', icon: mineToolNotice },
+  { key: 'service', label: '联系客服', icon: mineToolService }
+]
 
 const DEFAULT_CAT_AVATAR =
   'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=240&h=240&fit=crop'
@@ -200,6 +241,24 @@ const DEFAULT_CAT_AVATAR =
 const heroLayout = ref({
   navPlaceholderPx: 128
 })
+
+/** VIP 会员中心：设计底图 + 灰色底（小程序用 import 保证背景图路径） */
+const vipPromoBgStyle = {
+  backgroundColor: 'rgba(229, 229, 229, 1)',
+  backgroundImage: `url(${minePromoVipBg})`,
+  backgroundSize: '100% 100%',
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'center'
+}
+
+/** 点数充值：深色底图（小程序用 import 保证背景图路径） */
+const pointsPromoBgStyle = {
+  backgroundColor: 'rgba(28, 28, 28, 1)',
+  backgroundImage: `url(${minePromoPointsBg})`,
+  backgroundSize: '100% 100%',
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'center'
+}
 
 function readMenuButtonRect() {
   try {
@@ -523,10 +582,10 @@ function handleLogout() {
   flex-direction: column;
   align-items: stretch;
   
-  /* 顶距：mine-hero__nav-placeholder；左右：内容避让安全区 + 小程序右侧胶囊区 */
-  padding-left: calc(30rpx + constant(safe-area-inset-left));
-  padding-left: calc(30rpx + env(safe-area-inset-left));
-  padding-right: 30rpx;
+  /* 顶距：mine-hero__nav-placeholder；左右与首页内容区一致 24rpx + 安全区 */
+  padding-left: calc(24rpx + constant(safe-area-inset-left));
+  padding-left: calc(24rpx + env(safe-area-inset-left));
+  padding-right: 24rpx;
   padding-bottom: 72rpx;
   box-sizing: border-box;
 }
@@ -609,6 +668,7 @@ function handleLogout() {
   color: #1f2937;
   font-size: 32rpx;
   font-weight: 800;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
   letter-spacing: 0.5rpx;
   max-width: 100%;
   overflow: hidden;
@@ -636,13 +696,13 @@ function handleLogout() {
 
 .mine-exchange {
   flex-shrink: 0;
-  height: 52rpx;
-  min-width: 52rpx;
-  padding: 0 18rpx;
-  border-radius: 26rpx;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1rpx solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.06);
+  width: 146rpx;
+  height: 54rpx;
+  padding: 0;
+  border-radius: 12rpx;
+  background-color: rgba(255, 231, 204, 1);
+  border: none;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -650,10 +710,12 @@ function handleLogout() {
 }
 
 .mine-exchange-text {
-  font-size: 24rpx;
-  color: #888888;
-  font-weight: 600;
+  font-size: 28rpx;
+  color: rgba(31, 41, 55, 1);
+  font-weight: 400;
+  font-family: OPPOSans-light, OPPOSans, -apple-system, sans-serif;
   line-height: 1;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -661,10 +723,10 @@ function handleLogout() {
   margin-top: -44rpx;
   padding-top: 0;
   padding-bottom: 40rpx;
-  padding-left: calc(30rpx + constant(safe-area-inset-left));
-  padding-left: calc(30rpx + env(safe-area-inset-left));
-  padding-right: calc(30rpx + constant(safe-area-inset-right));
-  padding-right: calc(30rpx + env(safe-area-inset-right));
+  padding-left: calc(24rpx + constant(safe-area-inset-left));
+  padding-left: calc(24rpx + env(safe-area-inset-left));
+  padding-right: calc(24rpx + constant(safe-area-inset-right));
+  padding-right: calc(24rpx + env(safe-area-inset-right));
   position: relative;
   z-index: 3;
 }
@@ -702,7 +764,8 @@ function handleLogout() {
 
 .stats-title {
   font-size: 28rpx;
-  color: rgba(31,41,55,1);
+  color: rgba(31, 41, 55, 1);
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   line-height: 1.2;
 }
 
@@ -710,6 +773,7 @@ function handleLogout() {
   // margin-top: 4rpx;
   font-size: 28rpx;
   font-weight: 800;
+  font-family: OPPOSans-bold, OPPOSans, -apple-system, sans-serif;
   color: #1a1a1a;
   line-height: 1.15;
   margin-left: 16rpx;
@@ -740,33 +804,40 @@ function handleLogout() {
 .promo-row {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
+  gap: 18rpx;
   margin-top: 22rpx;
 }
 
 .promo-card {
-  flex: 1;
-  min-width: 0;
   position: relative;
-  min-height: 128rpx;
-  padding: 20rpx 52rpx 20rpx 22rpx;
-  border-radius: 24rpx;
   box-sizing: border-box;
   overflow: hidden;
 }
 
 .promo-card + .promo-card {
-  margin-left: 18rpx;
+  margin-left: 0;
 }
 
 .promo-card--vip {
-  background: linear-gradient(135deg, #ffb04d 0%, #ff8e24 100%);
-  box-shadow: 0 10rpx 24rpx rgba(255, 142, 36, 0.32);
+  flex: 0 0 328rpx;
+  width: 328rpx;
+  height: 118rpx;
+  min-height: 118rpx;
+  padding: 24rpx 20rpx 24rpx 28rpx;
+  border-radius: 26rpx;
+  box-shadow: none;
 }
 
 .promo-card--points {
-  background: linear-gradient(148deg, #4f4f4f 0%, #1c1c1c 100%);
-  box-shadow: 0 10rpx 24rpx rgba(0, 0, 0, 0.2);
+  flex: 0 0 328rpx;
+  width: 328rpx;
+  height: 118rpx;
+  min-height: 118rpx;
+  padding: 24rpx 20rpx 24rpx 28rpx;
+  border-radius: 26rpx;
+  box-shadow: none;
 }
 
 .promo-card__text {
@@ -774,36 +845,97 @@ function handleLogout() {
   flex-direction: column;
 }
 
+.promo-card__title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+
+.promo-card__vip-badge {
+  width: 62rpx;
+  height: 26rpx;
+  margin-right: 6rpx;
+  flex-shrink: 0;
+  display: block;
+}
+
 .promo-card__title {
   color: #ffffff;
   font-size: 28rpx;
   font-weight: 800;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
   line-height: 1.25;
 }
 
-.promo-card__sub {
+.promo-card--vip .promo-card__title {
+  font-size: 30rpx;
+  color: #654222;
+  font-weight: 500;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+}
+
+.promo-card--points .promo-card__title {
+  font-size: 30rpx;
+  color: #ffffff;
+  font-weight: 500;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+}
+
+.promo-card__sub-points {
   margin-top: 8rpx;
-  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+}
+
+.promo-card__sub-points-txt {
   font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   line-height: 1.35;
+}
+
+.promo-card__sub-points-txt:first-child {
+  margin-right: 10rpx;
+}
+
+.promo-card__sub-vip {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.promo-card__sub-vip-txt {
+  font-size: 20rpx;
+  color: #8c5d22;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+  line-height: 1.35;
+}
+
+.promo-card__sub-vip-txt--bold {
+  font-weight: 700;
+  font-family: OPPOSans-bold, OPPOSans, -apple-system, sans-serif;
 }
 
 .promo-card__circle {
   position: absolute;
   right: 14rpx;
   top: 50%;
-  width: 44rpx;
-  height: 44rpx;
-  margin-top: -22rpx;
+  width: 36rpx;
+  height: 36rpx;
+  margin-top: -18rpx;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.28);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .promo-card__circle--dark {
-  background: rgba(255, 255, 255, 0.14);
+  background: transparent;
 }
 
 .promo-card__arrow {
@@ -813,10 +945,20 @@ function handleLogout() {
 }
 
 .tools-panel {
+  box-sizing: border-box;
+  width: 750rpx;
+  max-width: 100%;
+  height: 210rpx;
   margin-top: 24rpx;
-  padding: 22rpx 12rpx 26rpx;
-  border-radius: 24rpx;
-  background: #f0f0f0;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 12rpx;
+  background: #ffffff;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
 }
 
 .tools-row {
@@ -832,25 +974,21 @@ function handleLogout() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
 }
 
-.tools-icon {
-  width: 76rpx;
-  height: 76rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 34rpx;
-  color: #ff922f;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.05);
+.tools-icon-img {
+  width: 68rpx;
+  height: 68rpx;
+  flex-shrink: 0;
+  display: block;
 }
 
 .tools-label {
   margin-top: 12rpx;
-  font-size: 22rpx;
-  color: #444444;
+  font-size: 24rpx;
+  color: #1f2937;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   text-align: center;
   line-height: 1.35;
 }
@@ -879,6 +1017,7 @@ function handleLogout() {
   font-size: 26rpx;
   color: #999999;
   font-weight: 500;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .tab-item--active {
@@ -909,6 +1048,7 @@ function handleLogout() {
   font-size: 24rpx;
   color: #7a5220;
   font-weight: 600;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .works-manage {
@@ -933,6 +1073,7 @@ function handleLogout() {
   font-size: 22rpx;
   color: #666666;
   font-weight: 600;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .works-grid {
@@ -1001,6 +1142,7 @@ function handleLogout() {
 .work-thumb__meta {
   font-size: 18rpx;
   color: rgba(255, 255, 255, 0.96);
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .works-empty {
@@ -1018,6 +1160,7 @@ function handleLogout() {
 .works-empty__text {
   font-size: 26rpx;
   color: #999999;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   text-align: center;
   line-height: 1.5;
 }
@@ -1033,6 +1176,7 @@ function handleLogout() {
   font-size: 26rpx;
   color: #ffffff;
   font-weight: 700;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
 }
 
 .mine-subnav {
@@ -1048,6 +1192,7 @@ function handleLogout() {
   font-size: 24rpx;
   color: #888888;
   font-weight: 500;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .mine-subnav__link--warn {

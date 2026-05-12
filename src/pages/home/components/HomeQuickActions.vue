@@ -1,17 +1,34 @@
 <template>
   <view class="quick-actions">
     <view class="quick-card" @tap="goToCreate">
-      <view class="quick-icon">▣</view>
+      <view class="quick-icon">
+        <image
+          class="quick-icon__img"
+          :src="quickCreateIcon"
+          mode="aspectFit"
+          :lazy-load="false"
+        />
+      </view>
       <text>AI一键成片</text>
     </view>
     <view class="quick-card" @tap="handleClick('引流数据')">
-      <view class="quick-icon">▥</view>
+      <view class="quick-icon">
+        <image
+          class="quick-icon__img"
+          :src="quickDrainIcon"
+          mode="aspectFit"
+          :lazy-load="false"
+        />
+      </view>
       <text>引流数据</text>
     </view>
   </view>
 </template>
 
 <script setup>
+import quickCreateIcon from '@/static/home/home-quick-create-icon.png'
+import quickDrainIcon from '@/static/home/home-quick-drain-icon.png'
+
 function goToCreate() {
   uni.navigateTo({
     url: '/pages/create/index'
@@ -31,39 +48,54 @@ function handleClick(name) {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  padding: 16rpx 24rpx;
+  justify-content: space-between;
+  padding: 16rpx 24rpx 36rpx;
 }
 
 .quick-card {
-  flex: 1;
-  min-width: 0;
+  width: 320rpx;
+  height: 88rpx;
+  min-width: 320rpx;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 74rpx;
-  border-radius: 40rpx;
-  background: linear-gradient(180deg, #fff4df 0%, #ffe7bd 100%);
-  color: #7a4b16;
-  font-size: 29rpx;
-  font-weight: 700;
-  box-shadow: 0 10rpx 18rpx rgba(255, 159, 46, 0.16);
+  justify-content: flex-start;
+  padding-left: 10rpx;
+  border-radius: 44rpx;
+  background-color: rgba(255, 241, 226, 0.8);
+  border: 1rpx solid rgba(255, 255, 255, 0.5);
+  color: rgba(31, 41, 55, 1);
 }
 
 .quick-card + .quick-card {
-  margin-left: 18rpx;
+  margin-left: 0;
+}
+
+.quick-card text {
+  font-size: 30rpx;
+  color: rgba(31, 41, 55, 1);
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
 }
 
 .quick-icon {
   flex-shrink: 0;
-  margin-right: 16rpx;
+  margin-right: 36rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42rpx;
-  height: 42rpx;
+  width: 68rpx;
+  height: 68rpx;
   border-radius: 50%;
-  background: #ff8b1f;
-  color: #ffffff;
-  font-size: 22rpx;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 197, 129, 1) 0%,
+    rgba(255, 148, 50, 1) 100%
+  );
+}
+
+.quick-icon__img {
+  width: 32rpx;
+  height: 32rpx;
+  display: block;
 }
 </style>

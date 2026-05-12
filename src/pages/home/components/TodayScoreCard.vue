@@ -128,8 +128,17 @@
         />
       </view>
       <view class="score-card__tip-wrap">
-        <view class="score-card__tip">{{ tipDisplay }}</view>
-        <text class="score-card__emoji">👍</text>
+        <view class="score-card__tip-bar">
+          <view class="score-card__tip">{{ tipDisplay }}</view>
+          <view class="score-card__tip-icon-wrap">
+            <image
+              class="score-card__tip-icon"
+              :src="homeScoreTipEmoji"
+              mode="aspectFit"
+              :lazy-load="false"
+            />
+          </view>
+        </view>
       </view>
     </view>
   </view>
@@ -140,6 +149,7 @@ import { computed, ref } from 'vue'
 import { useHomeStore } from '@/stores/home'
 import arrowIcon from '@/static/home/icon-score-select-arrow.png'
 import scoreFlameIcon from '@/static/home/icon-title-hot-flame.png'
+import homeScoreTipEmoji from '@/static/home/home-score-tip-emoji.png'
 
 /** 小程序端用根路径静态资源，避免组件内 import 在部分真机/分包下 src 异常 */
 const HOME_LOC_PIN_SRC = '/static/home/home-loc-pin.png'
@@ -221,7 +231,8 @@ async function selectIndustry(val) {
   min-height: 256rpx;
   height: auto;
   margin: 6rpx 0 0;
-  padding: 20rpx 24rpx 16rpx 24rpx;
+  /* 底栏小提示右侧 60rpx 图标纵向超出 46rpx 条，略加大底内边距减轻裁切 */
+  padding: 20rpx 24rpx 22rpx 24rpx;
   overflow: hidden;
   border: 1rpx solid rgba(255, 255, 255, 0.09);
   border-radius: 44rpx;
@@ -425,6 +436,7 @@ async function selectIndustry(val) {
   flex-shrink: 0;
   margin-top: auto;
   padding-top: 4rpx;
+  overflow: visible;
 }
 
 .score-card__loc-pill {
@@ -464,25 +476,58 @@ async function selectIndustry(val) {
   justify-content: flex-end;
   min-width: 0;
   margin-left: 12rpx;
+  overflow: visible;
+}
+
+.score-card__tip-bar {
+  position: relative;
+  box-sizing: border-box;
+  width: 446rpx;
+  max-width: 100%;
+  height: 46rpx;
+  border-radius: 22rpx;
+  background-color: rgba(255, 255, 255, 0.22);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 8rpx 0 14rpx;
+  overflow: visible;
 }
 
 .score-card__tip {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  color: #c98c4a;
-  font-size: 18rpx;
-  line-height: 1.35;
+  font-size: 20rpx;
+  line-height: 46rpx;
+  height: 46rpx;
+  color: rgba(31, 41, 55, 0.7);
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
   word-break: keep-all;
 }
 
-.score-card__emoji {
+.score-card__tip-icon-wrap {
+  position: relative;
   flex-shrink: 0;
-  margin-left: 8rpx;
-  font-size: 30rpx;
-  line-height: 1;
+  width: 60rpx;
+  min-width: 60rpx;
+  height: 46rpx;
+  margin-left: 4rpx;
+  overflow: visible;
+}
+
+/* 底边距小提示条底框 10rpx，60rpx 高图标主要向上超出条顶（46 - 10 - 60 = -24） */
+.score-card__tip-icon {
+  position: absolute;
+  right: 0;
+  bottom: 10rpx;
+  width: 60rpx;
+  height: 60rpx;
+  min-width: 60rpx;
+  min-height: 60rpx;
+  display: block;
 }
 </style>

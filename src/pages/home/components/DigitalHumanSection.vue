@@ -1,16 +1,48 @@
 <template>
   <view class="digital-section">
-    <SectionTitle
-      icon="⟡"
-      title="数字人视频"
-      tag="60秒生成口播视频"
-      more-text="全部形象"
-    />
+    <view class="digital-header">
+      <view class="digital-header__left">
+        <image
+          class="digital-header__title-icon"
+          :src="digitalTitleIcon"
+          mode="aspectFit"
+          :lazy-load="false"
+        />
+        <view class="digital-header__title-copy">
+          <view class="digital-header__title-row">
+            <text class="digital-header__title">数字人视频</text>
+            <image
+              class="digital-header__title-trail-icon"
+              :src="digitalTitleTrailIcon"
+              mode="aspectFit"
+              :lazy-load="false"
+            />
+          </view>
+          <text class="digital-header__tag">60秒生成口播视频</text>
+        </view>
+      </view>
+      <view class="digital-header__more">
+        <text class="digital-header__more-text">全部形象</text>
+        <image
+          class="digital-header__more-icon"
+          :src="digitalMoreIcon"
+          mode="aspectFit"
+          :lazy-load="false"
+        />
+      </view>
+    </view>
 
     <view class="digital-human">
       <view class="create-card" @tap="$emit('create')">
-        <view class="plus">+</view>
-        <text>创建数字形象</text>
+        <view class="plus">
+          <image
+            class="plus-icon"
+            :src="digitalPlusIcon"
+            mode="aspectFit"
+            :lazy-load="false"
+          />
+        </view>
+        <text>创建数字人</text>
       </view>
 
       <view
@@ -20,14 +52,26 @@
         :style="{ backgroundImage: `url(${item.avatar})` }"
       >
         <view class="human-tag">{{ item.tag }}</view>
-        <view v-if="item.playable" class="play">▶</view>
+        <view v-if="item.playable" class="play">
+          <image
+            class="play-icon"
+            :src="digitalScrollIcon"
+            mode="aspectFit"
+            :lazy-load="false"
+          />
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import SectionTitle from './SectionTitle.vue'
+import digitalTitleIcon from '@/static/home/home-digital-title-icon.png'
+import digitalMoreIcon from '@/static/home/home-digital-more-icon.png'
+import digitalCardArrowIcon from '@/static/home/home-digital-card-arrow-icon.png'
+import digitalTitleTrailIcon from '@/static/home/home-digital-title-trail-icon-v3.png'
+import digitalPlusIcon from '@/static/home/home-digital-plus-icon.png'
+import digitalScrollIcon from '@/static/home/home-digital-scroll-icon.png'
 
 defineProps({
   list: {
@@ -44,12 +88,96 @@ defineEmits(['create'])
   padding-top: 10rpx;
 }
 
+.digital-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 28rpx 24rpx 14rpx;
+}
+
+.digital-header__left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+
+.digital-header__title-icon {
+  width: 32rpx;
+  height: 56rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+  display: block;
+}
+
+.digital-header__title-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.digital-header__title-row {
+  display: flex;
+  align-items: center;
+}
+
+.digital-header__title {
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+  color: #1f2937;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.digital-header__title-trail-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-left: 8rpx;
+  flex-shrink: 0;
+  display: block;
+}
+
+.digital-header__tag {
+  margin-top: 4rpx;
+  color: #ff9a23;
+  font-size: 20rpx;
+}
+
+.digital-header__more {
+  display: flex;
+  align-items: center;
+}
+
+.digital-header__more-text {
+  color: #6b7280;
+  font-size: 28rpx;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+}
+
+.digital-header__more-icon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-left: 4rpx;
+  flex-shrink: 0;
+  display: block;
+}
+
 .digital-human {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  height: 202rpx;
-  padding: 0 24rpx;
+  width: 730rpx;
+  height: 320rpx;
+  margin-top: 22rpx;
+  margin-left: auto;
+  border-radius: 62rpx 0 0 62rpx;
+  background: linear-gradient(
+    133.53deg,
+    rgba(255, 197, 129, 1) 5.35%,
+    rgba(255, 165, 84, 1) 92.61%
+  );
+  box-sizing: border-box;
+  padding: 20rpx 24rpx 20rpx 28rpx;
 }
 
 /* 微信小程序 WXSS 不支持 `.parent > * + *` 中的通配符，改用相邻兄弟选择器 */
@@ -65,32 +193,53 @@ defineEmits(['create'])
 }
 
 .create-card {
-  flex: 0 0 152rpx;
-  width: 152rpx;
+  flex: 0 0 216rpx;
+  width: 216rpx;
+  height: 280rpx;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  background: #ffc06f;
+  color: #ffffff;
+  border-radius: 44rpx;
+  background-color: rgba(255, 241, 226, 0.3);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+}
+
+.create-card text {
+  font-size: 26rpx;
+  color: #ffffff;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .plus {
-  width: 42rpx;
-  height: 42rpx;
+  width: 64rpx;
+  height: 64rpx;
   margin-bottom: 24rpx;
-  color: #ffa236;
-  font-size: 34rpx;
-  line-height: 42rpx;
-  text-align: center;
-  background: #fff;
+  background-color: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 6rpx 0 rgba(223, 192, 192, 0.49);
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plus-icon {
+  width: 24rpx;
+  height: 24rpx;
+  display: block;
 }
 
 .human-card {
   position: relative;
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 216rpx;
+  width: 216rpx;
+  height: 280rpx;
+  min-width: 216rpx;
+  box-sizing: border-box;
+  border-radius: 44rpx;
+  background-color: rgba(229, 229, 229, 1);
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
@@ -98,27 +247,46 @@ defineEmits(['create'])
 
 .human-tag {
   position: absolute;
-  top: 10rpx;
-  left: 12rpx;
-  padding: 4rpx 12rpx;
-  color: #fff;
-  font-size: 20rpx;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 999rpx;
+  top: 0;
+  left: 0;
+  width: 168rpx;
+  height: 58rpx;
+  box-sizing: border-box;
+  padding: 0 12rpx;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+  text-align: center;
+  line-height: 58rpx;
+  background-image: url('@/static/home/home-digital-tag-bg.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  border-radius: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .play {
   position: absolute;
   right: 12rpx;
-  top: 76rpx;
-  width: 36rpx;
-  height: 36rpx;
-  color: #fff;
-  font-size: 18rpx;
-  line-height: 36rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40rpx;
+  height: 40rpx;
   text-align: center;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1rpx solid rgba(255, 255, 255, 0.85);
-  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-icon {
+  width: 40rpx;
+  height: 40rpx;
+  display: block;
 }
 </style>

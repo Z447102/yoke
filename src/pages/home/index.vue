@@ -29,12 +29,16 @@
 
     <ToolGrid
       title="智能工具库"
+      :title-icon-src="homeToolGridSmartIcon"
+      :module-icon-srcs="smartToolModuleIcons"
       :tools="homeStore.smartTools"
-      cta-text="左滑查看更多工具"
+      cta-text="左滑查看全部工具"
     />
 
     <ToolGrid
       title="文案工作站"
+      :title-icon-src="homeToolGridCopywritingIcon"
+      :module-icon-srcs="copywritingModuleIcons"
       :tools="homeStore.copywritingTools"
       cta-text="左滑进入工作站"
     />
@@ -60,8 +64,30 @@ import VideoCreationSection from './components/VideoCreationSection.vue'
 import ToolGrid from './components/ToolGrid.vue'
 import HomeTabBar from './components/HomeTabBar.vue'
 import heroTopSkinBg from '@/static/home/home-top-skin-bg.png'
+import homeToolGridSmartIcon from '@/static/home/home-tool-grid-smart-icon.png'
+import homeToolGridCopywritingIcon from '@/static/home/home-tool-grid-copywriting-icon.png'
+import homeToolModuleChat from '@/static/home/home-tool-module-chat.png'
+import homeToolModuleDress from '@/static/home/home-tool-module-dress.png'
+import homeToolModuleHd from '@/static/home/home-tool-module-hd.png'
+import homeCopywritingModule1 from '@/static/home/home-copywriting-module-1.png'
+import homeCopywritingModule2 from '@/static/home/home-copywriting-module-2.png'
+import homeCopywritingModule3 from '@/static/home/home-copywriting-module-3.png'
 
 const homeStore = useHomeStore()
+
+/** 与 Mock 前三项对应：文字生图 / 人物换装 / 图片高清化 */
+const smartToolModuleIcons = [
+  homeToolModuleChat,
+  homeToolModuleDress,
+  homeToolModuleHd
+]
+
+/** 与 Mock 前三项对应：企业宣传 / 文案仿写 / 电商带货 */
+const copywritingModuleIcons = [
+  homeCopywritingModule1,
+  homeCopywritingModule2,
+  homeCopywritingModule3
+]
 
 onLoad(async () => {
   showPageLoading()
