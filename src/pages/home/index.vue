@@ -10,15 +10,16 @@
             :summary="homeStore.scoreSummary"
             :filters="homeStore.scoreFilters"
           />
-          <HotContentList
-            :list="homeStore.hotContents"
-            @refresh="homeStore.refreshHotContents"
-          />
         </view>
+        <HotContentList
+          :list="homeStore.hotContents"
+          @refresh="homeStore.refreshHotContents"
+        />
         <HomeQuickActions />
       </view>
     </view>
-
+    <!-- 暂时隐藏 -->
+<!-- 
     <view class="section-divider">
       <view class="section-divider__bar"></view>
     </view>
@@ -41,8 +42,7 @@
       :module-icon-srcs="copywritingModuleIcons"
       :tools="homeStore.copywritingTools"
       cta-text="左滑进入工作站"
-    />
-
+    /> -->
     <HomeTabBar />
   </view>
 </template>
@@ -59,16 +59,23 @@ import HomeHeader from './components/HomeHeader.vue'
 import TodayScoreCard from './components/TodayScoreCard.vue'
 import HotContentList from './components/HotContentList.vue'
 import HomeQuickActions from './components/HomeQuickActions.vue'
-import DigitalHumanSection from './components/DigitalHumanSection.vue'
-import VideoCreationSection from './components/VideoCreationSection.vue'
-import ToolGrid from './components/ToolGrid.vue'
+// import DigitalHumanSection from './components/DigitalHumanSection.vue'
+// import VideoCreationSection from './components/VideoCreationSection.vue'
+// import ToolGrid from './components/ToolGrid.vue'
 import HomeTabBar from './components/HomeTabBar.vue'
 import heroTopSkinBg from '@/static/home/home-top-skin-bg.png'
-import homeToolGridSmartIcon from '@/static/home/home-tool-grid-smart-icon.png'
-import homeToolGridCopywritingIcon from '@/static/home/home-tool-grid-copywriting-icon.png'
+// import homeToolGridSmartIcon from '@/static/home/home-tool-grid-smart-icon.png'
+// import homeToolGridCopywritingIcon from '@/static/home/home-tool-grid-copywriting-icon.png'
 import homeToolModuleChat from '@/static/home/home-tool-module-chat.png'
 import homeToolModuleDress from '@/static/home/home-tool-module-dress.png'
 import homeToolModuleHd from '@/static/home/home-tool-module-hd.png'
+import homeToolModuleVoice from '@/static/home/home-tool-module-voice.png'
+import homeToolModuleFace from '@/static/home/home-tool-module-face.png'
+import homeToolModulePhoto from '@/static/home/home-tool-module-photo.png'
+import homeToolModuleGoods from '@/static/home/home-tool-module-goods.png'
+import homeToolModuleHair from '@/static/home/home-tool-module-hairstyle.png'
+
+
 import homeCopywritingModule1 from '@/static/home/home-copywriting-module-1.png'
 import homeCopywritingModule2 from '@/static/home/home-copywriting-module-2.png'
 import homeCopywritingModule3 from '@/static/home/home-copywriting-module-3.png'
@@ -79,7 +86,12 @@ const homeStore = useHomeStore()
 const smartToolModuleIcons = [
   homeToolModuleChat,
   homeToolModuleDress,
-  homeToolModuleHd
+  homeToolModuleHd,
+  homeToolModuleVoice,
+  homeToolModuleFace,
+  homeToolModuleGoods,
+  homeToolModulePhoto,
+  homeToolModuleHair
 ]
 
 /** 与 Mock 前三项对应：企业宣传 / 文案仿写 / 电商带货 */
@@ -106,19 +118,30 @@ onPullDownRefresh(async () => {
 
 <style lang="scss" scoped>
 .home-page {
-  min-height: 100vh;
-  padding-bottom: calc(150rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
-  background: #f7f7f7;
+  height: 100vh;
+  // background: #f7f7f7;
+  // background-color: #ff9d34;
   box-sizing: border-box;
 }
 
 /* 最顶部 → AI一键成片 / 引流数据：整段共用顶图，左下圆角 */
 .home-top-skin {
   position: relative;
-  overflow: hidden;
-  border-bottom-left-radius: 40rpx;
-  background-color: #ff9d34;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  // border-bottom-left-radius: 40rpx;
+  // background-color: #ff9d34;
+  height: 100%;
+  padding-bottom: calc(150rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
+}
+
+.home-top-skin::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .home-top-skin__bg {
@@ -131,7 +154,7 @@ onPullDownRefresh(async () => {
   height: 100%;
   z-index: 0;
   pointer-events: none;
-  transform: scale(1.08);
+  // transform: scale(1.08);
   transform-origin: center top;
 }
 

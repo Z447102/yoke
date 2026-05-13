@@ -49,7 +49,7 @@ function handleClick(name) {
   flex-direction: row;
   align-items: stretch;
   justify-content: space-between;
-  padding: 16rpx 24rpx 36rpx;
+  padding: 50rpx 36rpx 20rpx;
 }
 
 .quick-card {
@@ -75,6 +75,7 @@ function handleClick(name) {
   font-size: 30rpx;
   color: rgba(31, 41, 55, 1);
   font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+  letter-spacing: 3rpx;
 }
 
 .quick-icon {

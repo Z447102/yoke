@@ -37,7 +37,36 @@
               <text class="hot-card__desc">{{ item.desc }}</text>
               <view class="hot-card__meta">
                 <text class="hot-card__tag">{{ item.tag }}</text>
-                <text class="hot-card__heat">❤ {{ item.heat }}</text>
+                <view class="hot-card__heat">
+                  <image src="../static/hone-like.svg" class="hot-card__heat-icon" mode="aspectFit" />
+                  <text>{{ item.heat }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+      <scroll-view
+        scroll-x
+        class="hot-scroll"
+        style="margin-top: 20rpx;"
+        :show-scrollbar="false"
+        :enable-flex="true"
+      >
+        <view class="hot-list">
+          <view v-for="item in list" :key="item.id" class="hot-card">
+            <view class="hot-card__image-wrap">
+              <image class="hot-card__image" :src="item.image" mode="aspectFill" />
+            </view>
+            <view class="hot-card__body">
+              <text class="hot-card__title">{{ item.title }}</text>
+              <text class="hot-card__desc">{{ item.desc }}</text>
+              <view class="hot-card__meta">
+                <text class="hot-card__tag">{{ item.tag }}</text>
+                <view class="hot-card__heat">
+                  <image src="../static/hone-like.svg" class="hot-card__heat-icon" mode="aspectFit" />
+                  <text>{{ item.heat }}</text>
+                </view>
               </view>
             </view>
           </view>
@@ -64,7 +93,7 @@ defineEmits(['refresh'])
 <style lang="scss" scoped>
 .section {
   /* 与上方「今日爆款评分」卡片间距 34rpx */
-  margin-top: 34rpx;
+  margin-top: 0rpx;
   /* 左缘与 hero / 评分标题同一垂线（仅由 hero 的 24rpx 承担水平边距） */
   padding: 0;
 }
@@ -74,7 +103,7 @@ defineEmits(['refresh'])
   align-items: center;
   justify-content: space-between;
   padding: 0;
-  margin-bottom: 18rpx;
+  padding: 24rpx 24rpx 18rpx;
 }
 
 .section__title {
@@ -83,6 +112,7 @@ defineEmits(['refresh'])
   color: #553214;
   font-size: 27rpx;
   font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
 .section__flame-icon {
@@ -134,7 +164,7 @@ defineEmits(['refresh'])
   align-items: stretch;
   width: max-content;
   height: 100%;
-  padding: 0 0 6rpx;
+  padding: 0 20rpx 6rpx 0;
   box-sizing: border-box;
 }
 
@@ -144,28 +174,33 @@ defineEmits(['refresh'])
   box-sizing: border-box;
   width: 244rpx;
   height: 336rpx;
-  margin-right: 14rpx;
+  margin-right: 15rpx;
+  margin-bottom: 15rpx;
   border-radius: 24rpx;
   background-color: rgba(229, 229, 229, 1);
   display: flex;
   flex-direction: column;
+
+  &:first-child {
+    margin-left: 24rpx;
+  }
 }
 
-.hot-card:last-child {
-  margin-right: 0;
-}
+// .hot-card:nth-child(3n) {
+//   margin-right: 0;
+// }
 
 .hot-card__image-wrap {
   overflow: hidden;
   flex: 0 0 200rpx;
-  width: 244rpx;
+  width: 100%;
   height: 200rpx;
   background: #ffe1b7;
 }
 
 .hot-card__image {
   display: block;
-  width: 244rpx;
+  width: 100%;
   height: 200rpx;
 }
 
@@ -183,7 +218,7 @@ defineEmits(['refresh'])
   display: block;
   overflow: hidden;
   color: #3d3d3d;
-  font-size: 21rpx;
+  font-size: 24rpx;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -194,7 +229,7 @@ defineEmits(['refresh'])
   overflow: hidden;
   margin-top: 4rpx;
   color: #777777;
-  font-size: 17rpx;
+  font-size: 20rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -208,15 +243,24 @@ defineEmits(['refresh'])
 }
 
 .hot-card__tag {
-  padding: 3rpx 9rpx;
+  padding: 3rpx 8rpx;
   color: #ff8b1f;
-  font-size: 15rpx;
+  font-size: 18rpx;
   background: #fff1dc;
   border-radius: 6rpx;
+  letter-spacing: 1.2rpx;
 }
 
 .hot-card__heat {
+  display: flex;
+  align-items: center;
   color: #ff9b36;
-  font-size: 17rpx;
+  font-size: 20rpx;
+}
+
+.hot-card__heat-icon {
+  width: 24rpx;
+  height: 24rpx;
+  margin-right: 4rpx;
 }
 </style>

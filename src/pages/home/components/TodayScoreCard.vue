@@ -280,9 +280,10 @@ async function selectIndustry(val) {
 
 .score-card__title {
   color: #3d2d1f;
-  font-size: 24rpx;
+  font-size: 28rpx;
   font-weight: 600;
   line-height: 1.3;
+  letter-spacing: 1rpx;
 }
 
 .score-card__selects {
@@ -377,7 +378,7 @@ async function selectIndustry(val) {
 
 .score-card__score {
   display: flex;
-  align-items: center;
+  // align-items: center;
 }
 
 .score-card__number {
@@ -395,6 +396,7 @@ async function selectIndustry(val) {
   height: 34rpx;
   flex-shrink: 0;
   margin-left: 4rpx;
+  margin-top: 4rpx;
 }
 
 .score-card__metrics {
@@ -447,6 +449,7 @@ async function selectIndustry(val) {
   box-sizing: border-box;
   padding: 0;
   background: transparent;
+  letter-spacing: 1rpx;
 }
 
 .score-card__loc-icon-img,
@@ -523,7 +526,7 @@ async function selectIndustry(val) {
 .score-card__tip-icon {
   position: absolute;
   right: 0;
-  bottom: 10rpx;
+  bottom: 0rpx;
   width: 60rpx;
   height: 60rpx;
   min-width: 60rpx;

@@ -30,9 +30,35 @@ const mockHomeDashboard = {
       image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&h=220&fit=crop',
       tag: '商超餐饮',
       heat: '2.1w'
+
     },
     {
       id: 3,
+      title: '团购引流这样拍',
+      desc: '让老人都爱买真特色',
+      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=220&fit=crop',
+      tag: '团购生活',
+      heat: '2.1w'
+    },
+    {
+      id: 4,
+      title: '探店视频这样拍',
+      desc: '吸引转化客户',
+      image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=300&h=220&fit=crop',
+      tag: '家居',
+      heat: '3.2w'
+    },
+    {
+      id: 5,
+      title: '招聘海报这样拍',
+      desc: '让老板人看了有食欲',
+      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&h=220&fit=crop',
+      tag: '商超餐饮',
+      heat: '2.1w'
+
+    },
+    {
+      id: 6,
       title: '团购引流这样拍',
       desc: '让老人都爱买真特色',
       image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=220&fit=crop',

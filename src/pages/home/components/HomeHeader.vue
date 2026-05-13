@@ -94,9 +94,10 @@ const headerPadStyle = computed(() => {
 .brand-en-img {
   width: 78rpx;
   height: 22rpx;
-  margin-left: 8rpx;
+  margin-left: 6rpx;
   flex-shrink: 0;
   display: block;
+  margin-top: auto;
 }
 
 .date {
@@ -112,6 +113,7 @@ const headerPadStyle = computed(() => {
   display: flex;
   flex-direction: row;
   align-items: baseline;
+  font-family: OPPOSans-bold;
 }
 
 /* 月份 */
