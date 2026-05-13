@@ -5,3 +5,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# `postinstall` 生成的目录联接，指向各分包 `src/pages/*/static`（勿提交）
+src/static/home
+src/static/mine
+src/static/create
+src/static/login
+src/static/splash

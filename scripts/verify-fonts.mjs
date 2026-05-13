@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 
-const SRC_FONT = path.join(root, 'src', 'static', 'fonts', 'OPPOSans-4.0.ttf')
+const SRC_FONT = path.join(root, 'src', 'assets', 'fonts', 'OPPOSans-4.0.ttf')
 const MP_ROOT = path.join(root, 'dist', 'build', 'mp-weixin')
 const MP_FONT = path.join(MP_ROOT, 'static', 'fonts', 'OPPOSans-4.0.ttf')
 const MP_APP_WXSS = path.join(MP_ROOT, 'app.wxss')

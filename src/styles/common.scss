@@ -1,8 +1,7 @@
-/* OPPO Sans 4.0：文件见 src/static/fonts/OPPOSans-4.0.ttf */
+/* OPPO Sans 4.0：大字体文件在 src/assets/fonts，避免复制进主包 static */
 @font-face {
   font-family: 'OPPOSans';
-  /* 小程序端以项目根为基准，与 dist/.../mp-weixin/static/fonts 一致 */
-  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -10,7 +9,7 @@
 
 @font-face {
   font-family: 'OPPOSans-regular';
-  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -18,7 +17,7 @@
 
 @font-face {
   font-family: 'OPPOSans-medium';
-  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -26,7 +25,7 @@
 
 @font-face {
   font-family: 'OPPOSans-bold';
-  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -34,7 +33,7 @@
 
 @font-face {
   font-family: 'OPPOSans-light';
-  src: url('/static/fonts/OPPOSans-4.0.ttf') format('truetype');
+  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
