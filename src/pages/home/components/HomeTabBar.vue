@@ -10,7 +10,7 @@
     <view class="tab-main" @tap="goTo('/pages/create/index')">
       <image class="tab-main-img" :src="tabCenter" mode="aspectFill" />
     </view>
-    <view class="tab-item" @tap="goTo('/pages/mine/index')">
+    <view class="tab-item" @tap="goTo('/pages/home/mine/index')">
       <image
         class="tab-icon-img"
         :src="mineTabSrc"
@@ -36,7 +36,7 @@ function syncRoute() {
   try {
     const pages = getCurrentPages()
     const route = pages[pages.length - 1]?.route || ''
-    if (route.includes('pages/mine')) activeKey.value = 'mine'
+    if (route.includes('pages/home/mine/index')) activeKey.value = 'mine'
     else if (route.includes('pages/create')) activeKey.value = 'create'
     else activeKey.value = 'home'
   } catch (_) {
