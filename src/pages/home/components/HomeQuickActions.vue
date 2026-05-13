@@ -29,12 +29,18 @@
 import quickCreateIcon from '@/static/home/home-quick-create-icon.png'
 import quickDrainIcon from '@/static/home/home-quick-drain-icon.png'
 
+/**
+ * 页面跳转：goToCreate
+ */
 function goToCreate() {
   uni.navigateTo({
     url: '/pages/create/index'
   })
 }
 
+/**
+ * 处理：handleClick
+ */
 function handleClick(name) {
   uni.showToast({
     title: name,

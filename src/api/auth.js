@@ -462,6 +462,9 @@ export async function loginWithSms({ mobile, code }) {
   return normalizeSmsLoginPayload(raw)
 }
 
+/**
+ * 函数：logout
+ */
 export async function logout() {
   if (!isApiEnabled()) {
     return logoutMock()

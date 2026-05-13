@@ -89,7 +89,9 @@
 import { computed, ref, onMounted } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
 import { getBusinessCategories } from '@/api/create'
+import { listSecondTags, mapTagRowsToLeafCategoryNodes } from '@/api/metadata'
 import { CREATE_INDUSTRY_OPTIONS } from '@/constants/create'
+import { isApiEnabled } from '@/utils/request'
 import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh
@@ -116,6 +118,12 @@ const pageIntent = ref('add')
 const freshAddFromGenerate = ref(false)
 const categoryTree = ref([])
 const selectedPath = ref([])
+/** 当前行业 tb_category.id；仅走 core-tags + second-tags 拆流时有值 */
+const resolvedIndustryId = ref(null)
+/** 为 true：一级无 children，点选一级后 GET …/second-tags 再挂二级 */
+const useSecondTagsEndpoint = ref(false)
+/** 一级拉二级期间，避免 children 未返回时误判为「无二级」 */
+const coreTagsLoadingRootId = ref('')
 const showIndustryPopup = ref(false)
 const tempIndustry = ref('')
 
@@ -153,6 +161,7 @@ const visibleLevels = computed(() => {
 })
 
 const canConfirm = computed(() => {
+  if (coreTagsLoadingRootId.value) return false
   if (!selectedPath.value.length) return false
   const lastSelected = selectedPath.value[selectedPath.value.length - 1]
   return Boolean(lastSelected && !lastSelected.children?.length)
@@ -170,6 +179,9 @@ onLoad((query = {}) => {
     industry.value = ''
     categoryTree.value = []
     selectedPath.value = []
+    resolvedIndustryId.value = null
+    useSecondTagsEndpoint.value = false
+    coreTagsLoadingRootId.value = ''
     return
   }
 
@@ -189,6 +201,9 @@ async function fetchCategoryTree() {
   if (!key) {
     categoryTree.value = []
     selectedPath.value = []
+    resolvedIndustryId.value = null
+    useSecondTagsEndpoint.value = false
+    coreTagsLoadingRootId.value = ''
     return
   }
 
@@ -196,11 +211,19 @@ async function fetchCategoryTree() {
   try {
     const data = await getBusinessCategories(key)
     categoryTree.value = data.levels || []
+    resolvedIndustryId.value =
+      data.industryId != null && data.industryId !== ''
+        ? data.industryId
+        : null
+    useSecondTagsEndpoint.value = Boolean(data.useSecondTagsEndpoint)
     selectedPath.value = []
+    coreTagsLoadingRootId.value = ''
 
     /** 仅「一键成片初始页」等带行业的 add：默认选第一条到叶子；生成页新增主营业务不做默认勾选 */
     const useAddDefaults =
-      pageIntent.value === 'add' && !freshAddFromGenerate.value
+      pageIntent.value === 'add' &&
+      !freshAddFromGenerate.value &&
+      !useSecondTagsEndpoint.value
     if (useAddDefaults) {
       applyFirstBranchLeafPath(categoryTree.value)
     }
@@ -245,9 +268,81 @@ async function confirmIndustryPicker() {
   await fetchCategoryTree()
 }
 
-function selectCategory(levelIndex, category) {
+/**
+ * 拉取一级核心品类下的二级标签并写回 categoryTree 对应根节点。
+ * @param {string|number} rootTagId 一级 tagId（tb_tag.id）
+ * @param {{ silent?: boolean }} [opts]
+ */
+async function ensureSecondTagsForNode(rootTagId, opts = {}) {
+  const silent = opts.silent === true
+  if (!useSecondTagsEndpoint.value || resolvedIndustryId.value == null) {
+    return
+  }
+  const id = String(rootTagId ?? '').trim()
+  if (!id) return
+  if (!silent) {
+    showPageLoading()
+  }
+  try {
+    const rows = await listSecondTags(resolvedIndustryId.value, id)
+    const children = mapTagRowsToLeafCategoryNodes(rows)
+    const roots = categoryTree.value
+    const idx = roots.findIndex((r) => r.id === id)
+    if (idx >= 0) {
+      const prev = roots[idx]
+      roots[idx] = {
+        ...prev,
+        children: children.length ? children : undefined
+      }
+      categoryTree.value = [...roots]
+    }
+  } catch (e) {
+    uni.showToast({
+      title: e?.message ? String(e.message) : '二级品类加载失败',
+      icon: 'none'
+    })
+  } finally {
+    if (!silent) {
+      hidePageLoading()
+    }
+  }
+}
+
+/**
+ * 已选路径末级叶子标签 id（tb_tag.id），供创建主营业务 POST 的 industryTagId。
+ * @returns {string}
+ */
+function pickLeafIndustryTagIdForSubmit() {
+  const p = selectedPath.value
+  if (!p.length) return ''
+  const last = p[p.length - 1]
+  if (!last) return ''
+  if (last.children?.length) return ''
+  return String(last.id ?? '').trim()
+}
+
+async function selectCategory(levelIndex, category) {
+  coreTagsLoadingRootId.value = ''
   selectedPath.value = selectedPath.value.slice(0, levelIndex)
   selectedPath.value[levelIndex] = category
+
+  if (
+    levelIndex === 0 &&
+    useSecondTagsEndpoint.value &&
+    resolvedIndustryId.value != null &&
+    isApiEnabled()
+  ) {
+    coreTagsLoadingRootId.value = String(category.id ?? '')
+    try {
+      await ensureSecondTagsForNode(category.id, { silent: false })
+    } finally {
+      coreTagsLoadingRootId.value = ''
+    }
+    const updated = categoryTree.value.find((r) => r.id === category.id)
+    if (updated) {
+      selectedPath.value[0] = updated
+    }
+  }
 }
 
 function confirmSelection() {
@@ -263,13 +358,23 @@ function confirmSelection() {
     return
   }
 
+  const leafTagId = pickLeafIndustryTagIdForSubmit()
+  if (!leafTagId) {
+    uni.showToast({ title: '请完成主营业务选择', icon: 'none' })
+    return
+  }
   uni.setStorageSync('create:selected-business', {
     industry: industry.value,
+    industryId:
+      resolvedIndustryId.value != null && resolvedIndustryId.value !== ''
+        ? String(resolvedIndustryId.value)
+        : '',
     displayName: selectedPath.value.map((item) => item.name).join(' / '),
     path: selectedPath.value.map((item) => ({
       id: item.id,
       name: item.name
-    }))
+    })),
+    industryTagIdForDimensions: leafTagId
   })
   uni.showToast({
     title: '已选择主营业务',

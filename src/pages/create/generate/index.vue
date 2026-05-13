@@ -42,8 +42,8 @@
     <!-- 业务标签（示意） -->
     <view class="tag-row">
       <view
-        v-for="tag in businessTags"
-        :key="tag"
+        v-for="(tag, tagIndex) in businessTags"
+        :key="`${tagIndex}-${tag}`"
         class="tag active"
       >
         {{ tag }}
@@ -151,7 +151,7 @@
               </view>
               <view
                 class="photo-example-pill"
-                @tap.stop="openPhotoSlotExample(slot.key)"
+                @tap.stop="openPhotoSlotExample(slot)"
               >
                 示例
               </view>
@@ -314,7 +314,25 @@
               <text class="business-name">{{
                 businessSlotTitle(businessIndex)
               }}</text>
-              <text class="business-desc">{{ business.desc }}</text>
+              <view class="business-popup-summary">
+                <text class="business-popup-summary__prefix">{{
+                  businessPopupIndustryCoreLine(business)
+                }}</text>
+                <view
+                  v-if="businessPopupParenBlock(business)"
+                  class="business-popup-summary__others"
+                >
+                  <text class="business-popup-summary__paren">（</text>
+                  <text class="business-popup-summary__others-inner">{{
+                    businessPopupParenBlock(business).inner
+                  }}</text>
+                  <text class="business-popup-summary__paren">）</text>
+                  <text
+                    v-if="businessPopupParenBlock(business).dots"
+                    class="business-popup-summary__dots"
+                    >...</text>
+                </view>
+              </view>
             </view>
             <view class="business-edit" @tap.stop="onBusinessEdit(business)">
               <image
@@ -332,15 +350,68 @@
           </view>
         </view>
 
-        <view class="business-add" @tap.stop="onBusinessAdd">
-          <!-- 小程序 <image> 对 SVG 兼容性差，改用 view 绘制 + 保证必显 -->
-          <view class="business-add__icon-plus" aria-hidden="true">
-            <view class="business-add__icon-bar business-add__icon-bar--v" />
-            <view class="business-add__icon-bar business-add__icon-bar--h" />
+        <view class="business-actions-row">
+          <view class="business-add" @tap.stop="onBusinessAdd">
+            <!-- 小程序 <image> 对 SVG 兼容性差，改用 view 绘制 + 保证必显 -->
+            <view class="business-add__icon-plus" aria-hidden="true">
+              <view class="business-add__icon-bar business-add__icon-bar--v" />
+              <view class="business-add__icon-bar business-add__icon-bar--h" />
+            </view>
+            <text>新增主营业务</text>
           </view>
-          <text>新增主营业务</text>
+          <view class="business-add" @tap.stop="onBusinessDelete">
+            <!-- 与「+」一致用线条绘制；避免 works-icon-delete 白线黑底在浅灰按钮上发黑块 -->
+            <view class="business-add__icon-trash" aria-hidden="true">
+              <view class="business-add__icon-trash-handle" />
+              <view class="business-add__icon-trash-lid" />
+              <view class="business-add__icon-trash-body">
+                <view class="business-add__icon-trash-slots">
+                  <view class="business-add__icon-trash-slot" />
+                  <view class="business-add__icon-trash-slot" />
+                  <view class="business-add__icon-trash-slot" />
+                </view>
+              </view>
+            </view>
+            <text>删除主营业务</text>
+          </view>
         </view>
         <button class="popup-confirm" @tap="confirmBusiness">确定</button>
+      </view>
+    </view>
+
+    <!-- 删除主营业务确认（叠在选择弹窗之上，与设计稿一致） -->
+    <view
+      v-if="showDeleteMainBusinessConfirm"
+      class="delete-main-business-mask"
+      @tap="closeDeleteMainBusinessConfirm"
+    >
+      <view class="delete-main-business-dialog" @tap.stop>
+        <view class="delete-main-business-dialog__title">
+          <text class="delete-main-business-dialog__title-icon">ⓘ</text>
+          <text class="delete-main-business-dialog__title-text">
+            是否要删除{{ deleteMainBusinessConfirmSlotTitle }}
+          </text>
+        </view>
+        <view class="delete-main-business-dialog__hint">
+          <text class="delete-main-business-dialog__hint-star">*</text>
+          <text class="delete-main-business-dialog__hint-text">
+            删除后将无法恢复，请谨慎操作
+          </text>
+        </view>
+        <view class="delete-main-business-dialog__footer">
+          <view
+            class="delete-main-business-dialog__btn delete-main-business-dialog__btn--cancel"
+            @tap="closeDeleteMainBusinessConfirm"
+          >
+            取消
+          </view>
+          <view
+            class="delete-main-business-dialog__btn delete-main-business-dialog__btn--confirm"
+            @tap="confirmDeleteMainBusiness"
+          >
+            确认
+          </view>
+        </view>
       </view>
     </view>
 
@@ -411,8 +482,18 @@
  * 功能块：筛选与模板、素材与文案（含口播敏感词高亮与提示条）、底部成片操作、业务/平台弹窗、画质与模型子组件。
  * 规范：docs/frontend-development.md §10；常量 @/constants/create；接口 @/api/create。
  */
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
+import {
+  getMemberMainBusinessDetail,
+  listMemberMainBusinesses,
+  deleteMemberMainBusiness,
+  listMemberVideoTemplates,
+  getVideoTemplateScriptMaterials,
+  getVideoTemplatePhotoMaterials
+} from '@/api/create'
+import { listIndustries } from '@/api/metadata'
+import { isApiEnabled } from '@/utils/request'
 import {
   CREATE_MODEL_OPTIONS,
   CREATE_RESOLUTION_OPTIONS,
@@ -454,16 +535,22 @@ const PRIMARY_BUSINESS_ID = 'primary'
 
 // --- 页面静态配置：模板、标签、照片槽、数字人形象（Mock，后续接接口） ---
 const businessTags = ref([])
-const templates = [
+/** 主营业务选择页「确定」后的标签（路径+维度+自定义），筛选栏下展示；不含店名、定位 */
+const businessSelectionTagLabels = ref([])
+
+const FALLBACK_TEMPLATE_COVER =
+  'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=300&h=220&fit=crop'
+
+/** 未接 API / 无数据时的模板区占位（与原先 mock 一致） */
+const DEFAULT_VIDEO_TEMPLATES = [
   {
     id: 'store',
     title: '探店视频这样拍',
     desc: '吸引转化客户',
     tag: '探店',
     hot: '3.2w',
-    /** 成片时长（秒），参与计费；后续可由模板接口下发 */
     durationSec: 30,
-    image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=300&h=220&fit=crop'
+    image: FALLBACK_TEMPLATE_COVER
   },
   {
     id: 'dish',
@@ -472,7 +559,8 @@ const templates = [
     tag: '菜品展示',
     hot: '2.1w',
     durationSec: 15,
-    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&h=220&fit=crop'
+    image:
+      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&h=220&fit=crop'
   },
   {
     id: 'coupon',
@@ -481,21 +569,33 @@ const templates = [
     tag: '团购引流',
     hot: '2.1w',
     durationSec: 30,
-    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=220&fit=crop'
+    image:
+      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=220&fit=crop'
   }
 ]
-/** 上传槽位：与设计稿「门头 / 菜品 / 环境01 / 环境02」一致 */
-const photoSlotList = [
-  { key: 'facade', label: '门头照片' },
-  { key: 'dish', label: '菜品照片' },
-  { key: 'env1', label: '环境照片01' },
-  { key: 'env2', label: '环境照片02' }
+
+/** 视频模板列表：接口 `/api/member/video-templates` 有数据时覆盖，否则沿用 DEFAULT */
+const templates = ref([...DEFAULT_VIDEO_TEMPLATES])
+/** 未接照片素材接口时的上传槽位（与原先 mock 一致；示例页 tab 对齐） */
+const DEFAULT_PHOTO_SLOTS = [
+  { key: 'facade', label: '门头照片', legacyExampleTab: 'facade' },
+  { key: 'dish', label: '菜品照片', legacyExampleTab: 'dish' },
+  { key: 'env1', label: '环境照片01', legacyExampleTab: 'env1' },
+  { key: 'env2', label: '环境照片02', legacyExampleTab: 'env2' }
 ]
+
+function cloneDefaultPhotoSlots() {
+  return DEFAULT_PHOTO_SLOTS.map((s) => ({ ...s }))
+}
+
+/** 上传槽位：接口 `/api/member/video-templates/{id}/photo-materials` 有数据时覆盖 */
+const photoSlotList = ref(cloneDefaultPhotoSlots())
 const STORAGE_AVATAR_TAB = 'create:generate-avatar-tab'
 const STORAGE_AVATAR_ID_OFFICIAL = 'create:generate-avatar-id-official'
 const STORAGE_AVATAR_ID_MINE = 'create:generate-avatar-id-mine'
 /** 生成前「温馨提示」勾选「下次不再提示」后写入 */
 const STORAGE_SKIP_GENERATE_WARM_TIP = 'create:skip-generate-warm-tip'
+const STORAGE_EDIT_MAIN_BUSINESS_DETAIL = 'create:edit-main-business-detail'
 
 const avatarsOfficial = [
   {
@@ -577,13 +677,19 @@ const platformOptions = PLATFORM_OPTIONS
 const selectedBusiness = ref('business1')
 const tempBusiness = ref('business1')
 const showBusinessPopup = ref(false)
+/** 删除主营业务：居中确认弹窗 */
+const showDeleteMainBusinessConfirm = ref(false)
+const deleteMainBusinessTargetId = ref('')
 const selectedPlatform = ref('douyin')
 const tempPlatform = ref('douyin')
 const showPlatformPopup = ref(false)
 /**
- * 口播文案分行：maxLen>0 时为可编辑输入框 + 字数；maxLen===0 时为只读展示文案（白底无框）
+ * 本地占位视频模板 id（无 script-materials 接口）
  */
-const scriptLines = ref([
+const LOCAL_ONLY_TEMPLATE_IDS = new Set(['store', 'dish', 'coupon'])
+
+/** 未接模板口播接口时的默认口播行（与原先 mock 一致） */
+const DEFAULT_SCRIPT_LINES = [
   { key: 's1', text: '重庆老火锅', maxLen: 10 },
   { key: 's2', text: '这味道太顶了！', maxLen: 0 },
   { key: 's3', text: '惠州的宝藏正宗重庆老火锅店', maxLen: 20 },
@@ -598,7 +704,16 @@ const scriptLines = ref([
     text: '满满一大桌6荤8素，全惠州最便宜，套餐仅需168',
     maxLen: 20
   }
-])
+]
+
+function cloneDefaultScriptLines() {
+  return DEFAULT_SCRIPT_LINES.map((l) => ({ ...l }))
+}
+
+/**
+ * 口播文案分行：maxLen>0 时为可编辑输入框 + 字数；maxLen===0 时为只读展示文案（白底无框）
+ */
+const scriptLines = ref(cloneDefaultScriptLines())
 
 /** 口播单行输入长度上限（大于设计 maxLen，便于标红超限；生成前仍会校验 maxLen） */
 const SCRIPT_INPUT_MAX_LEN = 200
@@ -626,10 +741,16 @@ const hasScriptSensitiveHit = computed(() =>
   )
 )
 
+/**
+ * 函数：scriptLineSegments
+ */
 function scriptLineSegments(line) {
   return splitTextBySensitiveWords(line.text, sensitiveWordList.value)
 }
 
+/**
+ * 函数：scriptLineCountDanger
+ */
 function scriptLineCountDanger(line) {
   return (
     line.text.length > line.maxLen ||
@@ -637,10 +758,16 @@ function scriptLineCountDanger(line) {
   )
 }
 
+/**
+ * 函数：scriptLineOverLimit
+ */
 function scriptLineOverLimit(line) {
   return line.maxLen > 0 && line.text.length > line.maxLen
 }
 
+/**
+ * 校验：assertScriptReadyForGenerate
+ */
 function assertScriptReadyForGenerate() {
   if (hasScriptSensitiveHit.value) {
     uni.showToast({ title: '请先修改口播文案中的敏感词', icon: 'none' })
@@ -664,9 +791,21 @@ const selectedResolution = ref('720p')
 const selectedModel = ref('seedance2')
 const showQualityPopup = ref(false)
 
-const selectedTemplateMeta = computed(
-  () => templates.find((t) => t.id === selectedTemplate.value) || templates[0]
-)
+const selectedTemplateMeta = computed(() => {
+  const list = templates.value
+  return (
+    list.find((t) => t.id === selectedTemplate.value) ||
+    list[0] || {
+      id: 'store',
+      title: '',
+      desc: '',
+      tag: '',
+      hot: '',
+      durationSec: 30,
+      image: FALLBACK_TEMPLATE_COVER
+    }
+  )
+})
 
 const generateCostPoints = computed(() =>
   computeVideoGenerateCostPoints({
@@ -688,6 +827,10 @@ const pointsRechargeHasPromo = computed(() => true)
 
 /** 与商户信息页一致：用于「编辑」跳转主营业务子页 */
 const createFlowIndustry = ref('餐饮')
+/** 商户页写入的 `industryId`，拉 `/api/member/main-businesses` 用 */
+const createFlowIndustryId = ref('')
+/** 商户页店铺/公司名称，作 enterpriseName 模糊查询 */
+const createFlowEnterpriseName = ref('')
 /** 从弹窗点「编辑」进入子页返回后，用于写回对应条目 */
 const editingBusinessId = ref('')
 /** 「新增主营业务」跳转选择页返回后追加一条到下拉选项 */
@@ -705,6 +848,13 @@ function businessSlotTitle(index) {
   const n = Number(index) + 1
   return Number.isFinite(n) && n > 0 ? `主营业务${n}` : '主营业务'
 }
+
+const deleteMainBusinessConfirmSlotTitle = computed(() => {
+  const id = String(deleteMainBusinessTargetId.value ?? '').trim()
+  if (!id) return '该项主营业务'
+  const idx = businessOptions.value.findIndex((b) => b.id === id)
+  return idx >= 0 ? businessSlotTitle(idx) : '该项主营业务'
+})
 
 const currentBusinessSlotTitle = computed(() => {
   const list = businessOptions.value
@@ -728,10 +878,16 @@ const displayAvatars = computed(() =>
   avatarSourceTab.value === 'official' ? avatarsOfficial : avatarsMine
 )
 
+/**
+ * 函数：avatarIdInList
+ */
 function avatarIdInList(list, id) {
   return list.some((a) => a.id === id)
 }
 
+/**
+ * 加载数据：loadAvatarTabState
+ */
 function loadAvatarTabState() {
   let tab = uni.getStorageSync(STORAGE_AVATAR_TAB)
   if (tab !== 'official' && tab !== 'mine') tab = 'official'
@@ -745,6 +901,9 @@ function loadAvatarTabState() {
   selectedAvatar.value = sid
 }
 
+/**
+ * 写入：setAvatarTab
+ */
 function setAvatarTab(tab) {
   if (tab !== 'official' && tab !== 'mine') return
   if (tab === avatarSourceTab.value) return
@@ -764,6 +923,9 @@ function setAvatarTab(tab) {
   selectedAvatar.value = sid
 }
 
+/**
+ * 选择项：selectAvatar
+ */
 function selectAvatar(id) {
   selectedAvatar.value = id
   const key =
@@ -787,13 +949,18 @@ onMounted(() => {
   const biz = businessOptions.value.find(
     (b) => b.id === selectedBusiness.value
   )
-  businessTags.value = tagLabelsForBusiness(biz || {})
+  const tags = tagLabelsForBusiness(biz || {})
+  businessSelectionTagLabels.value = [...tags]
+  businessTags.value = [...tags]
 })
 
 onReady(() => {
   scheduleCreateNavBarStyleRefresh(createNavBarStyle)
 })
 
+/**
+ * 读取：readMerchantDraft
+ */
 function readMerchantDraft() {
   let raw = uni.getStorageSync('create:merchant-draft')
   if (raw == null || raw === '') return null
@@ -808,6 +975,9 @@ function readMerchantDraft() {
   return raw
 }
 
+/**
+ * 读取：readSelectedBusinessPayload
+ */
 function readSelectedBusinessPayload() {
   let raw = uni.getStorageSync('create:selected-business')
   if (raw == null || raw === '') return null
@@ -823,10 +993,26 @@ function readSelectedBusinessPayload() {
   return raw
 }
 
+/**
+ * 函数：pathLabelsFromPayload
+ */
 function pathLabelsFromPayload(path) {
   return (path || [])
     .map((p) => String(p?.name ?? p?.label ?? p?.title ?? p?.categoryName ?? '').trim())
     .filter(Boolean)
+}
+
+/** 与商户页业务范围一致：含路径、维度标签、自定义场景（有则优先于仅 path）。 */
+function scopeTagNamesFromPayload(payload) {
+  const rows = payload?.scopeTagRows
+  if (Array.isArray(rows) && rows.length) {
+    return rows
+      .map((r) =>
+        String(r?.name ?? r?.label ?? r?.title ?? r?.categoryName ?? '').trim()
+      )
+      .filter(Boolean)
+  }
+  return pathLabelsFromPayload(payload?.path)
 }
 
 /** 头部标签行与每条主营业务绑定；无上送 tagLabels 时从 desc/path 推导 */
@@ -848,33 +1034,98 @@ function tagLabelsForBusiness(business) {
   return pieces.length > 1 ? pieces : [raw]
 }
 
+/** 弹窗列表：`行业 - 核心品类`（核心取 tagLabels[0]；行业优先行内 popupIndustryName，否则当前成片行业） */
+function businessPopupIndustryCoreLine(business) {
+  const industry =
+    String(business?.popupIndustryName ?? '').trim() ||
+    String(createFlowIndustry.value || '').trim() ||
+    '—'
+  const tags = tagLabelsForBusiness(business || {})
+  const core = String(tags[0] ?? '').trim()
+  if (core) return `${industry} - ${core}`
+  return industry
+}
+
+/**
+ * 弹窗列表：括号内为二级类目 + 维度/自定义等（tagLabels 从第 2 项起）；省略号仅在「）」后。
+ * @returns {{ inner: string, dots: boolean } | null}
+ */
+function businessPopupParenBlock(business) {
+  const tags = tagLabelsForBusiness(business || {})
+    .map((t) => String(t).trim())
+    .filter(Boolean)
+  const innerTags = tags.slice(1)
+  if (!innerTags.length) return null
+  const full = innerTags.join('、')
+  const MAX_INNER = 14
+  if (full.length <= MAX_INNER) {
+    return { inner: full, dots: false }
+  }
+  let acc = ''
+  for (let i = 0; i < innerTags.length; i += 1) {
+    const t = innerTags[i]
+    const next = acc ? `${acc}、${t}` : t
+    if (next.length > MAX_INNER) {
+      if (acc) return { inner: acc, dots: true }
+      return {
+        inner: t.length > MAX_INNER ? t.slice(0, MAX_INNER) : t,
+        dots: true
+      }
+    }
+    acc = next
+  }
+  return { inner: acc, dots: false }
+}
+
+/**
+ * 应用数据：applyMerchantDraft
+ */
 function applyMerchantDraft(draft) {
   const industry = String(draft.industry || '').trim() || '餐饮'
   createFlowIndustry.value = industry
-  const labels = pathLabelsFromPayload(draft.businessPath)
+  createFlowIndustryId.value = String(draft.industryId ?? '').trim()
+  createFlowEnterpriseName.value = String(draft.shopName ?? '').trim()
+  const fromDraft =
+    Array.isArray(draft.businessTagLabels) && draft.businessTagLabels.length
+      ? draft.businessTagLabels
+          .map((t) => String(t).trim())
+          .filter(Boolean)
+      : pathLabelsFromPayload(draft.businessPath)
+  const labels = fromDraft
   const desc = labels.join(' - ') || '未选择'
   const shortName = labels[labels.length - 1] || '主营业务'
+  const createdId = String(draft.createdMainBusinessId ?? '').trim()
+  const bizId = createdId || PRIMARY_BUSINESS_ID
   businessOptions.value = [
     {
-      id: PRIMARY_BUSINESS_ID,
+      id: bizId,
       name: shortName,
       path: desc,
       desc,
       tagLabels: labels.length ? [...labels] : []
     }
   ]
-  selectedBusiness.value = PRIMARY_BUSINESS_ID
-  tempBusiness.value = PRIMARY_BUSINESS_ID
-  businessTags.value = labels.length ? [...labels] : []
+  selectedBusiness.value = bizId
+  tempBusiness.value = bizId
+  businessSelectionTagLabels.value = [...labels]
+  businessTags.value = [...labels]
 }
 
+/**
+ * 应用数据：applySelectedBusiness
+ */
 function applySelectedBusiness(payload) {
-  const labels = pathLabelsFromPayload(payload.path)
+  const pathLabels = pathLabelsFromPayload(payload.path)
+  const scopeLabels = scopeTagNamesFromPayload(payload)
+  const labels = scopeLabels.length ? scopeLabels : pathLabels
   const desc =
     labels.join(' - ') ||
     String(payload.displayName || '').trim() ||
     '未选择'
-  const shortName = labels[labels.length - 1] || '主营业务'
+  const shortName =
+    pathLabels[pathLabels.length - 1] ||
+    labels[labels.length - 1] ||
+    '主营业务'
 
   if (pendingAddNewBusiness.value) {
     pendingAddNewBusiness.value = false
@@ -884,12 +1135,19 @@ function applySelectedBusiness(payload) {
       name: shortName,
       path: desc,
       desc,
-      tagLabels: labels.length ? [...labels] : []
+      tagLabels: labels.length ? [...labels] : [],
+      customScenes: Array.isArray(payload.customScenes)
+        ? [...payload.customScenes]
+        : []
     })
     selectedBusiness.value = newId
     tempBusiness.value = newId
     if (labels.length) {
+      businessSelectionTagLabels.value = [...labels]
       businessTags.value = labels
+    } else {
+      businessSelectionTagLabels.value = []
+      businessTags.value = []
     }
     if (payload.industry) {
       createFlowIndustry.value =
@@ -909,7 +1167,10 @@ function applySelectedBusiness(payload) {
       path: desc,
       desc,
       tagLabels:
-        labels.length > 0 ? [...labels] : list[idx].tagLabels
+        labels.length > 0 ? [...labels] : list[idx].tagLabels,
+      customScenes: Array.isArray(payload.customScenes)
+        ? [...payload.customScenes]
+        : (list[idx].customScenes || [])
     }
   } else if (list.length) {
     list[0] = {
@@ -918,11 +1179,18 @@ function applySelectedBusiness(payload) {
       path: desc,
       desc,
       tagLabels:
-        labels.length > 0 ? [...labels] : list[0].tagLabels
+        labels.length > 0 ? [...labels] : list[0].tagLabels,
+      customScenes: Array.isArray(payload.customScenes)
+        ? [...payload.customScenes]
+        : (list[0].customScenes || [])
     }
   }
   if (labels.length) {
+    businessSelectionTagLabels.value = [...labels]
     businessTags.value = labels
+  } else {
+    businessSelectionTagLabels.value = []
+    businessTags.value = []
   }
   if (payload.industry) {
     createFlowIndustry.value =
@@ -931,19 +1199,61 @@ function applySelectedBusiness(payload) {
   editingBusinessId.value = ''
 }
 
-onShow(() => {
+/**
+ * 当前选中是否仍为本地演示 / 占位 id（须先拉主营业务列表再请求视频模板）。
+ * @returns {boolean}
+ */
+function isPlaceholderMainBusinessSelection() {
+  const mb = String(selectedBusiness.value ?? '').trim()
+  if (!mb) return true
+  if (mb === PRIMARY_BUSINESS_ID) return true
+  if (/^business\d+$/i.test(mb)) return true
+  return false
+}
+
+/**
+ * 是否具备拉主营业务列表的前置信息（行业 id 或行业名）。
+ * @returns {boolean}
+ */
+function hasCreateFlowIndustryHint() {
+  return (
+    Boolean(String(createFlowIndustryId.value || '').trim()) ||
+    Boolean(String(createFlowIndustry.value || '').trim())
+  )
+}
+
+onShow(async () => {
   loadAvatarTabState()
+  let needRefreshList = false
+  try {
+    const r = uni.getStorageSync('create:refresh-main-business-list')
+    needRefreshList = r === '1' || r === 1 || r === true
+    if (needRefreshList) {
+      uni.removeStorageSync('create:refresh-main-business-list')
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  if (needRefreshList && isApiEnabled()) {
+    await loadBusinessOptionsFromApi({ silent: true })
+  }
   const selected = readSelectedBusinessPayload()
   if (selected) {
     applySelectedBusiness(selected)
     uni.removeStorageSync('create:selected-business')
-    return
+  } else {
+    pendingAddNewBusiness.value = false
+    const draft = readMerchantDraft()
+    if (draft) {
+      applyMerchantDraft(draft)
+      uni.removeStorageSync('create:merchant-draft')
+    }
   }
-  pendingAddNewBusiness.value = false
-  const draft = readMerchantDraft()
-  if (draft) {
-    applyMerchantDraft(draft)
-    uni.removeStorageSync('create:merchant-draft')
+  if (isApiEnabled()) {
+    if (hasCreateFlowIndustryHint() && isPlaceholderMainBusinessSelection()) {
+      await loadBusinessOptionsFromApi({ silent: true })
+    }
+    await loadVideoTemplatesFromApi({ silent: true })
   }
 })
 
@@ -970,14 +1280,38 @@ function openPhotoExamples() {
   })
 }
 
-function openPhotoSlotExample(key) {
-  const q = key ? `?tab=${encodeURIComponent(String(key))}` : ''
+/**
+ * 打开界面/弹层：openPhotoSlotExample
+ * @param {string | { key?: string, legacyExampleTab?: string }} slotOrKey 槽位对象或旧版 key
+ */
+function openPhotoSlotExample(slotOrKey) {
+  const slot =
+    typeof slotOrKey === 'string'
+      ? photoSlotList.value.find((s) => s.key === slotOrKey) || null
+      : slotOrKey
+  let tab = 'facade'
+  if (
+    slot &&
+    typeof slot.legacyExampleTab === 'string' &&
+    ['facade', 'dish', 'env1', 'env2'].includes(slot.legacyExampleTab)
+  ) {
+    tab = slot.legacyExampleTab
+  } else if (
+    typeof slotOrKey === 'string' &&
+    ['facade', 'dish', 'env1', 'env2'].includes(slotOrKey)
+  ) {
+    tab = slotOrKey
+  }
+  const q = `?tab=${encodeURIComponent(tab)}`
   uni.navigateTo({
     url: `/pages/create/photo-examples/index${q}`,
     fail: () => uni.showToast({ title: '页面打开失败', icon: 'none' })
   })
 }
 
+/**
+ * 事件处理：onPickPhoto
+ */
 function onPickPhoto() {
   uni.chooseImage({
     count: 1,
@@ -989,38 +1323,597 @@ function onPickPhoto() {
   })
 }
 
+// --- 主营业务列表（/api/member/main-businesses）---
+
+/**
+ * 解析行业 id：优先商户草稿中的 industryId，否则按行业名称查 `/api/industries`。
+ * @returns {Promise<string>}
+ */
+async function resolveCreateFlowIndustryId() {
+  let id = String(createFlowIndustryId.value || '').trim()
+  if (id) return id
+  const name = String(createFlowIndustry.value || '').trim()
+  if (!name || !isApiEnabled()) return ''
+  try {
+    const list = await listIndustries()
+    const hit = Array.isArray(list)
+      ? list.find((x) => String(x.industryName ?? '').trim() === name)
+      : null
+    id = hit ? String(hit.industryId ?? '').trim() : ''
+    if (id) createFlowIndustryId.value = id
+    return id
+  } catch (_) {
+    return ''
+  }
+}
+
+/**
+ * GET /api/member/main-businesses 单行 → 弹窗选项。
+ * tagLabels 仅用于类目相关展示，不含企业名、定位（筛选下标签行用 businessSelectionTagLabels）。
+ * @param {Record<string, unknown>} row
+ * @returns {{ id: string, name: string, path: string, desc: string, tagLabels: string[] } | null}
+ */
+function mapMainBusinessRowToOption(row) {
+  if (!row || typeof row !== 'object') return null
+  const id = String(row.id ?? '').trim()
+  if (!id) return null
+  const industryTagName = String(row.industryTagName ?? '').trim()
+  const industryName = String(row.industryName ?? '').trim()
+  const enterpriseName = String(row.enterpriseName ?? '').trim()
+  const locationName = String(row.locationName ?? '').trim()
+  const address = String(row.address ?? '').trim()
+  const core = industryTagName || industryName
+  const tagLabels = core ? [core] : []
+  const desc =
+    [enterpriseName, locationName || address].filter(Boolean).join(' · ') ||
+    enterpriseName ||
+    core ||
+    '主营业务'
+  return {
+    id,
+    name: enterpriseName || core || '主营业务',
+    path: desc,
+    desc,
+    tagLabels,
+    popupIndustryName: industryName
+  }
+}
+
+/**
+ * 拉取会员主营业务列表并刷新弹窗选项。
+ * @param {{ silent?: boolean }} [opts] silent：无 loading / 无 toast（用于编辑返回后静默刷新）
+ */
+async function loadBusinessOptionsFromApi(opts = {}) {
+  const silent = opts.silent === true
+  if (!isApiEnabled()) return
+  const industryId = await resolveCreateFlowIndustryId()
+  const enterpriseName = String(createFlowEnterpriseName.value || '').trim()
+  if (!industryId) {
+    if (!silent) {
+      uni.showToast({ title: '缺少行业信息，请返回商户页选择行业', icon: 'none' })
+    }
+    return
+  }
+  if (!silent) {
+    uni.showLoading({ title: '加载中', mask: true })
+  }
+  try {
+    const data = await listMemberMainBusinesses({ industryId, enterpriseName })
+    const rows = Array.isArray(data?.rows) ? data.rows : []
+    const mapped = rows
+      .map((r) => mapMainBusinessRowToOption(r))
+      .filter(Boolean)
+    if (!mapped.length) {
+      if (!silent) {
+        uni.showToast({ title: '暂无匹配的主营业务', icon: 'none' })
+      }
+      return
+    }
+    const prev = String(selectedBusiness.value || '').trim()
+    businessOptions.value = mapped
+    const still = mapped.some((b) => b.id === prev)
+    selectedBusiness.value = still ? prev : mapped[0].id
+    tempBusiness.value = selectedBusiness.value
+  } catch (e) {
+    if (!silent) {
+      uni.showToast({
+        title: e?.message ? String(e.message) : '主营业务列表加载失败',
+        icon: 'none'
+      })
+    }
+  } finally {
+    if (!silent) {
+      uni.hideLoading()
+    }
+  }
+}
+
+/**
+ * 接口热度数值 → 列表区展示（与原先「3.2w」风格接近）
+ * @param {unknown} heat
+ * @returns {string}
+ */
+function formatTemplateHeat(heat) {
+  const n = Number(heat)
+  if (!Number.isFinite(n) || n <= 0) return '—'
+  if (n >= 100000000) return `${(n / 100000000).toFixed(1)}亿`
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}w`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(Math.trunc(n))
+}
+
+/**
+ * GET /api/member/video-templates 单行 → 模板卡片
+ * @param {Record<string, unknown>} row
+ */
+function mapVideoTemplateRow(row) {
+  if (!row || typeof row !== 'object') return null
+  const id = String(row.videoId ?? '').trim()
+  if (!id) return null
+  const cover = String(row.coverUrl ?? '').trim()
+  const heatNum = Number(row.heat)
+  const dur = Number(row.durationSecondsTotal)
+  const typeName = String(row.videoTypeName ?? '').trim()
+  return {
+    id,
+    title: String(row.title ?? '').trim() || '视频模板',
+    desc: String(row.subtitle ?? '').trim() || typeName || '',
+    tag: typeName || '模板',
+    hot: formatTemplateHeat(Number.isFinite(heatNum) ? heatNum : 0),
+    durationSec: Number.isFinite(dur) && dur > 0 ? Math.trunc(dur) : 30,
+    image: cover || FALLBACK_TEMPLATE_COVER,
+    videoTypeId: row.videoTypeId != null ? String(row.videoTypeId) : '',
+    matchScore: Number(row.matchScore),
+    demoVideoUrl: String(row.demoVideoUrl ?? '').trim(),
+    createTime: row.createTime
+  }
+}
+
+/**
+ * 是否可为「视频模板列表」请求带 mainBusinessId（比「可删除」宽松：允许 primary；仅排除内置 mock、biz_ 临时）
+ * @param {string} id
+ */
+function isTemplateListMainBusinessId(id) {
+  const s = String(id ?? '').trim()
+  if (!s) return false
+  if (/^business\d+$/i.test(s)) return false
+  if (s.startsWith('biz_')) return false
+  return true
+}
+
+/** 一键成片：视频模板列表接口固定 platformId（tb_category） */
+const VIDEO_TEMPLATE_LIST_PLATFORM_ID = '11'
+
+/**
+ * 拉取视频模板列表（mainBusinessId + platformId）。
+ * platformId 当前固定为 {@link VIDEO_TEMPLATE_LIST_PLATFORM_ID}。
+ * @param {{ silent?: boolean }} [opts]
+ */
+async function loadVideoTemplatesFromApi(opts = {}) {
+  const silent = opts.silent === true
+  if (!isApiEnabled()) return
+  const mbId = String(selectedBusiness.value ?? '').trim()
+  if (!isTemplateListMainBusinessId(mbId)) return
+
+  const platformParam = VIDEO_TEMPLATE_LIST_PLATFORM_ID
+
+  if (!silent) {
+    uni.showLoading({ title: '加载模板', mask: true })
+  }
+  try {
+    const data = await listMemberVideoTemplates({
+      mainBusinessId: mbId,
+      platformId: platformParam,
+      pageNum: 1,
+      pageSize: 50
+    })
+    const rows = Array.isArray(data?.rows) ? data.rows : []
+    const mapped = rows.map((r) => mapVideoTemplateRow(r)).filter(Boolean)
+    if (!mapped.length) {
+      templates.value = [...DEFAULT_VIDEO_TEMPLATES]
+      selectedTemplate.value = DEFAULT_VIDEO_TEMPLATES[0].id
+      if (!silent) {
+        uni.showToast({ title: '暂无视频模板', icon: 'none' })
+      }
+      return
+    }
+    templates.value = mapped
+    const cur = String(selectedTemplate.value || '')
+    if (!mapped.some((t) => t.id === cur)) {
+      selectedTemplate.value = mapped[0].id
+    }
+  } catch (e) {
+    if (!silent) {
+      uni.showToast({
+        title: e?.message ? String(e.message) : '模板列表加载失败',
+        icon: 'none'
+      })
+    }
+  } finally {
+    if (!silent) {
+      uni.hideLoading()
+    }
+  }
+}
+
+/**
+ * 是否请求口播文案接口：已开 API 且当前模板非本地占位 id
+ * @param {string} videoId
+ */
+function shouldFetchScriptMaterials(videoId) {
+  const id = String(videoId ?? '').trim()
+  if (!id || !isApiEnabled()) return false
+  if (LOCAL_ONLY_TEMPLATE_IDS.has(id)) return false
+  return true
+}
+
+/**
+ * 从素材 content 解析展示文案（兼容 OpenAPI 动态 property）
+ * @param {unknown} content
+ * @param {string} [fallbackName]
+ */
+function contentToScriptText(content, fallbackName = '') {
+  if (content == null) return String(fallbackName || '').trim()
+  if (typeof content === 'string') return content.trim()
+  if (typeof content !== 'object') return String(content)
+  const o = /** @type {Record<string, unknown>} */ (content)
+  const direct =
+    o.text ?? o.value ?? o.script ?? o.copy ?? o.defaultText ?? o.lineText
+  if (direct != null && String(direct).trim() !== '') return String(direct).trim()
+  const parts = []
+  for (const [k, v] of Object.entries(o)) {
+    if (k === 'empty') continue
+    if (typeof v === 'string' && v.trim()) parts.push(v.trim())
+    else if (typeof v === 'number' && Number.isFinite(v)) parts.push(String(v))
+  }
+  if (parts.length) return parts.join(' ')
+  return String(fallbackName || '').trim()
+}
+
+/**
+ * @param {unknown} content
+ * @param {string} materialType
+ * @param {string} sourceType
+ */
+function resolveScriptMaxLen(content, materialType, sourceType) {
+  if (content && typeof content === 'object') {
+    const o = /** @type {Record<string, unknown>} */ (content)
+    const n = Number(o.maxLen ?? o.maxLength ?? o.limit ?? o.wordLimit)
+    if (Number.isFinite(n) && n >= 0) return Math.min(500, Math.trunc(n))
+    if (o.readonly === true || o.editable === false) return 0
+  }
+  const hint = `${materialType} ${sourceType}`.toLowerCase()
+  if (/readonly|fixed|display|static|只读|固定|系统/i.test(hint)) return 0
+  return 20
+}
+
+/**
+ * script-materials 单行 → 口播行
+ * @param {Record<string, unknown>} row
+ * @param {number} index
+ */
+function mapScriptMaterialRow(row, index) {
+  if (!row || typeof row !== 'object') return null
+  const materialId = String(row.id ?? '').trim()
+  if (!materialId) return null
+  const content = row.content
+  const materialName = String(row.materialName ?? '').trim()
+  const materialType = String(row.materialType ?? '').trim()
+  const sourceType = String(row.sourceType ?? '').trim()
+  const text = contentToScriptText(content, materialName)
+  const maxLen = resolveScriptMaxLen(content, materialType, sourceType)
+  return {
+    key: `sm-${materialId}-${index}`,
+    text,
+    maxLen,
+    materialId,
+    materialName,
+    materialType,
+    sourceType
+  }
+}
+
+/**
+ * GET /api/member/video-templates/{videoId}/script-materials → scriptLines
+ * @param {{ silent?: boolean, videoId?: string }} [opts]
+ */
+async function loadScriptMaterialsFromApi(opts = {}) {
+  const silent = opts.silent === true
+  const videoId = String(opts.videoId ?? selectedTemplate.value ?? '').trim()
+  if (!shouldFetchScriptMaterials(videoId)) {
+    scriptLines.value = cloneDefaultScriptLines()
+    return
+  }
+  if (!silent) {
+    uni.showLoading({ title: '加载口播', mask: true })
+  }
+  try {
+    const data = await getVideoTemplateScriptMaterials(videoId)
+    const rows = Array.isArray(data) ? data : []
+    const sorted = [...rows].sort(
+      (a, b) => Number(a.sort ?? 0) - Number(b.sort ?? 0)
+    )
+    const mapped = sorted
+      .map((r, i) =>
+        mapScriptMaterialRow(/** @type {Record<string, unknown>} */ (r), i)
+      )
+      .filter(Boolean)
+    if (!mapped.length) {
+      scriptLines.value = cloneDefaultScriptLines()
+      if (!silent) {
+        uni.showToast({ title: '暂无口播文案', icon: 'none' })
+      }
+      return
+    }
+    scriptLines.value = mapped
+  } catch (e) {
+    scriptLines.value = cloneDefaultScriptLines()
+    if (!silent) {
+      uni.showToast({
+        title: e?.message ? String(e.message) : '口播文案加载失败',
+        icon: 'none'
+      })
+    }
+  } finally {
+    if (!silent) {
+      uni.hideLoading()
+    }
+  }
+}
+
+/**
+ * 根据槽位名称推断照片示例页 tab（与 photo-examples TAB_KEYS 对齐）
+ * @param {string} materialName
+ * @param {string} materialType
+ */
+function guessPhotoExampleTab(materialName, materialType) {
+  const name = String(materialName || '')
+  if (/门头|门面|店招|招牌/i.test(name)) return 'facade'
+  if (/菜品|菜图|食物|餐图/i.test(name)) return 'dish'
+  if (/环境|店内|就餐|座位/i.test(name)) return 'env1'
+  const t = String(materialType || '').toLowerCase()
+  if (t === 'video') return 'env2'
+  return 'facade'
+}
+
+/**
+ * photo-materials 单行 → 上传槽位
+ * @param {Record<string, unknown>} row
+ * @param {number} index
+ */
+function mapPhotoMaterialRow(row, index) {
+  if (!row || typeof row !== 'object') return null
+  const materialId = String(row.id ?? '').trim()
+  if (!materialId) return null
+  const materialName = String(row.materialName ?? '').trim()
+  const materialType = String(row.materialType ?? '').trim().toLowerCase()
+  if (materialType === 'text') return null
+  const sourceType = String(row.sourceType ?? '').trim()
+  const content =
+    row.content && typeof row.content === 'object'
+      ? /** @type {Record<string, unknown>} */ (row.content)
+      : {}
+  const tabFromContent = String(content.exampleTab ?? content.tabKey ?? '').trim()
+  const legacyExampleTab = ['facade', 'dish', 'env1', 'env2'].includes(tabFromContent)
+    ? tabFromContent
+    : guessPhotoExampleTab(materialName, materialType)
+  return {
+    key: `pm-${materialId}-${index}`,
+    label: materialName || `照片${index + 1}`,
+    materialId,
+    materialType: String(row.materialType ?? ''),
+    sourceType,
+    sort: Number(row.sort ?? index),
+    legacyExampleTab,
+    content
+  }
+}
+
+/**
+ * GET /api/member/video-templates/{videoId}/photo-materials → photoSlotList
+ * @param {{ silent?: boolean, videoId?: string }} [opts]
+ */
+async function loadPhotoMaterialsFromApi(opts = {}) {
+  const silent = opts.silent === true
+  const videoId = String(opts.videoId ?? selectedTemplate.value ?? '').trim()
+  if (!shouldFetchScriptMaterials(videoId)) {
+    photoSlotList.value = cloneDefaultPhotoSlots()
+    return
+  }
+  if (!silent) {
+    uni.showLoading({ title: '加载照片槽位', mask: true })
+  }
+  try {
+    const data = await getVideoTemplatePhotoMaterials(videoId)
+    const rows = Array.isArray(data) ? data : []
+    const sorted = [...rows].sort(
+      (a, b) => Number(a.sort ?? 0) - Number(b.sort ?? 0)
+    )
+    const mapped = sorted
+      .map((r, i) =>
+        mapPhotoMaterialRow(/** @type {Record<string, unknown>} */ (r), i)
+      )
+      .filter(Boolean)
+    if (!mapped.length) {
+      photoSlotList.value = cloneDefaultPhotoSlots()
+      if (!silent) {
+        uni.showToast({ title: '暂无照片槽位', icon: 'none' })
+      }
+      return
+    }
+    photoSlotList.value = mapped
+  } catch (e) {
+    photoSlotList.value = cloneDefaultPhotoSlots()
+    if (!silent) {
+      uni.showToast({
+        title: e?.message ? String(e.message) : '照片槽位加载失败',
+        icon: 'none'
+      })
+    }
+  } finally {
+    if (!silent) {
+      uni.hideLoading()
+    }
+  }
+}
+
+watch(
+  () => selectedTemplate.value,
+  async (id) => {
+    const vid = String(id ?? '')
+    try {
+      await Promise.all([
+        loadScriptMaterialsFromApi({ silent: true, videoId: vid }),
+        loadPhotoMaterialsFromApi({ silent: true, videoId: vid })
+      ])
+    } catch (err) {
+      try {
+        console.error('[generate] template materials load failed', err)
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }
+)
+
 // --- 主营业务弹窗 ---
-function openBusinessPopup() {
+async function openBusinessPopup() {
   tempBusiness.value = selectedBusiness.value
+  if (isApiEnabled()) {
+    await loadBusinessOptionsFromApi()
+  }
   showBusinessPopup.value = true
 }
 
+/**
+ * 关闭界面/弹层：closeBusinessPopup
+ */
 function closeBusinessPopup() {
   showBusinessPopup.value = false
+  closeDeleteMainBusinessConfirm()
 }
 
+function closeDeleteMainBusinessConfirm() {
+  showDeleteMainBusinessConfirm.value = false
+  deleteMainBusinessTargetId.value = ''
+}
+
+/**
+ * 选择项：selectBusiness
+ */
 function selectBusiness(id) {
   tempBusiness.value = id
 }
 
-function confirmBusiness() {
+/**
+ * 确认操作：confirmBusiness
+ */
+async function confirmBusiness() {
   selectedBusiness.value = tempBusiness.value
-  const biz = businessOptions.value.find(
-    (b) => b.id === selectedBusiness.value
-  )
-  businessTags.value = tagLabelsForBusiness(biz || {})
+  businessTags.value = [...businessSelectionTagLabels.value]
   closeBusinessPopup()
+  if (isApiEnabled()) {
+    await loadVideoTemplatesFromApi({ silent: true })
+  }
 }
 
 /** 编辑：跳转主营业务子页，返回后由 onShow 读 create:selected-business 写回 */
-function onBusinessEdit(business) {
+async function onBusinessEdit(business) {
   const industry = String(createFlowIndustry.value || '').trim() || '餐饮'
-  editingBusinessId.value = business?.id != null ? String(business.id) : ''
+  const businessId = business?.id != null ? String(business.id) : ''
+  editingBusinessId.value = businessId
   pendingAddNewBusiness.value = false
+  if (businessId) {
+    try {
+      const detail = await getMemberMainBusinessDetail(businessId)
+      uni.setStorageSync(STORAGE_EDIT_MAIN_BUSINESS_DETAIL, detail || null)
+    } catch (e) {
+      uni.showToast({
+        title: e?.message ? String(e.message) : '主营业务详情加载失败',
+        icon: 'none'
+      })
+      try {
+        uni.removeStorageSync(STORAGE_EDIT_MAIN_BUSINESS_DETAIL)
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }
   closeBusinessPopup()
   uni.navigateTo({
     url: `/pages/create/business/index?industry=${encodeURIComponent(industry)}&intent=edit`
   })
+}
+
+/** 是否可调用 DELETE：排除本地占位 id；其余交由接口校验（避免误伤短数字 id、UUID 等） */
+function isDeletableMainBusinessId(id) {
+  const s = String(id ?? '').trim()
+  if (!s || s === PRIMARY_BUSINESS_ID) return false
+  if (s.startsWith('biz_')) return false
+  if (/^business\d+$/i.test(s)) return false
+  return true
+}
+
+/** 删除主营业务：打开设计稿确认弹窗（当前弹窗选中项） */
+function onBusinessDelete() {
+  const id = String(tempBusiness.value ?? '').trim()
+  if (!id) {
+    uni.showToast({ title: '请先选择要删除的主营业务', icon: 'none' })
+    return
+  }
+  if (!isApiEnabled()) {
+    uni.showToast({ title: '当前环境不支持删除', icon: 'none' })
+    return
+  }
+  if (!isDeletableMainBusinessId(id)) {
+    uni.showToast({ title: '该主营业务无法删除', icon: 'none' })
+    return
+  }
+  deleteMainBusinessTargetId.value = id
+  showDeleteMainBusinessConfirm.value = true
+}
+
+/** 确认删除：DELETE 后重新拉取主营业务列表 */
+async function confirmDeleteMainBusiness() {
+  const id = String(deleteMainBusinessTargetId.value ?? '').trim()
+  if (!id) {
+    closeDeleteMainBusinessConfirm()
+    return
+  }
+  try {
+    uni.showLoading({ title: '删除中', mask: true })
+    await deleteMemberMainBusiness(id)
+    closeDeleteMainBusinessConfirm()
+    if (isApiEnabled()) {
+      await loadBusinessOptionsFromApi({ silent: true })
+    }
+    if (businessOptions.value.some((b) => String(b.id) === id)) {
+      const list = businessOptions.value.filter((b) => b.id !== id)
+      businessOptions.value = list
+      const nextId = list.length ? String(list[0].id) : ''
+      tempBusiness.value = nextId
+      selectedBusiness.value = nextId
+    }
+    const sid = String(selectedBusiness.value || '').trim()
+    const nb =
+      (sid && businessOptions.value.find((b) => b.id === sid)) ||
+      businessOptions.value[0] ||
+      {}
+    const tags = tagLabelsForBusiness(nb)
+    businessTags.value = [...tags]
+    businessSelectionTagLabels.value = [...tags]
+    if (isApiEnabled()) {
+      await loadVideoTemplatesFromApi({ silent: true })
+    }
+    uni.showToast({ title: '已删除', icon: 'none' })
+  } catch (e) {
+    uni.showToast({
+      title: e?.message ? String(e.message) : '删除失败',
+      icon: 'none'
+    })
+  } finally {
+    uni.hideLoading()
+  }
 }
 
 /** 新增主营业务：与设计稿一致进入「主营业务」选择页 */
@@ -1039,15 +1932,24 @@ function openPlatformPopup() {
   showPlatformPopup.value = true
 }
 
+/**
+ * 关闭界面/弹层：closePlatformPopup
+ */
 function closePlatformPopup() {
   showPlatformPopup.value = false
 }
 
+/**
+ * 选择项：selectPlatform
+ */
 function selectPlatform(id) {
   tempPlatform.value = id
 }
 
-function confirmPlatform() {
+/**
+ * 确认操作：confirmPlatform
+ */
+async function confirmPlatform() {
   selectedPlatform.value = tempPlatform.value
   try {
     uni.setStorageSync(CREATE_SELECTED_PLATFORM_STORAGE_KEY, tempPlatform.value)
@@ -1055,6 +1957,9 @@ function confirmPlatform() {
     /* 非 uni 环境忽略 */
   }
   closePlatformPopup()
+  if (isApiEnabled()) {
+    await loadVideoTemplatesFromApi({ silent: true })
+  }
 }
 
 // --- 画质 / 模型底部弹窗 ---
@@ -1062,10 +1967,16 @@ function openQualityPopup() {
   showQualityPopup.value = true
 }
 
+/**
+ * 关闭界面/弹层：closeQualityPopup
+ */
 function closeQualityPopup() {
   showQualityPopup.value = false
 }
 
+/**
+ * 选择项：selectResolution
+ */
 function selectResolution(id) {
   selectedResolution.value = id
 }
@@ -1075,10 +1986,16 @@ function onPickResolution(item) {
   selectResolution(item.id)
 }
 
+/**
+ * 选择项：selectModel
+ */
 function selectModel(id) {
   selectedModel.value = id
 }
 
+/**
+ * 函数：resolveVipModalVariant
+ */
 function resolveVipModalVariant() {
   if (supportsContinuousVipSubscription()) return 'continuous'
   return userStore.isFirstVipSubscribeEligible ? 'first_time_once' : 'standard_once'
@@ -1091,10 +2008,16 @@ function openVipRechargeForGenerate() {
   showVipModal.value = true
 }
 
+/**
+ * 关闭界面/弹层：closeVipModal
+ */
 function closeVipModal() {
   showVipModal.value = false
 }
 
+/**
+ * 事件处理：onVipSubscribeConfirm
+ */
 async function onVipSubscribeConfirm(payload) {
   /** 前端模拟：视为支付成功，写入 VIP 并持久化；联调后改为支付成功回调再 mergeProfile / 拉用户信息 */
   userStore.mergeProfile({
@@ -1115,6 +2038,9 @@ async function onVipSubscribeConfirm(payload) {
   showPointsRechargeModal.value = true
 }
 
+/**
+ * 事件处理：onVipAuxBuy
+ */
 function onVipAuxBuy(payload) {
   uni.showToast({
     title: `请接入单笔购买：${payload.kind}`,
@@ -1141,10 +2067,16 @@ function openPointsRechargeForGenerate() {
   showPointsRechargeModal.value = true
 }
 
+/**
+ * 关闭界面/弹层：closePointsRechargeModal
+ */
 function closePointsRechargeModal() {
   showPointsRechargeModal.value = false
 }
 
+/**
+ * 事件处理：onPointsRechargeConfirm
+ */
 function onPointsRechargeConfirm(payload) {
   safeHideKeyboard()
   uni.showToast({
@@ -1154,6 +2086,9 @@ function onPointsRechargeConfirm(payload) {
   closePointsRechargeModal()
 }
 
+/**
+ * 函数：safeHideKeyboard
+ */
 function safeHideKeyboard() {
   try {
     if (typeof uni !== 'undefined' && typeof uni.hideKeyboard === 'function') {
@@ -1180,6 +2115,9 @@ function confirmGenerateFromPopup() {
   openGenerateWarmTipOrRun()
 }
 
+/**
+ * 函数：shouldSkipGenerateWarmTip
+ */
 function shouldSkipGenerateWarmTip() {
   try {
     return uni.getStorageSync(STORAGE_SKIP_GENERATE_WARM_TIP) === '1'
@@ -1198,6 +2136,9 @@ function openGenerateWarmTipOrRun() {
   showGenerateWarmTipModal.value = true
 }
 
+/**
+ * 事件处理：onGenerateWarmTipConfirm
+ */
 function onGenerateWarmTipConfirm(payload) {
   if (payload?.skipNextTime) {
     try {
@@ -1210,6 +2151,9 @@ function onGenerateWarmTipConfirm(payload) {
   runGenerateSuccessFlow()
 }
 
+/**
+ * 函数：runGenerateSuccessFlow
+ */
 function runGenerateSuccessFlow() {
   uni.showToast({
     title: '开始生成视频',
@@ -1217,6 +2161,9 @@ function runGenerateSuccessFlow() {
   })
 }
 
+/**
+ * 函数：generateVideo
+ */
 function generateVideo() {
   if (!ensureVipForGenerate()) return
   if (!assertScriptReadyForGenerate()) return
@@ -1333,22 +2280,34 @@ function generateVideo() {
 }
 
 .tag-row {
+  box-sizing: border-box;
+  width: 100%;
   padding: 10rpx 20rpx 24rpx;
   border-bottom: 1rpx solid #f1f1f1;
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 14rpx;
 }
 
 .tag {
-  height: 54rpx;
-  padding: 0 22rpx;
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-height: 54rpx;
+  padding: 12rpx 22rpx;
   border: 1rpx solid #ff9a35;
   border-radius: 999rpx;
   color: #ff8e24;
   background: #fff3e6;
   font-size: 23rpx;
-  line-height: 54rpx;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .section {
@@ -2087,7 +3046,10 @@ function generateVideo() {
 
 .popup-mask {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
   z-index: 100;
   box-sizing: border-box;
   padding-top: constant(safe-area-inset-top);
@@ -2095,6 +3057,123 @@ function generateVideo() {
   background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: flex-end;
+}
+
+.delete-main-business-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 120;
+  box-sizing: border-box;
+  padding: 40rpx;
+  padding-top: calc(40rpx + constant(safe-area-inset-top));
+  padding-top: calc(40rpx + env(safe-area-inset-top));
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-main-business-dialog {
+  width: 600rpx;
+  max-width: 100%;
+  height: 384rpx;
+  border-radius: 44rpx;
+  background-color: rgba(255, 255, 255, 1);
+  box-sizing: border-box;
+  padding: 36rpx 40rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.delete-main-business-dialog__title {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8rpx;
+}
+
+.delete-main-business-dialog__title-icon {
+  flex-shrink: 0;
+  font-size: 32rpx;
+  line-height: 1.35;
+  color: #fd5656;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+}
+
+.delete-main-business-dialog__title-text {
+  flex: 1;
+  font-size: 32rpx;
+  line-height: 1.35;
+  color: #fd5656;
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+}
+
+.delete-main-business-dialog__hint {
+  margin-top: 24rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 4rpx;
+  flex: 1;
+  min-height: 0;
+}
+
+.delete-main-business-dialog__hint-star {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  line-height: 1.45;
+  color: #1f2937;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+}
+
+.delete-main-business-dialog__hint-text {
+  flex: 1;
+  font-size: 28rpx;
+  line-height: 1.45;
+  color: #1f2937;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+}
+
+.delete-main-business-dialog__footer {
+  margin-top: auto;
+  padding-top: 8rpx;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.delete-main-business-dialog__footer .delete-main-business-dialog__btn + .delete-main-business-dialog__btn {
+  margin-left: 40rpx;
+}
+
+.delete-main-business-dialog__btn {
+  flex-shrink: 0;
+  width: 200rpx;
+  height: 80rpx;
+  border-radius: 64rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  text-align: center;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+}
+
+.delete-main-business-dialog__btn--cancel {
+  background-color: rgba(255, 255, 255, 1);
+  color: rgba(128, 128, 128, 1);
+  border: 2rpx solid rgba(187, 187, 187, 1);
+}
+
+.delete-main-business-dialog__btn--confirm {
+  background-color: rgba(16, 16, 16, 1);
+  color: rgba(255, 255, 255, 1);
+  border: none;
 }
 
 .business-popup {
@@ -2145,16 +3224,62 @@ function generateVideo() {
   border-color: #409eff;
 }
 
+.business-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
 .business-name {
+  flex-shrink: 0;
   color: #ff8e24;
   font-size: 28rpx;
   font-weight: 700;
 }
 
-.business-desc {
-  margin-left: 28rpx;
+/* 选择主营业务弹窗：整段说明宽 300rpx；核心/二级不缩略，其余在（）内省略 */
+.business-popup-summary {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  max-width: 300rpx;
+  min-width: 0;
+  margin-left: 16rpx;
   color: #5d6672;
   font-size: 24rpx;
+}
+
+.business-popup-summary__prefix {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.business-popup-summary__others {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.business-popup-summary__paren {
+  flex-shrink: 0;
+}
+
+.business-popup-summary__others-inner {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.business-popup-summary__dots {
+  flex-shrink: 0;
 }
 
 .business-edit {
@@ -2184,9 +3309,22 @@ function generateVideo() {
   height: 32rpx;
 }
 
+.business-actions-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24rpx;
+  margin-top: 20rpx;
+}
+
+.business-actions-row .business-add {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0;
+}
+
 .business-add {
   height: 90rpx;
-  margin-top: 20rpx;
   border-radius: 18rpx;
   background: #f2f2f2;
   color: #1f2933;
@@ -2196,6 +3334,69 @@ function generateVideo() {
   align-items: center;
   justify-content: center;
   gap: 10rpx;
+}
+
+/* 垃圾桶：与 business-add__icon-bar 同色，30rpx 视口内 */
+.business-add__icon-trash {
+  position: relative;
+  width: 30rpx;
+  height: 30rpx;
+  flex-shrink: 0;
+}
+
+.business-add__icon-trash-handle {
+  position: absolute;
+  left: 50%;
+  top: 2rpx;
+  width: 8rpx;
+  height: 3rpx;
+  margin-left: -4rpx;
+  background: #4b5563;
+  border-radius: 2rpx;
+}
+
+.business-add__icon-trash-lid {
+  position: absolute;
+  left: 50%;
+  top: 6rpx;
+  width: 20rpx;
+  height: 3rpx;
+  margin-left: -10rpx;
+  background: #4b5563;
+  border-radius: 2rpx;
+}
+
+.business-add__icon-trash-body {
+  position: absolute;
+  left: 50%;
+  top: 10rpx;
+  width: 18rpx;
+  height: 16rpx;
+  margin-left: -9rpx;
+  box-sizing: border-box;
+  border: 2rpx solid #4b5563;
+  border-top-width: 0;
+  border-radius: 0 0 4rpx 4rpx;
+}
+
+.business-add__icon-trash-slots {
+  position: absolute;
+  left: 2rpx;
+  right: 2rpx;
+  top: 4rpx;
+  bottom: 3rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.business-add__icon-trash-slot {
+  width: 2rpx;
+  height: 7rpx;
+  background: #4b5563;
+  border-radius: 1rpx;
+  flex-shrink: 0;
 }
 
 /* 32rpx 圆角「+」，与 #f2f2f2 底对比足够（非 SVG，避免微信小程序 image 不显） */

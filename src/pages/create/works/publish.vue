@@ -360,17 +360,29 @@ onLoad((query = {}) => {
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
+/**
+ * 返回上一页
+ */
 function goBack() {
   uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/index' }) })
 }
+/**
+ * 事件处理：onSave
+ */
 function onSave() {
   uni.showToast({ title: '视频已保存', icon: 'none' })
 }
+/**
+ * 事件处理：onPublishToPlatform
+ */
 function onPublishToPlatform() {
   const name = currentPublishPlatform.value?.name || '平台'
   uni.showToast({ title: `即将打开${name}发布`, icon: 'none' })
 }
 
+/**
+ * 事件处理：onCopyPublishTitle
+ */
 function onCopyPublishTitle() {
   uni.setClipboardData({
     data: String(publishTitleText.value || ''),
@@ -378,6 +390,9 @@ function onCopyPublishTitle() {
   })
 }
 
+/**
+ * 事件处理：onCopyPublishCaption
+ */
 function onCopyPublishCaption() {
   const caption = String(publishCaptionText.value || '').trim()
   const tags = String(publishTagsText.value || '').trim()

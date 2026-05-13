@@ -179,6 +179,9 @@ watch(
   }
 )
 
+/**
+ * 函数：safeHideKeyboard
+ */
 function safeHideKeyboard() {
   try {
     if (typeof uni !== 'undefined' && typeof uni.hideKeyboard === 'function') {
@@ -189,10 +192,16 @@ function safeHideKeyboard() {
   }
 }
 
+/**
+ * 函数：displayPrice
+ */
 function displayPrice(pkg) {
   return getPackageDisplayPriceYuan(pkg, props.hasPromo)
 }
 
+/**
+ * 函数：formatYuan
+ */
 function formatYuan(n) {
   const v = Number(n)
   if (!Number.isFinite(v)) return '0'
@@ -200,6 +209,9 @@ function formatYuan(n) {
   return v.toFixed(2)
 }
 
+/**
+ * 函数：parsePromoSeconds
+ */
 function parsePromoSeconds(text) {
   const s = String(text || '')
   const m = s.match(/(\d+)\s*天\s*(\d{1,2}):(\d{1,2}):(\d{1,2})/)
@@ -220,6 +232,9 @@ const countdownText = computed(() => {
   return `活动剩余：${d}天${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 })
 
+/**
+ * 函数：startPromoTimer
+ */
 function startPromoTimer() {
   stopPromoTimer()
   promoTimer = setInterval(() => {
@@ -231,23 +246,35 @@ function startPromoTimer() {
   }, 1000)
 }
 
+/**
+ * 函数：stopPromoTimer
+ */
 function stopPromoTimer() {
   if (!promoTimer) return
   clearInterval(promoTimer)
   promoTimer = null
 }
 
+/**
+ * 事件处理：onSelectPackage
+ */
 function onSelectPackage(id) {
   selectedId.value = id
   // 避免页面上已有输入框（如文案 textarea）在切换金额时被重新聚焦而唤起键盘
   safeHideKeyboard()
 }
 
+/**
+ * 切换状态：toggleNeedBoxActive
+ */
 function toggleNeedBoxActive() {
   needBoxIsActive.value = !needBoxIsActive.value
   safeHideKeyboard()
 }
 
+/**
+ * 处理：handleBuy
+ */
 function handleBuy() {
   safeHideKeyboard()
   if (!agreed.value) {

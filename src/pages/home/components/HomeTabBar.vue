@@ -32,6 +32,9 @@ import tabCenter from '@/static/home/tabbar-center.png'
 /** home | mine | create — 中间「创作」不高亮左右 icon */
 const activeKey = ref('home')
 
+/**
+ * 同步：syncRoute
+ */
 function syncRoute() {
   try {
     const pages = getCurrentPages()
@@ -55,6 +58,9 @@ const mineTabSrc = computed(() =>
   activeKey.value === 'mine' ? tabMineActive : tabMine
 )
 
+/**
+ * 页面跳转：goTo
+ */
 function goTo(url) {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]

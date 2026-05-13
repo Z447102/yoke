@@ -338,6 +338,9 @@ onReady(() => {
   })
 })
 
+/**
+ * 事件处理：onTabTap
+ */
 function onTabTap(idx) {
   activeIndex.value = idx
   requestTabScrollIntoView(idx)
@@ -358,6 +361,9 @@ function requestTabScrollIntoView(idx) {
   })
 }
 
+/**
+ * 返回上一页
+ */
 function goBack() {
   uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/index' }) })
 }
@@ -408,6 +414,9 @@ function scrollTabsStripForward() {
     })
 }
 
+/**
+ * 事件处理：onTabsScroll
+ */
 function onTabsScroll(e) {
   const left = e?.detail?.scrollLeft
   if (typeof left === 'number' && !Number.isNaN(left)) {

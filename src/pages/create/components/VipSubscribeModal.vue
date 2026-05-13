@@ -256,6 +256,9 @@ watch(
   }
 )
 
+/**
+ * 处理：handleConfirm
+ */
 function handleConfirm() {
   if (!agreed.value) {
     uni.showToast({

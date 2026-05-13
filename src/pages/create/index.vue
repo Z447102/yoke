@@ -169,23 +169,41 @@ import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
 import createIconMapPin from '@/static/create/create-icon-map-pin.png'
 import createIconAttention from '@/static/create/create-icon-attention.png'
 import { CREATE_INDUSTRY_OPTIONS } from '@/constants/create'
+import { listIndustries } from '@/api/metadata'
+import { createMemberMainBusiness } from '@/api/create'
+import { isApiEnabled } from '@/utils/request'
+import { hidePageLoading, showPageLoading } from '@/utils/page-loading'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
-const industryOptions = CREATE_INDUSTRY_OPTIONS
+/** 行业下拉：已配置基址时打开弹窗前拉取 `/api/industries`，失败或未配置时用本地枚举兜底 */
+const industryOptions = ref([...CREATE_INDUSTRY_OPTIONS])
 
 const selectedIndustry = ref('')
+/** 与 `selectedIndustry` 名称对应的行业 id（`/api/industries`），写入 generate 拉主营业务列表用 */
+const selectedIndustryId = ref('')
 const tempIndustry = ref('')
 const showIndustryPopup = ref(false)
+/** 打开行业弹窗时拉取的 `/api/industries` 原始行，用于名称 → id */
+const industryRowsForId = ref([])
 /** 地图选点回传的展示数据（只读，不再用手输文本框） */
 const locationPick = ref(null)
 /** 主营业务路径节点（与选点页写入的 path 一致，用于标签展示） */
 const businessPath = ref([])
 /** 店铺 / 公司名称 */
 const shopName = ref('')
+/**
+ * 主营业务子页确认时写入的完整 payload（维度、自定义场景、industryTagId 等），
+ * 用于「下一步」POST /api/member/main-businesses。
+ * @type {import('vue').Ref<Record<string, unknown> | null>}
+ */
+const lastSelectedBusinessPayload = ref(null)
 
+/**
+ * 函数：nodeDisplayName
+ */
 function nodeDisplayName(p) {
   if (!p || typeof p !== 'object') return ''
   const raw = p.name ?? p.label ?? p.title ?? p.categoryName
@@ -213,8 +231,12 @@ function removeBusinessTag(index) {
   businessPath.value = businessPath.value.filter((_, i) => i !== index)
 }
 
+/**
+ * 清空状态：clearAllBusinessTags
+ */
 function clearAllBusinessTags() {
   businessPath.value = []
+  lastSelectedBusinessPayload.value = null
 }
 
 /** 校验失败时仅高亮：行业下拉、主营业务下拉、店铺名输入、地图选点（其余样式不变） */
@@ -223,18 +245,30 @@ const errorBusiness = ref(false)
 const errorShop = ref(false)
 const errorLocation = ref(false)
 
+/**
+ * 布尔判断：isIndustryValid
+ */
 function isIndustryValid() {
   return Boolean(String(selectedIndustry.value || '').trim())
 }
 
+/**
+ * 布尔判断：isBusinessValid
+ */
 function isBusinessValid() {
   return businessPath.value.length > 0
 }
 
+/**
+ * 布尔判断：isShopValid
+ */
 function isShopValid() {
   return Boolean(String(shopName.value || '').trim())
 }
 
+/**
+ * 布尔判断：isLocationValid
+ */
 function isLocationValid() {
   const loc = locationPick.value
   if (!loc || typeof loc !== 'object') return false
@@ -253,6 +287,9 @@ const canProceedNext = computed(
     isLocationValid()
 )
 
+/**
+ * 清空状态：clearErrorsWhenFixed
+ */
 function clearErrorsWhenFixed() {
   if (isIndustryValid()) errorIndustry.value = false
   if (isBusinessValid()) errorBusiness.value = false
@@ -288,25 +325,58 @@ function readSelectedLocationPayload() {
 onShow(() => {
   const raw = readSelectedLocationPayload()
   if (raw) {
+    const latRaw = raw.latitude
+    const lngRaw = raw.longitude
     locationPick.value = {
       id: raw.id != null ? String(raw.id) : '',
       name: raw.name != null ? String(raw.name) : '',
       address: raw.address != null ? String(raw.address) : '',
-      distance: raw.distance != null ? String(raw.distance) : ''
+      distance: raw.distance != null ? String(raw.distance) : '',
+      latitude:
+        latRaw != null && Number.isFinite(Number(latRaw)) ? Number(latRaw) : null,
+      longitude:
+        lngRaw != null && Number.isFinite(Number(lngRaw)) ? Number(lngRaw) : null
     }
     uni.removeStorageSync('create:selected-location')
   }
 
   const selectedBusiness = readSelectedBusinessPayload()
   if (selectedBusiness) {
-    businessPath.value = selectedBusiness.path.map((p) => ({
-      id: p.id != null ? String(p.id) : '',
-      name: nodeDisplayName(p)
-    }))
+    try {
+      lastSelectedBusinessPayload.value = JSON.parse(JSON.stringify(selectedBusiness))
+    } catch {
+      lastSelectedBusinessPayload.value =
+        selectedBusiness && typeof selectedBusiness === 'object'
+          ? { ...selectedBusiness }
+          : null
+    }
+    const scopeRows = selectedBusiness.scopeTagRows
+    if (Array.isArray(scopeRows) && scopeRows.length) {
+      businessPath.value = scopeRows
+        .map((r) => ({
+          id: r.id != null ? String(r.id) : '',
+          name: nodeDisplayName(r)
+        }))
+        .filter((x) => x.name)
+    } else {
+      businessPath.value = selectedBusiness.path.map((p) => ({
+        id: p.id != null ? String(p.id) : '',
+        name: nodeDisplayName(p)
+      }))
+    }
+    const ind = String(selectedBusiness.industry ?? '').trim()
+    if (ind) selectedIndustry.value = ind
+    const bid = String(selectedBusiness.industryId ?? '').trim()
+    if (bid && Number.isFinite(Number(bid))) {
+      selectedIndustryId.value = bid
+    }
     uni.removeStorageSync('create:selected-business')
   }
 })
 
+/**
+ * 返回上一页
+ */
 function goBack() {
   const pages = getCurrentPages()
 
@@ -325,24 +395,80 @@ function goBack() {
   })
 }
 
-function openIndustryPopup() {
-  tempIndustry.value = selectedIndustry.value || '餐饮'
+/**
+ * 打开界面/弹层：openIndustryPopup
+ */
+async function openIndustryPopup() {
+  if (isApiEnabled()) {
+    showPageLoading()
+    try {
+      const data = await listIndustries()
+      const rows = Array.isArray(data) ? data : []
+      industryRowsForId.value = rows
+      const names = [...rows]
+        .sort((a, b) => {
+          const sa = Number(a.sort ?? 0)
+          const sb = Number(b.sort ?? 0)
+          if (sa !== sb) return sa - sb
+          return String(a.industryName ?? '').localeCompare(
+            String(b.industryName ?? ''),
+            'zh-Hans-CN'
+          )
+        })
+        .map((row) => String(row.industryName ?? '').trim())
+        .filter(Boolean)
+      if (names.length) {
+        industryOptions.value = names
+      }
+    } catch (e) {
+      industryRowsForId.value = []
+      industryOptions.value = [...CREATE_INDUSTRY_OPTIONS]
+      uni.showToast({
+        title: e?.message ? String(e.message) : '行业列表加载失败',
+        icon: 'none'
+      })
+    } finally {
+      hidePageLoading()
+    }
+  }
+
+  const list = industryOptions.value
+  const cur = String(selectedIndustry.value || '').trim()
+  tempIndustry.value =
+    cur && list.includes(cur) ? cur : list[0] || ''
   showIndustryPopup.value = true
 }
 
+/**
+ * 关闭界面/弹层：closeIndustryPopup
+ */
 function closeIndustryPopup() {
   showIndustryPopup.value = false
 }
 
+/**
+ * 选择项：selectIndustry
+ */
 function selectIndustry(industry) {
   tempIndustry.value = industry
 }
 
+/**
+ * 确认操作：confirmIndustry
+ */
 function confirmIndustry() {
   selectedIndustry.value = tempIndustry.value
+  const name = String(tempIndustry.value || '').trim()
+  const hit = industryRowsForId.value.find(
+    (x) => String(x.industryName ?? '').trim() === name
+  )
+  selectedIndustryId.value = hit ? String(hit.industryId ?? '').trim() : ''
   closeIndustryPopup()
 }
 
+/**
+ * 页面跳转：goToBusiness
+ */
 function goToBusiness() {
   if (!String(selectedIndustry.value || '').trim()) {
     uni.showToast({ title: '请选择行业', icon: 'none' })
@@ -353,13 +479,19 @@ function goToBusiness() {
   })
 }
 
+/**
+ * 页面跳转：goToLocation
+ */
 function goToLocation() {
   uni.navigateTo({
     url: '/pages/create/location/index'
   })
 }
 
-function goToGenerate() {
+/**
+ * 页面跳转：goToGenerate
+ */
+async function goToGenerate() {
   errorIndustry.value = !isIndustryValid()
   errorBusiness.value = !isBusinessValid()
   errorShop.value = !isShopValid()
@@ -375,29 +507,202 @@ function goToGenerate() {
     return
   }
 
-  uni.setStorageSync('create:merchant-draft', {
+  const loc = locationPick.value
+  const businessTagLabels = businessPath.value
+    .map((p) => String(p.name || '').trim())
+    .filter(Boolean)
+  const draftBase = {
     industry: String(selectedIndustry.value || '').trim(),
+    industryId: String(selectedIndustryId.value || '').trim(),
     businessPath: businessPath.value.map((p) => ({
       id: p.id != null ? String(p.id) : '',
       name: String(p.name || '').trim()
     })),
+    businessTagLabels,
     shopName: String(shopName.value || '').trim(),
-    location: locationPick.value
+    location: loc
       ? {
-          id: locationPick.value.id != null ? String(locationPick.value.id) : '',
-          name: String(locationPick.value.name || '').trim(),
-          address: String(locationPick.value.address || '').trim(),
-          distance:
-            locationPick.value.distance != null
-              ? String(locationPick.value.distance)
-              : ''
+          id: loc.id != null ? String(loc.id) : '',
+          name: String(loc.name || '').trim(),
+          address: String(loc.address || '').trim(),
+          distance: loc.distance != null ? String(loc.distance) : '',
+          ...(loc.latitude != null ? { latitude: loc.latitude } : {}),
+          ...(loc.longitude != null ? { longitude: loc.longitude } : {})
         }
       : null
-  })
+  }
 
-  uni.navigateTo({
-    url: '/pages/create/generate/index'
-  })
+  if (!isApiEnabled()) {
+    uni.setStorageSync('create:merchant-draft', draftBase)
+    uni.navigateTo({
+      url: '/pages/create/generate/index'
+    })
+    return
+  }
+
+  if (!lastSelectedBusinessPayload.value) {
+    uni.showToast({ title: '请重新选择主营业务', icon: 'none' })
+    return
+  }
+
+  const rawTagId = String(
+    lastSelectedBusinessPayload.value.industryTagIdForDimensions ?? ''
+  ).trim()
+  if (!rawTagId) {
+    uni.showToast({
+      title: '主营业务数据不完整，请重新选择主营业务',
+      icon: 'none'
+    })
+    return
+  }
+  const industryTagIdNum = Number(rawTagId)
+  if (!Number.isFinite(industryTagIdNum) || industryTagIdNum <= 0) {
+    uni.showToast({
+      title: '主营业务标签无效，请重新选择主营业务',
+      icon: 'none'
+    })
+    return
+  }
+
+  showPageLoading()
+  try {
+    const industryIdNum = await resolveIndustryIdForSubmit()
+    if (!Number.isFinite(industryIdNum)) {
+      uni.showToast({ title: '缺少行业信息，请重新选择行业', icon: 'none' })
+      return
+    }
+    const body = buildCreateMainBusinessRequestBody(industryIdNum, industryTagIdNum)
+    const created = await createMemberMainBusiness(body)
+    const newId = pickCreatedMainBusinessId(
+      created && typeof created === 'object' ? created : {}
+    )
+    uni.setStorageSync('create:merchant-draft', {
+      ...draftBase,
+      ...(newId ? { createdMainBusinessId: newId } : {})
+    })
+    uni.navigateTo({
+      url: '/pages/create/generate/index'
+    })
+  } catch (e) {
+    uni.showToast({
+      title: e?.message ? String(e.message) : '主营业务保存失败',
+      icon: 'none'
+    })
+  } finally {
+    hidePageLoading()
+  }
+}
+
+/**
+ * 提交前解析行业 id（草稿 industryId 为空时按名称查 `/api/industries`）。
+ * @returns {Promise<number>}
+ */
+async function resolveIndustryIdForSubmit() {
+  const sid0 = String(selectedIndustryId.value || '').trim()
+  if (sid0 && Number.isFinite(Number(sid0))) return Number(sid0)
+  const name = String(selectedIndustry.value || '').trim()
+  if (!name) return NaN
+  let rows = industryRowsForId.value
+  if (!Array.isArray(rows) || !rows.length) {
+    try {
+      const data = await listIndustries()
+      rows = Array.isArray(data) ? data : []
+      industryRowsForId.value = rows
+    } catch {
+      return NaN
+    }
+  }
+  const hit = rows.find((x) => String(x.industryName ?? '').trim() === name)
+  const sid = hit ? String(hit.industryId ?? '').trim() : ''
+  if (sid && Number.isFinite(Number(sid))) {
+    selectedIndustryId.value = sid
+    return Number(sid)
+  }
+  return NaN
+}
+
+/**
+ * @param {Record<string, unknown> | null} payload
+ * @returns {number[]}
+ */
+function collectDimensionTagIdsFromPayload(payload) {
+  const out = []
+  if (!payload || typeof payload !== 'object' || !Array.isArray(payload.dimensionPicks)) {
+    return out
+  }
+  for (const g of payload.dimensionPicks) {
+    if (!g || typeof g !== 'object') continue
+    const ids = g.selectedTagIds
+    if (!Array.isArray(ids)) continue
+    for (const id of ids) {
+      const n = Number(String(id ?? '').trim())
+      if (Number.isFinite(n)) out.push(n)
+    }
+  }
+  return [...new Set(out)]
+}
+
+/**
+ * @param {Record<string, unknown> | null} payload
+ * @returns {string[]}
+ */
+function collectCustomSceneTextsFromPayload(payload) {
+  if (!payload || typeof payload !== 'object' || !Array.isArray(payload.customScenes)) {
+    return []
+  }
+  return payload.customScenes
+    .map((x) => (x && typeof x === 'object' ? String(x.sceneText ?? '').trim() : ''))
+    .filter(Boolean)
+    .slice(0, 50)
+}
+
+/**
+ * @param {number} industryId
+ * @param {number} industryTagId
+ * @returns {Record<string, unknown>}
+ */
+function buildCreateMainBusinessRequestBody(industryId, industryTagId) {
+  const d = lastSelectedBusinessPayload.value
+  const enterpriseName = String(shopName.value ?? '').trim()
+  const body = {
+    industryId,
+    industryTagId,
+    enterpriseName
+  }
+  const loc = locationPick.value
+  if (loc && typeof loc === 'object') {
+    const ln = String(loc.name ?? '').trim()
+    if (ln) body.locationName = ln
+    const ad = String(loc.address ?? '').trim()
+    if (ad) body.address = ad
+    if (loc.latitude != null && Number.isFinite(Number(loc.latitude))) {
+      body.latitude = Number(loc.latitude)
+    }
+    if (loc.longitude != null && Number.isFinite(Number(loc.longitude))) {
+      body.longitude = Number(loc.longitude)
+    }
+  }
+  const dimIds = collectDimensionTagIdsFromPayload(d)
+  if (dimIds.length) body.dimensionTagIds = dimIds
+  const scenes = collectCustomSceneTextsFromPayload(d)
+  if (scenes.length) body.customSceneTexts = scenes
+  body.sort = 0
+  return body
+}
+
+/**
+ * @param {Record<string, unknown>} res
+ * @returns {string}
+ */
+function pickCreatedMainBusinessId(res) {
+  if (typeof res === 'number' && Number.isFinite(res)) return String(res)
+  if (!res || typeof res !== 'object') return ''
+  if (res.id != null) return String(res.id).trim()
+  const nested = res.data
+  if (nested && typeof nested === 'object' && nested.id != null) {
+    return String(nested.id).trim()
+  }
+  return ''
 }
 </script>
 

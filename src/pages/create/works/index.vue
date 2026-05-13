@@ -83,6 +83,10 @@
         </view>
       </view>
 
+      <view v-if="manageMode" class="manage-multi-hint">
+        <text>（可多选）</text>
+      </view>
+
       <!-- 三列宫格 -->
       <view class="grid3">
         <view
@@ -491,10 +495,16 @@ onMounted(() => {
 })
 onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
+/**
+ * 返回上一页
+ */
 function goBack() {
   uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/index' }) })
 }
 
+/**
+ * 页面跳转：goToCreate
+ */
 function goToCreate() {
   uni.navigateTo({
     url: '/pages/create/index',
@@ -504,29 +514,47 @@ function goToCreate() {
   })
 }
 
+/**
+ * 布尔判断：isSelected
+ */
 function isSelected(id) {
   return selectedIds.value.includes(id)
 }
 
+/**
+ * 切换状态：toggleSelect
+ */
 function toggleSelect(id) {
   const i = selectedIds.value.indexOf(id)
   if (i >= 0) selectedIds.value.splice(i, 1)
   else selectedIds.value.push(id)
 }
 
+/**
+ * 切换状态：toggleManage
+ */
 function toggleManage() {
   manageMode.value = !manageMode.value
   if (!manageMode.value) selectedIds.value = []
 }
 
+/**
+ * 事件处理：onNotify
+ */
 function onNotify() {
   notifyDialogVisible.value = true
 }
 
+/**
+ * 关闭界面/弹层：closeNotifyDialog
+ */
 function closeNotifyDialog() {
   notifyDialogVisible.value = false
 }
 
+/**
+ * 函数：checkNotifyEnabled
+ */
 function checkNotifyEnabled() {
   return new Promise((resolve) => {
     if (typeof wx === 'undefined' || typeof wx.getSetting !== 'function') {
@@ -544,6 +572,9 @@ function checkNotifyEnabled() {
   })
 }
 
+/**
+ * 事件处理：onAllowNotify
+ */
 function onAllowNotify() {
   if (typeof wx === 'undefined' || typeof wx.openSetting !== 'function') {
     closeNotifyDialog()
@@ -567,6 +598,9 @@ function onAllowNotify() {
   })
 }
 
+/**
+ * 事件处理：onRegenerateFailed
+ */
 function onRegenerateFailed(_item) {
   uni.showToast({
     title: '重新生成（待接入）',
@@ -574,26 +608,41 @@ function onRegenerateFailed(_item) {
   })
 }
 
+/**
+ * 事件处理：onViewFailedReason
+ */
 function onViewFailedReason(item) {
   failReasonTargetItem.value = item
   failReasonDialogVisible.value = true
 }
 
+/**
+ * 关闭界面/弹层：closeFailReasonDialog
+ */
 function closeFailReasonDialog() {
   failReasonDialogVisible.value = false
   failReasonTargetItem.value = null
 }
 
+/**
+ * 事件处理：onFailReasonCancel
+ */
 function onFailReasonCancel() {
   closeFailReasonDialog()
 }
 
+/**
+ * 事件处理：onFailReasonRegenerate
+ */
 function onFailReasonRegenerate() {
   const target = failReasonTargetItem.value
   closeFailReasonDialog()
   if (target) onRegenerateFailed(target)
 }
 
+/**
+ * 事件处理：onPublish
+ */
 function onPublish(item) {
   let platformId = 'douyin'
   try {
@@ -614,6 +663,9 @@ function onPublish(item) {
   })
 }
 
+/**
+ * 事件处理：onCardTap
+ */
 function onCardTap(item) {
   if (manageMode.value) {
     if (item.status === 'completed') toggleSelect(item.id)
@@ -622,15 +674,24 @@ function onCardTap(item) {
   if (item.status === 'completed') openDetail(item)
 }
 
+/**
+ * 事件处理：onDeleteTap
+ */
 function onDeleteTap() {
   if (!selectedIds.value.length) return
   deleteDialogVisible.value = true
 }
 
+/**
+ * 事件处理：onDeleteCancel
+ */
 function onDeleteCancel() {
   deleteDialogVisible.value = false
 }
 
+/**
+ * 事件处理：onDeleteConfirm
+ */
 async function onDeleteConfirm() {
   const ids = selectedIds.value.slice()
   if (!ids.length) return
@@ -643,6 +704,9 @@ async function onDeleteConfirm() {
   uni.showToast({ title: `已删除 ${ids.length} 条`, icon: 'none' })
 }
 
+/**
+ * 加载数据：loadFirstPage
+ */
 async function loadFirstPage() {
   page.value = 1
   hasMore.value = true
@@ -665,6 +729,9 @@ async function loadFirstPage() {
   }
 }
 
+/**
+ * 加载数据：loadNextPage
+ */
 async function loadNextPage() {
   if (!hasMore.value || loadingMore.value || loading.value) return
   if (!useMockList.value) return
@@ -687,6 +754,9 @@ async function loadNextPage() {
   }
 }
 
+/**
+ * 事件处理：onRefresherRefresh
+ */
 async function onRefresherRefresh() {
   refresherTriggered.value = true
   try {
@@ -696,10 +766,16 @@ async function onRefresherRefresh() {
   }
 }
 
+/**
+ * 事件处理：onScrollToLower
+ */
 function onScrollToLower() {
   loadNextPage()
 }
 
+/**
+ * 打开界面/弹层：openDetail
+ */
 function openDetail(item) {
   uni.navigateTo({
     url: `/pages/create/works/detail?id=${encodeURIComponent(item.id)}`
@@ -983,6 +1059,16 @@ function openDetail(item) {
   justify-content: space-between;
   gap: 12rpx;
   margin-bottom: 20rpx;
+}
+
+.manage-multi-hint {
+  margin: -12rpx 0 16rpx;
+  padding-left: 4rpx;
+}
+
+.manage-multi-hint text {
+  font-size: 22rpx;
+  color: #9ca3af;
 }
 
 .toolbar-badge {

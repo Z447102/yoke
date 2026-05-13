@@ -18,6 +18,9 @@ const MOCK_COUNTS = {
   copy: 128
 }
 
+/**
+ * 构建数据：buildWorksList
+ */
 function buildWorksList(tab, limit = 9) {
   const total = MOCK_COUNTS[tab] ?? 0
   const n = Math.min(limit, Math.max(0, total))

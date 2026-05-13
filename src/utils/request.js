@@ -60,6 +60,28 @@ function mergeHeaders(base, extra) {
 }
 
 /**
+ * 读取本次请求可用的 Bearer token：优先本地持久化，其次 Pinia（避免刚登录尚未落盘时漏带头）。
+ * @returns {string}
+ */
+function readBearerTokenForRequest() {
+  try {
+    const persisted = readPersistedAuth()
+    const t = persisted?.token != null ? String(persisted.token).trim() : ''
+    if (t) return t
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    const store = useUserStore()
+    const t = store.token != null ? String(store.token).trim() : ''
+    if (t) return t
+  } catch (_) {
+    /* Pinia 未就绪 */
+  }
+  return ''
+}
+
+/**
  * 将 uni.request 返回的 data 尽量解析为对象；已是对象则原样返回。
  * @param {unknown} raw
  * @returns {unknown}
@@ -135,11 +157,13 @@ export function request(options) {
     header
   )
 
+  /** 是否实际发出了 Authorization（用于区分「未登录」与「token 失效」） */
+  let sentAuthorizationBearer = false
   if (auth) {
-    const persisted = readPersistedAuth()
-    const token = persisted && persisted.token
+    const token = readBearerTokenForRequest()
     if (token) {
       headers.Authorization = `Bearer ${token}`
+      sentAuthorizationBearer = true
     }
   }
 
@@ -157,14 +181,21 @@ export function request(options) {
         const body = tryParseJson(res.data)
 
         if (statusCode === 401) {
-          try {
-            useUserStore().clearLoginState()
-          } catch (_) {
-            /* Pinia 未就绪时忽略 */
+          /* 仅当本次请求携带了 Bearer 仍 401 时清理本地登录态，避免未带头访问受保护资源误清 store */
+          if (sentAuthorizationBearer) {
+            try {
+              useUserStore().clearLoginState()
+            } catch (_) {
+              /* Pinia 未就绪时忽略 */
+            }
           }
+          const serverMsg = pickBizMessage(body, bizMsgKey)
           reject(
             new HttpError(
-              pickBizMessage(body, bizMsgKey) || '登录已失效，请重新登录',
+              serverMsg ||
+                (sentAuthorizationBearer
+                  ? '登录已失效，请重新登录'
+                  : '请先登录后再使用该功能'),
               { statusCode, data: body, code: 'HTTP_401' }
             )
           )

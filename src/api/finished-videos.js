@@ -32,6 +32,9 @@ function buildSummary() {
   }
 }
 
+/**
+ * 构建数据：buildMockItem
+ */
 function buildMockItem(globalIndex, status, progressOpt, failReasonOpt) {
   const i = globalIndex + 1
   const durations = ['30s', '15s', '30s']
@@ -117,6 +120,9 @@ export function deleteFinishedVideos(ids) {
   return Promise.resolve({ ok: true })
 }
 
+/**
+ * 读取：getFinishedVideoDetail
+ */
 export function getFinishedVideoDetail(id) {
   const sid = String(id || '').trim()
   if (!sid) return Promise.resolve(null)
