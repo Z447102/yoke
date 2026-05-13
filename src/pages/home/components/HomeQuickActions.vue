@@ -3,7 +3,7 @@
     <view class="quick-card" @tap="goToCreate">
       <view class="quick-icon">
         <image
-          class="quick-icon__img"
+          class="quick-icon__img quick-icon__img--create"
           :src="quickCreateIcon"
           mode="aspectFit"
           :lazy-load="false"
@@ -97,5 +97,10 @@ function handleClick(name) {
   width: 32rpx;
   height: 32rpx;
   display: block;
+}
+
+.quick-icon__img--create {
+  width: 38rpx;
+  height: 38rpx;
 }
 </style>

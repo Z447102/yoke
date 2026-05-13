@@ -1,25 +1,35 @@
 /**
  * 登录相关接口
  * - 未配置 `VITE_API_BASE_URL` 时走 Mock
+ *
+ * 【产品约定】
+ * 1. 预登录会话标识：与后端对齐，字段名为 **uuid**；前端持久化在 `wxSessionUuid`（见 session 归一化）。
+ * 2. 登录落地页（`pages/login`）两条路：
+ *    - **未**走微信「授权手机号」：用户输入手机号 + 短信验证码，请求 `POST /api/auth/login`
+ *     （`send-code` → `login`）；成功后写入 **token**（及可选 profile，见 `normalizeSmsLoginPayload`）。
+ *    - **已**拿到微信 `getPhoneNumber` 的 **phoneCode**：请求 `POST /api/auth/wechat/mobile-login`，
+ *      请求体 **仅** `{ uuid, phoneCode }`；成功后写入 **token**（`hooks/use-login.js` → `setLoginState`）。
+ * 3. 登录成功后的「下一步跳转 / 资料完善」等编排 **暂不实现**，由后续需求再接。
+ * 4. 开屏 `pages/splash`：隐私同意后 `silentLoginOnce`（`uni.login` → `session`）；已下发正式 token 且无需绑手机则 **进首页**；微信小程序侧仅 uuid 预登录时门闸内 **`getPhoneNumber`**（点击后由 **微信原生** 绘制授权弹窗）→ `mobile-login` 成功后进首页；未拿到手机号或非微信端需绑手机则 **跳转 `pages/login`**（`redirect=/pages/home/index`）走验证码登录。
+ *
+ * ---
  * - 静默登录：`POST /api/auth/wechat/session`（可用 `VITE_AUTH_WECHAT_SILENT_PATH` 覆盖）
  * - 请求体：`{ loginCode }`（值为 `uni.login` 返回的微信 code）
  * - 成功外壳：`{ code: 200, msg, data }`（成功码见 `VITE_API_BIZ_CODE_SUCCESS`，默认 200）
  *
  * data 约定（微信 session）：
  * - needPhoneAuthorization → needBindPhone
- * - uuid → wxSessionUuid（后续手机号等接口可携带）
+ * - uuid → wxSessionUuid（后续 mobile-login 必带同一 uuid）
  * - loginResult.token → token；loginResult 内可含 user 等扩展字段
  *
  * 【与 mobile-login 的关系】静默登录 **只** 调 session，**不会**自动请求 mobile-login。
- * mobile-login 需要微信组件 `getPhoneNumber` 返回的 **phoneCode**，只能由用户在
- * `pages/login` 点击「授权手机号」后，经 `loginWithPhoneCode` → `bindPhoneByCode` 发起
- * `POST /api/auth/wechat/mobile-login`（见 `hooks/use-login.js`）。
+ * mobile-login 由用户在 `pages/login` 授权手机号后，经 `loginWithPhoneCode` → `bindPhoneByCode` 发起。
  *
  * 手机号授权登录：`POST /api/auth/wechat/mobile-login`
- * - 请求体：`{ uuid, phoneCode }`（uuid 为 session 返回的预登录会话 id；phoneCode 为 getPhoneNumber 返回）；**不附带 Authorization**
- * - 响应 data：常见含 `token`、`expiresIn`、`newUser`（无 profile 时保留本地原 profile）
+ * - 请求体：`{ uuid, phoneCode }`；**不附带 Authorization**
+ * - 响应 data：至少含 `token`；可含 `user`/`profile`、`points`（见 `normalizeMobileLoginPayload`）
  *
- * 其它认证（与 OpenAPI 一致）：`POST /api/auth/send-code`、`POST /api/auth/login`；登出 `POST /api/auth/logout`。
+ * 其它认证：`POST /api/auth/send-code`、`POST /api/auth/login`；登出 `POST /api/auth/logout`。
  */
 import { isApiEnabled, post } from '@/utils/request'
 import {
@@ -257,10 +267,40 @@ function normalizeMobileLoginPayload(raw) {
     err.code = 'NO_TOKEN'
     throw err
   }
+  const srcRaw =
+    raw.profile ??
+    raw.user ??
+    raw.userInfo ??
+    (raw.loginResult && typeof raw.loginResult === 'object'
+      ? raw.loginResult.user ?? raw.loginResult.profile
+      : null)
+  let profile = null
+  if (srcRaw && typeof srcRaw === 'object') {
+    profile = {
+      id: String(srcRaw.userId ?? srcRaw.id ?? srcRaw.userName ?? ''),
+      nickname: String(
+        srcRaw.nickName ?? srcRaw.nickname ?? srcRaw.name ?? ''
+      ),
+      phone: String(
+        srcRaw.phonenumber ?? srcRaw.phone ?? srcRaw.mobile ?? ''
+      ),
+      avatarUrl: String(
+        srcRaw.avatar ?? srcRaw.avatarUrl ?? srcRaw.headImgUrl ?? ''
+      )
+    }
+  }
+  const pointsRaw = raw.points ?? raw.score ?? raw.integral ?? raw.coin
+  let points
+  if (pointsRaw != null) {
+    const pn = Number(pointsRaw)
+    points = Number.isFinite(pn) ? Math.max(0, Math.floor(pn)) : undefined
+  }
   return {
     token,
+    profile,
     needBindPhone: false,
-    wxSessionUuid: ''
+    wxSessionUuid: '',
+    ...(points !== undefined ? { points } : {})
   }
 }
 
@@ -317,9 +357,58 @@ export async function bindPhoneByCode({ phoneCode, wxSessionUuid }) {
 }
 
 /**
- * 退出登录：请求后端后由调用方或 store 清本地（此处仅发请求）。
- * @returns {Promise<unknown>}
+ * 将「短信验证码登录」接口返回的 `data` 转为与 session 类似的会话切片，供 Pinia 写入。
+ * @param {Record<string, unknown>} raw 后端 data
+ * @returns {{ token: string, profile: object | null, needBindPhone: false, points: number, wxSessionUuid: '' }}
  */
+function normalizeSmsLoginPayload(raw) {
+  if (!raw || typeof raw !== 'object') {
+    const err = new Error('登录响应异常')
+    err.code = 'BAD_RESPONSE'
+    throw err
+  }
+  const token = String(
+    raw.token ?? raw.accessToken ?? raw.access_token ?? ''
+  ).trim()
+  if (!token) {
+    const err = new Error('登录未返回 token')
+    err.code = 'NO_TOKEN'
+    throw err
+  }
+  const srcRaw =
+    raw.profile ??
+    raw.user ??
+    raw.userInfo ??
+    (raw.loginResult && typeof raw.loginResult === 'object'
+      ? raw.loginResult.user ?? raw.loginResult.profile
+      : null)
+  let profile = null
+  if (srcRaw && typeof srcRaw === 'object') {
+    profile = {
+      id: String(srcRaw.userId ?? srcRaw.id ?? srcRaw.userName ?? ''),
+      nickname: String(
+        srcRaw.nickName ?? srcRaw.nickname ?? srcRaw.name ?? ''
+      ),
+      phone: String(
+        srcRaw.phonenumber ?? srcRaw.phone ?? srcRaw.mobile ?? ''
+      ),
+      avatarUrl: String(
+        srcRaw.avatar ?? srcRaw.avatarUrl ?? srcRaw.headImgUrl ?? ''
+      )
+    }
+  }
+  const pointsRaw = raw.points ?? raw.score ?? raw.integral ?? raw.coin ?? 0
+  const pn = Number(pointsRaw)
+  const points = Number.isFinite(pn) ? Math.max(0, Math.floor(pn)) : 0
+  return {
+    token,
+    profile,
+    needBindPhone: false,
+    points,
+    wxSessionUuid: ''
+  }
+}
+
 /**
  * 发送短信验证码（登录用）
  * POST /api/auth/send-code
@@ -338,23 +427,39 @@ export async function sendSmsCode({ mobile }) {
  * 短信验证码登录
  * POST /api/auth/login
  * @param {{ mobile: string, code: string }} param0
- * @returns {Promise<{ token: string, expiresIn?: number, newUser?: boolean }>}
+ * @returns {Promise<{ token: string, profile: object | null, needBindPhone: false, points: number, wxSessionUuid: string }>}
  */
 export async function loginWithSms({ mobile, code }) {
+  const m = String(mobile || '').trim()
+  const c = String(code || '').trim()
+  if (!/^1\d{10}$/.test(m)) {
+    const err = new Error('请输入正确手机号')
+    err.code = 'INVALID_INPUT'
+    throw err
+  }
+  if (!c || c.length < 4) {
+    const err = new Error('请输入验证码')
+    err.code = 'INVALID_INPUT'
+    throw err
+  }
   if (!isApiEnabled()) {
     await delay(280)
-    if (!mobile || !code) {
-      const err = new Error('请输入手机号与验证码')
-      err.code = 'INVALID_INPUT'
-      throw err
-    }
-    return {
-      token: `sms_${mobile.slice(-4)}_${Date.now()}`,
-      expiresIn: 7200,
-      newUser: false
-    }
+    return normalizeSmsLoginPayload({
+      token: `sms_${m.slice(-4)}_${Date.now()}`,
+      user: {
+        id: `mock_sms_${m}`,
+        nickname: '手机用户',
+        phonenumber: m,
+        phone: m,
+        avatarUrl: ''
+      },
+      points: 50
+    })
   }
-  return post('/api/auth/login', { mobile, code }, { auth: false })
+  const raw = await post('/api/auth/login', { mobile: m, code: c }, {
+    auth: false
+  })
+  return normalizeSmsLoginPayload(raw)
 }
 
 export async function logout() {

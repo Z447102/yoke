@@ -29,7 +29,13 @@
       </view>
     </view>
 
-    <view class="tool-cta" :style="ctaBarStyle">
+    <view class="tool-cta">
+      <image
+        class="tool-cta__bg"
+        :src="toolGridCtaBg"
+        mode="aspectFill"
+        :lazy-load="false"
+      />
       <text class="tool-cta__lead">‹‹</text>
       <text class="tool-cta__text">{{ ctaText }}</text>
       <view class="tool-cta__tray">
@@ -77,14 +83,6 @@ const props = defineProps({
 defineEmits(['select'])
 
 const displayedTools = computed(() => (props.tools || []).slice(0, 3))
-
-/** 小程序端用 import + 内联 background，避免 wxss 里 url(@/static/...) 不生效 */
-const ctaBarStyle = {
-  backgroundImage: `url(${toolGridCtaBg})`,
-  backgroundSize: '100% 100%',
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'center'
-}
 
 function moduleIconAt(index) {
   const list = props.moduleIconSrcs || []
@@ -194,30 +192,48 @@ $tool-cell-h: 248rpx;
 }
 
 .tool-cta {
+  position: relative;
   width: 520rpx;
   height: 88rpx;
   margin: 18rpx auto 0;
   padding: 0 32rpx;
   box-sizing: border-box;
   border-radius: 44rpx;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
+.tool-cta__bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .tool-cta__lead {
+  position: relative;
+  z-index: 1;
   color: #ffffff;
   font-size: 26rpx;
   line-height: 1;
 }
 
 .tool-cta__text {
+  position: relative;
+  z-index: 1;
   font-size: 26rpx;
   color: #ffffff;
   font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .tool-cta__tray {
+  position: relative;
+  z-index: 1;
   width: 60rpx;
   height: 60rpx;
   border-radius: 50%;

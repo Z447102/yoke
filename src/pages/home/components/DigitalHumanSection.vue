@@ -177,13 +177,13 @@ defineEmits(['create'])
     rgba(255, 165, 84, 1) 92.61%
   );
   box-sizing: border-box;
-  padding: 20rpx 24rpx 20rpx 28rpx;
+  padding: 20rpx 20rpx 20rpx 20rpx;
 }
 
 /* 微信小程序 WXSS 不支持 `.parent > * + *` 中的通配符，改用相邻兄弟选择器 */
 .create-card + .human-card,
 .human-card + .human-card {
-  margin-left: 16rpx;
+  margin-left: 20rpx;
 }
 
 .create-card,

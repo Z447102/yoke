@@ -1,148 +1,275 @@
 <template>
   <view class="login-page">
-    <view class="login-brand">
-      <text class="login-brand__name">有客</text>
-      <text class="login-brand__en">YOKE</text>
-    </view>
-    <text class="login-hint">使用微信账号登录，体验创作与会员服务</text>
-    <text
-      v-if="userStore.isLogin && userStore.needBindPhone"
-      class="login-hint login-hint--sub"
-    >
-      已完成微信侧登录，请再点击下方授权手机号
-    </text>
-
-    <view class="login-actions">
-      <button
-        class="login-btn login-btn--primary"
-        type="primary"
-        :loading="loadingWx"
-        :disabled="loadingWx || loadingPhone"
-        @tap="onWechatLogin"
-      >
-        {{ userStore.isLogin && userStore.needBindPhone ? '刷新微信登录态' : '微信一键登录' }}
-      </button>
-
-      <!-- #ifdef MP-WEIXIN -->
-      <button
-        v-if="showPhoneBind"
-        class="login-btn login-btn--ghost"
-        open-type="getPhoneNumber"
-        :loading="loadingPhone"
-        :disabled="loadingWx || loadingPhone"
-        @getphonenumber="onGetPhoneNumber"
-      >
-        授权手机号（完善资料）
-      </button>
-      <!-- #endif -->
-
-      <!-- #ifndef MP-WEIXIN -->
-      <text class="login-tip">请在微信小程序中打开以完成登录</text>
-      <!-- #endif -->
+    <!-- 顶部背景区：750rpx×318rpx + 设计图背景（真机用 image 铺满） -->
+    <view class="login-hero">
+      <image
+        class="login-hero__bg"
+        :src="loginHeroTopBg"
+        mode="aspectFill"
+      />
+      <view class="login-hero__inner" :style="loginHeroInnerStyle">
+        <text class="login-hero__brand-cn">创贸有客</text>
+        <text class="login-hero__brand-en">COMPOAi</text>
+      </view>
     </view>
 
-    <view class="login-footer">
-      <text class="login-footer__text">登录即表示同意</text>
-      <text class="login-footer__link" @tap="openUserAgreement">《用户软件许可协议》</text>
-      <text class="login-footer__text">与</text>
-      <text class="login-footer__link" @tap="openPrivacy">《隐私政策》</text>
+    <view class="login-body">
+      <text class="login-body__welcome">欢迎使用有客</text>
+      <text class="login-body__sub">用户登录</text>
+
+      <!-- 验证码区：下划线输入 + 获取验证码 -->
+      <view class="sms-field sms-field--mobile">
+        <input
+          v-model="smsMobile"
+          class="sms-field__input"
+          type="digit"
+          maxlength="11"
+          placeholder="请输入手机号"
+          placeholder-class="sms-field__ph"
+          :disabled="loadingSms || loadingSmsSend"
+        />
+        <view class="sms-field__line" />
+      </view>
+
+      <view class="sms-field sms-field--code">
+        <view class="sms-field__code-wrap">
+          <input
+            v-model="smsCode"
+            class="sms-field__input sms-field__input--flex"
+            type="number"
+            maxlength="8"
+            placeholder="请输入验证码"
+            placeholder-class="sms-field__ph"
+            :disabled="loadingSms || loadingSmsSend"
+          />
+          <button
+            class="sms-get-code"
+            :disabled="
+              smsCooldownSec > 0 || loadingSmsSend || loadingSms
+            "
+            @tap="onSendSmsCode"
+          >
+            {{
+              smsCooldownSec > 0
+                ? `${smsCooldownSec}秒后重获`
+                : '获取验证码'
+            }}
+          </button>
+        </view>
+        <view class="sms-field__line" />
+      </view>
+
+      <view class="sms-help" @tap="onSmsHelpTap">
+        <image
+          class="sms-help__icon"
+          :src="smsHelpIcon"
+          mode="aspectFit"
+        />
+        <text class="sms-help__text">收不到验证码 请点此解决</text>
+      </view>
+
+      <view class="sms-agree">
+        <view class="sms-agree__check" @tap="toggleAgree">
+          <view
+            :class="['sms-agree__circle', { 'sms-agree__circle--on': agreedToTerms }]"
+            @tap.stop="toggleAgree"
+          >
+            <view
+              v-show="agreedToTerms"
+              class="sms-agree__dot"
+              @tap.stop="toggleAgree"
+            />
+          </view>
+        </view>
+        <view class="sms-agree__texts">
+          <text class="sms-agree__plain" @tap="toggleAgree">我已阅读并同意</text>
+          <text class="sms-agree__link" @tap.stop="openUserAgreement">《用户服务协议》</text>
+          <text class="sms-agree__plain" @tap="toggleAgree">和</text>
+          <text class="sms-agree__link" @tap.stop="openPrivacy">《隐私政策》</text>
+        </view>
+      </view>
+
+      <button
+        class="sms-submit"
+        type="default"
+        :loading="loadingSms"
+        :disabled="loadingSmsSend"
+        @tap="onSmsLogin"
+      >
+        登录
+      </button>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
-import { loginWithWechatExplicit, loginWithPhoneCode } from '@/hooks/use-login'
+import { loginWithSmsCredentials } from '@/hooks/use-login'
+import { sendSmsCode } from '@/api/auth'
+import loginHeroTopBg from '@/static/login/login-hero-top-bg.png'
+import smsHelpIcon from '@/static/login/sms-help-icon.png'
 
 const userStore = useUserStore()
 
-const loadingWx = ref(false)
-const loadingPhone = ref(false)
+const loadingSms = ref(false)
+const loadingSmsSend = ref(false)
 const redirect = ref('')
+/** 是否同意协议（设计稿勾选） */
+const agreedToTerms = ref(false)
 
-/** 已登录且仍需手机号时，展示「授权手机号」按钮。 */
-const showPhoneBind = computed(
-  () => userStore.isLogin && userStore.needBindPhone
-)
+const smsMobile = ref('')
+const smsCode = ref('')
+const smsCooldownSec = ref(0)
+/** @type {ReturnType<typeof setInterval> | null} */
+let smsCooldownTimer = null
 
-/** 读取路由参数中的登录成功回跳地址。 */
+/** 头图内品牌区顶部留白（px）：安全区 + 与状态栏的间距 */
+const heroInnerPaddingTopPx = ref(44)
+
+const loginHeroInnerStyle = computed(() => ({
+  paddingTop: `${heroInnerPaddingTopPx.value}px`
+}))
+
+onMounted(() => {
+  let inset = 0
+  try {
+    if (typeof uni.getWindowInfo === 'function') {
+      const w = uni.getWindowInfo()
+      inset = Math.max(
+        Number(w.safeAreaInsets?.top ?? 0),
+        Number(w.statusBarHeight ?? 0)
+      )
+    } else {
+      const si = uni.getSystemInfoSync()
+      const fromSafe =
+        si.safeAreaInsets != null && typeof si.safeAreaInsets.top === 'number'
+          ? si.safeAreaInsets.top
+          : 0
+      const fromStatus =
+        typeof si.statusBarHeight === 'number' ? si.statusBarHeight : 0
+      inset = Math.max(fromSafe, fromStatus, 0)
+    }
+  } catch (_) {
+    inset = 0
+  }
+  let extraPx = 14
+  try {
+    extraPx = uni.upx2px(28)
+  } catch (_) {
+    extraPx = 14
+  }
+  /** 无安全区信息时至少留出常见状态栏高度，避免内容与胶囊重叠 */
+  const base = Math.max(Math.ceil(inset), 20)
+  heroInnerPaddingTopPx.value = base + extraPx
+})
+
+function toggleAgree() {
+  agreedToTerms.value = !agreedToTerms.value
+}
+
 onLoad((query) => {
   redirect.value = query.redirect ? decodeURIComponent(query.redirect) : ''
 })
 
-/** 若已无需绑定手机则自动执行回跳或回首页。 */
 onShow(() => {
   if (userStore.isLogin && !userStore.needBindPhone) {
     tryNavigateAfterLogin()
   }
 })
 
-/** 点击「微信一键登录」：换 session 并 toast，按需跳转。 */
-async function onWechatLogin() {
-  if (loadingWx.value) return
-  loadingWx.value = true
-  try {
-    await loginWithWechatExplicit()
-    uni.showToast({ title: '登录成功', icon: 'success' })
-    if (!userStore.needBindPhone) {
-      tryNavigateAfterLogin()
-    }
-  } catch (e) {
-    const msg =
-      (e && (e.message || e.errMsg)) || '登录失败，请稍后重试'
-    uni.showToast({ title: String(msg), icon: 'none' })
-  } finally {
-    loadingWx.value = false
+onUnmounted(() => {
+  if (smsCooldownTimer != null) {
+    clearInterval(smsCooldownTimer)
+    smsCooldownTimer = null
+  }
+})
+
+function clearSmsCooldownTimer() {
+  if (smsCooldownTimer != null) {
+    clearInterval(smsCooldownTimer)
+    smsCooldownTimer = null
   }
 }
 
-/**
- * 手机号授权组件回调：校验 `errMsg` 后取 `detail.code` 调 mobile-login，再导航离开。
- * @param {{ detail?: { errMsg?: string, code?: string } }} e 微信事件对象
- */
-async function onGetPhoneNumber(e) {
-  const ok = e.detail && e.detail.errMsg === 'getPhoneNumber:ok'
-  if (!ok) {
-    if (e.detail?.errMsg && !e.detail.errMsg.includes('deny')) {
-      uni.showToast({ title: e.detail.errMsg, icon: 'none' })
+function startSmsCooldown() {
+  clearSmsCooldownTimer()
+  smsCooldownSec.value = 60
+  smsCooldownTimer = setInterval(() => {
+    smsCooldownSec.value -= 1
+    if (smsCooldownSec.value <= 0) {
+      smsCooldownSec.value = 0
+      clearSmsCooldownTimer()
     }
+  }, 1000)
+}
+
+async function onSendSmsCode() {
+  if (loadingSmsSend.value || loadingSms.value) return
+  if (smsCooldownSec.value > 0) return
+  const m = String(smsMobile.value || '').trim()
+  if (!/^1\d{10}$/.test(m)) {
+    uni.showToast({ title: '请输入正确手机号', icon: 'none' })
     return
   }
-  const code = e.detail.code
-  if (!code) {
-    uni.showToast({ title: '未获取到手机号凭证', icon: 'none' })
-    return
-  }
-  loadingPhone.value = true
+  loadingSmsSend.value = true
   try {
-    await loginWithPhoneCode(code)
-    uni.showToast({ title: '绑定成功', icon: 'success' })
-    tryNavigateAfterLogin()
-  } catch (err) {
+    await sendSmsCode({ mobile: m })
+    uni.showToast({ title: '验证码已发送', icon: 'none' })
+    startSmsCooldown()
+  } catch (e) {
     uni.showToast({
-      title: (err && err.message) || '绑定失败',
+      title: (e && e.message) || '发送失败',
       icon: 'none'
     })
   } finally {
-    loadingPhone.value = false
+    loadingSmsSend.value = false
   }
 }
 
-/** 打开用户协议页。 */
+function onSmsHelpTap() {
+  uni.showModal({
+    title: '收不到验证码？',
+    content:
+      '请确认手机号填写正确、信号正常；若仍无法收到，可稍后再试或联系客服处理。',
+    showCancel: false,
+    confirmText: '我知道了'
+  })
+}
+
+async function onSmsLogin() {
+  if (!agreedToTerms.value) {
+    uni.showToast({ title: '请先阅读并勾选同意协议', icon: 'none' })
+    return
+  }
+  if (loadingSms.value) return
+  loadingSms.value = true
+  try {
+    await loginWithSmsCredentials({
+      mobile: smsMobile.value,
+      code: smsCode.value
+    })
+    uni.showToast({ title: '登录成功', icon: 'success' })
+    tryNavigateAfterLogin()
+  } catch (e) {
+    uni.showToast({
+      title: (e && e.message) || '登录失败',
+      icon: 'none'
+    })
+  } finally {
+    loadingSms.value = false
+  }
+}
+
 function openUserAgreement() {
   uni.navigateTo({ url: '/pages/legal/user-agreement' })
 }
 
-/** 打开隐私政策页。 */
 function openPrivacy() {
   uni.navigateTo({ url: '/pages/legal/privacy' })
 }
 
-/**
- * 登录成功后的导航：优先 `redirectTo` 到 `redirect` 参数；否则栈深则 `navigateBack`，否则 `reLaunch` 首页。
- */
 function tryNavigateAfterLogin() {
   const url = redirect.value
   if (url && url.startsWith('/')) {
@@ -166,107 +293,275 @@ function tryNavigateAfterLogin() {
 <style lang="scss" scoped>
 .login-page {
   min-height: 100vh;
-  /* 无系统导航栏：仅用安全区顶部留白（去掉默认顶栏「模拟手机标题栏」观感） */
-  padding-top: calc(constant(safe-area-inset-top) + 80rpx);
-  padding-top: calc(env(safe-area-inset-top) + 80rpx);
-  padding-right: 48rpx;
-  padding-bottom: 80rpx;
-  padding-left: 48rpx;
-  background: linear-gradient(180deg, #fff7ed 0%, #f7f7f7 42%, #f7f7f7 100%);
+  display: flex;
+  flex-direction: column;
+  background-color: #fff5e6;
   box-sizing: border-box;
 }
 
-.login-brand {
-  display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  justify-content: center;
+/* 顶部头图容器：设计稿尺寸 + 铺底灰（加载前后一致） */
+.login-hero {
+  position: relative;
+  width: 750rpx;
+  max-width: 100%;
+  margin: 0 auto;
+  height: 318rpx;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background-color: rgba(229, 229, 229, 1);
+  overflow: hidden;
+  border-radius: 0 0 36rpx 36rpx;
 }
 
-.login-brand__name {
-  font-size: 52rpx;
-  font-weight: 800;
-  color: #1a1a1a;
-  letter-spacing: 2rpx;
-}
-
-.login-brand__en {
-  margin-left: 12rpx;
-  font-size: 26rpx;
-  font-weight: 700;
-  color: #ff8e24;
-  letter-spacing: 4rpx;
-}
-
-.login-hint {
+.login-hero__bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
   display: block;
-  margin-top: 36rpx;
-  text-align: center;
-  font-size: 28rpx;
-  color: #666666;
-  line-height: 1.55;
+  pointer-events: none;
 }
 
-.login-hint--sub {
-  margin-top: 16rpx;
-  font-size: 24rpx;
-  color: #ff8e24;
-}
-
-.login-actions {
-  margin-top: 80rpx;
+.login-hero__inner {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  box-sizing: border-box;
+  padding-left: 40rpx;
+  padding-right: 40rpx;
+  padding-bottom: 28rpx;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
-.login-btn {
-  margin: 0;
-  border-radius: 999rpx;
-  font-size: 32rpx;
-  font-weight: 700;
-}
-
-.login-btn--primary {
-  background: linear-gradient(90deg, #ffb04d 0%, #ff8e24 100%);
-  border: none;
+.login-hero__brand-cn {
+  font-size: 48rpx;
+  font-weight: 800;
   color: #ffffff;
+  letter-spacing: 2rpx;
+  font-style: italic;
+  text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 
-.login-btn--ghost {
-  margin-top: 28rpx;
-  background: #ffffff;
-  color: #ff8e24;
-  border: 2rpx solid rgba(255, 142, 36, 0.45);
-}
-
-.login-tip {
-  margin-top: 32rpx;
-  text-align: center;
+.login-hero__brand-en {
+  margin-top: 8rpx;
   font-size: 26rpx;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 1rpx;
+}
+
+/* 主内容区（独立一层，盖住头图与表单衔接处，避免被头图遮挡） */
+.login-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  padding: 40rpx 56rpx calc(32rpx + constant(safe-area-inset-bottom));
+  padding: 40rpx 56rpx calc(32rpx + env(safe-area-inset-bottom));
+  background-color: #fff5e6;
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+}
+
+.login-body__welcome {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 800;
+  color: #333333;
+  letter-spacing: 1rpx;
+}
+
+.login-body__sub {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 28rpx;
   color: #999999;
 }
 
-.login-footer {
-  margin-top: auto;
-  padding-top: 120rpx;
+/* 下划线输入 */
+.sms-field {
+  margin-top: 0;
+}
+
+/* 「用户登录」到手机号输入框：设计稿 220rpx */
+.sms-field--mobile {
+  margin-top: 220rpx;
+}
+
+.sms-field--code {
+  margin-top: 74rpx;
+}
+
+.sms-field__code-wrap {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
   align-items: center;
-  gap: 0 4rpx;
+  min-height: 96rpx;
 }
 
-.login-footer__text {
-  font-size: 22rpx;
+.sms-field__input {
+  width: 100%;
+  height: 96rpx;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+  font-size: 32rpx;
+  color: #333333;
+  background: transparent;
+  border: none;
+}
+
+.sms-field__input--flex {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.sms-field__ph {
   color: #bbbbbb;
-  line-height: 1.5;
+  font-size: 30rpx;
 }
 
-.login-footer__link {
+.sms-field__line {
+  height: 2rpx;
+  background: #333333;
+  opacity: 0.85;
+}
+
+.sms-get-code {
+  flex-shrink: 0;
+  margin: 0 0 0 16rpx;
+  padding: 0 28rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #888888;
+  background: #ffffff;
+  border-radius: 999rpx;
+  border: none;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.sms-get-code::after {
+  border: none;
+}
+
+.sms-get-code[disabled] {
+  opacity: 0.55;
+}
+
+/* 收不到验证码：设计图 icon + 灰色小字 */
+.sms-help {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 20rpx;
+  padding-right: 4rpx;
+}
+
+.sms-help__icon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+  display: block;
+}
+
+.sms-help__text {
   font-size: 22rpx;
-  color: #ff8e24;
-  line-height: 1.5;
+  color: #999999;
+}
+
+/* 协议勾选（与上方「收不到验证码」行间距设计稿 168rpx） */
+.sms-agree {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin-top: 168rpx;
+  padding-right: 8rpx;
+}
+
+.sms-agree__check {
+  flex-shrink: 0;
+  padding: 4rpx 16rpx 0 0;
+}
+
+.sms-agree__circle {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 2rpx solid #ff8e24;
+  background-color: transparent;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sms-agree__circle--on {
+  border-color: #ff8e24;
+  background-color: transparent;
+}
+
+/** 勾选态：环内实心橙点（设计稿）；显式重置避免 view 默认行高造成视觉偏移 */
+.sms-agree__dot {
+  display: block;
+  width: 14rpx;
+  height: 14rpx;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  border-radius: 50%;
+  background-color: #ff8e24;
+  flex-shrink: 0;
+}
+
+.sms-agree__texts {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  line-height: 1.65;
+  color: #999999;
+}
+
+.sms-agree__plain {
+  color: #999999;
+}
+
+.sms-agree__link {
+  color: #333333;
+  font-weight: 600;
+}
+
+/* 登录主按钮 */
+.sms-submit {
+  margin: 48rpx 0 0;
+  width: 100%;
+  height: 100rpx;
+  line-height: 100rpx;
+  border-radius: 999rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #333333;
+  border: none;
+  background: linear-gradient(90deg, #ffc371 0%, #ff8e24 52%, #ff7a4a 100%);
+  box-shadow: 0 12rpx 32rpx rgba(255, 142, 36, 0.35);
+}
+
+.sms-submit::after {
+  border: none;
+}
+
+.sms-submit[disabled] {
+  opacity: 0.55;
 }
 </style>

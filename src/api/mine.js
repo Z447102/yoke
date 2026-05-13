@@ -14,7 +14,6 @@ const MOCK_COVERS = [
 
 const MOCK_COUNTS = {
   video: 389,
-  digital: 12,
   image: 56,
   copy: 128
 }

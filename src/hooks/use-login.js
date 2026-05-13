@@ -1,7 +1,13 @@
 /**
  * 登录流程编排：uni.login + 静默接口 + Pinia（docs §8）
+ * 产品约定（uuid / 微信 mobile-login / 短信登录 / 登录后跳转）见 `api/auth.js` 文件头注释。
  */
-import { silentLogin, bindPhoneByCode, logout as logoutApi } from '@/api/auth'
+import {
+  silentLogin,
+  bindPhoneByCode,
+  logout as logoutApi,
+  loginWithSms
+} from '@/api/auth'
 import { isApiEnabled } from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 
@@ -106,7 +112,7 @@ export function silentLoginOnce() {
       applyWechatSilentPayload(data)
       if (import.meta.env.DEV && data.needBindPhone) {
         console.info(
-          '[Yoke] 静默登录已完成 session；需绑定手机号时请打开登录页点「授权手机号」，届时将请求 /api/auth/wechat/mobile-login'
+          '[Yoke] 静默登录已完成 session；需绑定时请在登录页「授权手机号」或「手机号验证码登录」（见 api/auth.js 说明）'
         )
       }
       return data
@@ -139,13 +145,44 @@ export async function loginWithPhoneCode(phoneCode) {
   const prevProfile = store.profile
   const prevPoints = store.points
   const data = await bindPhoneByCode({ phoneCode, wxSessionUuid })
+  const nextPoints =
+    data.points != null ? data.points : prevPoints
+  const pn = Number(nextPoints)
   store.setLoginState({
     token: data.token,
     profile: data.profile != null ? data.profile : prevProfile,
     needBindPhone: Boolean(data.needBindPhone),
     loginType: 'phone',
-    points: data.points != null ? data.points : prevPoints,
+    points: Number.isFinite(pn) ? Math.max(0, Math.floor(pn)) : prevPoints,
     wxSessionUuid: data.wxSessionUuid != null ? String(data.wxSessionUuid) : ''
+  })
+  return data
+}
+
+/**
+ * 登录页：手机号 + 短信验证码登录（`POST /api/auth/login`），成功后写入 token 等。
+ * @param {{ mobile: string, code: string }} param0
+ * @returns {Promise<object>}
+ */
+export async function loginWithSmsCredentials({ mobile, code }) {
+  const store = useUserStore()
+  const m = String(mobile || '').trim()
+  const data = await loginWithSms({ mobile: m, code })
+  const base =
+    data.profile && typeof data.profile === 'object'
+      ? { ...data.profile }
+      : { id: '', nickname: '', phone: '', avatarUrl: '' }
+  if (!String(base.phone || '').trim()) {
+    base.phone = m
+  }
+  const pn = Number(data.points)
+  store.setLoginState({
+    token: data.token,
+    profile: base,
+    needBindPhone: false,
+    loginType: 'sms',
+    points: Number.isFinite(pn) ? Math.max(0, Math.floor(pn)) : 0,
+    wxSessionUuid: ''
   })
   return data
 }

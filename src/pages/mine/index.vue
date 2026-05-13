@@ -1,11 +1,9 @@
 <template>
-  <!-- 我的：设计稿 1:1（暖橙顶区、白卡叠压、点数/业务、VIP/充值、三入口、作品 Tab+条+宫格） -->
+  <!-- 我的：顶区深色头图 + 白卡叠压、点数/业务、VIP/充值、四入口、作品 Tab+条+宫格 -->
   <view class="mine-page">
     <view class="mine-hero">
-      <view class="mine-hero__bg-wrap">
-        <image class="mine-hero__bg" :src="mineHeaderBg" mode="aspectFill" />
-      </view>
-      <view class="mine-hero__shade" />
+      <view class="mine-hero__tone" />
+      <view class="mine-hero__bg-wrap" :style="mineHeroBgStyle" />
       <view class="mine-hero__inner">
         <!-- 顶距用占位块：确保整行（含会员兑换）整体在胶囊下缘以下，避免 padding-top 在部分端不生效 -->
         <view
@@ -29,7 +27,7 @@
                 <text class="mine-name">{{ displayName }}</text>
                 <image
                   class="mine-name-arrow"
-                  :src="iconChevronRightLight"
+                  :src="mineNameChevron"
                   mode="aspectFit"
                 />
               </view>
@@ -45,76 +43,78 @@
     </view>
 
     <view class="mine-body">
-      <view class="stats-card">
-        <view class="stats-col" @tap="onPointsTap">
-          <image class="stats-icon" :src="iconPoints" mode="aspectFit" />
-          <view class="stats-mid">
-            <text class="stats-title">我的点数</text>
-            <text class="stats-value">{{ pointsDisplay }}</text>
+      <view class="mine-top-surface">
+        <view class="stats-card">
+          <view class="stats-col" @tap="onPointsTap">
+            <image class="stats-icon" :src="iconPoints" mode="aspectFit" />
+            <view class="stats-mid">
+              <text class="stats-title">我的点数</text>
+              <text class="stats-value">{{ pointsDisplay }}</text>
+            </view>
+            <image class="stats-chev" :src="iconStatsChevronRight" mode="aspectFit" />
           </view>
-          <image class="stats-chev" :src="iconStatsChevronRight" mode="aspectFit" />
-        </view>
-        <view class="stats-divider" />
-        <view class="stats-col right" @tap="goBusiness">
-          <image class="stats-icon" :src="iconBusiness" mode="aspectFit" />
-          <view class="stats-mid">
-            <text class="stats-title">主营业务</text>
-            <text class="stats-placeholder"> </text>
+          <view class="stats-divider" />
+          <view class="stats-col right" @tap="goBusiness">
+            <image class="stats-icon" :src="iconBusiness" mode="aspectFit" />
+            <view class="stats-mid">
+              <text class="stats-title">主营业务</text>
+              <text class="stats-placeholder"> </text>
+            </view>
+            <image class="stats-chev" :src="iconStatsChevronRight" mode="aspectFit" />
           </view>
-          <image class="stats-chev" :src="iconStatsChevronRight" mode="aspectFit" />
         </view>
-      </view>
 
-      <view class="promo-row">
-        <view
-          class="promo-card promo-card--vip"
-          :style="vipPromoBgStyle"
-          @tap="onVipTap"
-        >
-          <view class="promo-card__text">
-            <view class="promo-card__title-row">
+        <view class="promo-row">
+          <view
+            class="promo-card promo-card--vip"
+            :style="vipPromoBgStyle"
+            @tap="onVipTap"
+          >
+            <view class="promo-card__text">
+              <view class="promo-card__title-row">
+                <image
+                  class="promo-card__vip-badge"
+                  :src="minePromoVipBadge"
+                  mode="aspectFit"
+                  :lazy-load="false"
+                />
+                <text class="promo-card__title">会员中心</text>
+              </view>
+              <view class="promo-card__sub-vip">
+                <text class="promo-card__sub-vip-txt">当前立省 ¥</text>
+                <text class="promo-card__sub-vip-txt promo-card__sub-vip-txt--bold">99</text>
+                <text class="promo-card__sub-vip-txt"> 送</text>
+                <text class="promo-card__sub-vip-txt promo-card__sub-vip-txt--bold">1000</text>
+                <text class="promo-card__sub-vip-txt">点</text>
+              </view>
+            </view>
+            <view class="promo-card__circle">
               <image
-                class="promo-card__vip-badge"
-                :src="minePromoVipBadge"
+                class="promo-card__arrow"
+                :src="iconPromoNext"
                 mode="aspectFit"
-                :lazy-load="false"
               />
-              <text class="promo-card__title">会员中心</text>
-            </view>
-            <view class="promo-card__sub-vip">
-              <text class="promo-card__sub-vip-txt">当前立省 ¥</text>
-              <text class="promo-card__sub-vip-txt promo-card__sub-vip-txt--bold">99</text>
-              <text class="promo-card__sub-vip-txt"> 送</text>
-              <text class="promo-card__sub-vip-txt promo-card__sub-vip-txt--bold">1000</text>
-              <text class="promo-card__sub-vip-txt">点</text>
             </view>
           </view>
-          <view class="promo-card__circle">
-            <image
-              class="promo-card__arrow"
-              :src="iconPromoNext"
-              mode="aspectFit"
-            />
-          </view>
-        </view>
-        <view
-          class="promo-card promo-card--points"
-          :style="pointsPromoBgStyle"
-          @tap="onRechargeTap"
-        >
-          <view class="promo-card__text">
-            <text class="promo-card__title">点数充值</text>
-            <view class="promo-card__sub-points">
-              <text class="promo-card__sub-points-txt">首充8折</text>
-              <text class="promo-card__sub-points-txt">限时优惠</text>
+          <view
+            class="promo-card promo-card--points"
+            :style="pointsPromoBgStyle"
+            @tap="onRechargeTap"
+          >
+            <view class="promo-card__text">
+              <text class="promo-card__title">点数充值</text>
+              <view class="promo-card__sub-points">
+                <text class="promo-card__sub-points-txt">首充8折</text>
+                <text class="promo-card__sub-points-txt">限时优惠</text>
+              </view>
             </view>
-          </view>
-          <view class="promo-card__circle promo-card__circle--dark">
-            <image
-              class="promo-card__arrow"
-              :src="iconPromoNext"
-              mode="aspectFit"
-            />
+            <view class="promo-card__circle promo-card__circle--dark">
+              <image
+                class="promo-card__arrow"
+                :src="iconPromoNext"
+                mode="aspectFit"
+              />
+            </view>
           </view>
         </view>
       </view>
@@ -138,55 +138,62 @@
         </view>
       </view>
 
-      <scroll-view
-        class="tabs-scroll"
-        scroll-x
-        :show-scrollbar="false"
-        :enable-flex="true"
-      >
-        <view class="tabs-inner">
-          <view
-            v-for="tab in workTabs"
-            :key="tab.key"
-            class="tab-item"
-            :class="{ 'tab-item--active': activeWorkTab === tab.key }"
-            @tap="activeWorkTab = tab.key"
-          >
-            <text class="tab-label">{{ tab.label }}</text>
-          </view>
-        </view>
-      </scroll-view>
-
-      <view class="works-banner">
-        <text class="works-banner__text">{{ worksSummary }}</text>
-        <view class="works-manage" @tap="onManageWorks">
-          <text class="works-manage__icon">▦</text>
-          <text class="works-manage__text">管理</text>
-        </view>
-      </view>
-
-      <view v-if="worksList.length" class="works-grid">
-        <view
-          v-for="item in worksList"
-          :key="item.id"
-          class="work-cell"
-          @tap="onWorkTap(item)"
+      <view class="works-block">
+        <scroll-view
+          class="tabs-scroll"
+          scroll-x
+          :show-scrollbar="false"
+          :enable-flex="true"
         >
-          <view class="work-thumb">
-            <image class="work-thumb__img" :src="item.cover" mode="aspectFill" />
-            <view class="work-thumb__play">
-              <text class="work-thumb__play-tri">▶</text>
-            </view>
-            <view class="work-thumb__bar">
-              <text class="work-thumb__meta">{{ item.duration }} {{ item.date }}</text>
+          <view class="tabs-inner">
+            <view
+              v-for="tab in workTabs"
+              :key="tab.key"
+              class="tab-item"
+              :class="{ 'tab-item--active': activeWorkTab === tab.key }"
+              @tap="activeWorkTab = tab.key"
+            >
+              <text class="tab-label">{{ tab.label }}</text>
+              <view class="tab-item__mark-row">
+                <view v-if="activeWorkTab === tab.key" class="tab-item__mark" />
+              </view>
             </view>
           </view>
-        </view>
-      </view>
-      <view v-else class="works-empty">
-        <text class="works-empty__text">暂无作品，去创作页试试吧</text>
-        <view class="works-empty__btn" @tap="goCreate">
-          <text>去创作</text>
+        </scroll-view>
+
+        <view class="works-block__body">
+          <view class="works-banner">
+            <text class="works-banner__text">{{ worksSummary }}</text>
+            <view class="works-manage" @tap="onManageWorks">
+              <text class="works-manage__icon">▦</text>
+              <text class="works-manage__text">管理</text>
+            </view>
+          </view>
+
+          <view v-if="worksList.length" class="works-grid">
+            <view
+              v-for="item in worksList"
+              :key="item.id"
+              class="work-cell"
+              @tap="onWorkTap(item)"
+            >
+              <view class="work-thumb">
+                <image class="work-thumb__img" :src="item.cover" mode="aspectFill" />
+                <view class="work-thumb__play">
+                  <text class="work-thumb__play-tri">▶</text>
+                </view>
+                <view class="work-thumb__bar">
+                  <text class="work-thumb__meta">{{ item.duration }} {{ item.date }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view v-else class="works-empty">
+            <text class="works-empty__text">暂无作品，去创作页试试吧</text>
+            <view class="works-empty__btn" @tap="goCreate">
+              <text>去创作</text>
+            </view>
+          </view>
         </view>
       </view>
 
@@ -215,7 +222,7 @@ import mineHeaderBg from '@/static/mine/mine-header-bg.png'
 import iconPoints from '@/static/mine/icon-points.png'
 import iconBusiness from '@/static/mine/icon-business.png'
 import iconStatsChevronRight from '@/static/mine/mine-stats-chevron-right.png'
-import iconChevronRightLight from '@/static/mine/icon-chevron-right-light.svg'
+import mineNameChevron from '@/static/mine/mine-name-chevron.png'
 import iconPromoNext from '@/static/mine/mine-promo-next-icon.png'
 import minePromoVipBg from '@/static/mine/mine-promo-vip-bg.png'
 import minePromoVipBadge from '@/static/mine/mine-promo-vip-badge.png'
@@ -241,6 +248,14 @@ const DEFAULT_CAT_AVATAR =
 const heroLayout = ref({
   navPlaceholderPx: 128
 })
+
+/** 顶区头图：与资源 750×413 同比例，用 100% auto 避免 100%100% 纵向拉伸导致观感偏色 */
+const mineHeroBgStyle = {
+  backgroundImage: `url(${mineHeaderBg})`,
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: '100% auto',
+  backgroundPosition: 'center top'
+}
 
 /** VIP 会员中心：设计底图 + 灰色底（小程序用 import 保证背景图路径） */
 const vipPromoBgStyle = {
@@ -384,7 +399,6 @@ const pointsDisplay = computed(() => userStore.points ?? 0)
 
 const workTabs = [
   { key: 'video', label: '视频作品' },
-  { key: 'digital', label: '数字人形象' },
   { key: 'image', label: '图片作品' },
   { key: 'copy', label: '文案作品' }
 ]
@@ -393,7 +407,6 @@ const activeWorkTab = ref('video')
 
 const worksCountByTab = ref({
   video: 389,
-  digital: 12,
   image: 56,
   copy: 128
 })
@@ -416,14 +429,8 @@ watch(activeWorkTab, () => {
 
 const worksSummary = computed(() => {
   const n = worksCountByTab.value[activeWorkTab.value] ?? 0
-  const label =
-    activeWorkTab.value === 'video'
-      ? '视频作品'
-      : activeWorkTab.value === 'digital'
-        ? '数字人形象'
-        : activeWorkTab.value === 'image'
-          ? '图片作品'
-          : '文案作品'
+  const tab = workTabs.find((t) => t.key === activeWorkTab.value)
+  const label = tab?.label ?? '作品'
   return `您已创作 ${n} 条${label}`
 })
 
@@ -523,17 +530,28 @@ function handleLogout() {
   /* 底部：TabBar + 横条安全区（constant 兼容 iOS 11.2，env 为现行标准） */
   padding-bottom: calc(150rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
-  background: #f8f8f8;
+  background-color: rgba(246, 246, 246, 1);
 }
 
 .mine-hero {
   position: relative;
+  z-index: 1;
   overflow: hidden;
-  min-height: 408rpx;
-  border-bottom-left-radius: 44rpx;
-  border-bottom-right-radius: 44rpx;
-  background-color: #ff9d34;
-  box-shadow: 0 18rpx 40rpx rgba(255, 130, 40, 0.22);
+  width: 750rpx;
+  height: 413rpx;
+  box-sizing: border-box;
+}
+
+.mine-hero__tone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 750rpx;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 170, 71, 1) 0%, rgba(255, 227, 194, 1) 100%);
 }
 
 .mine-hero__bg-wrap {
@@ -542,37 +560,9 @@ function handleLogout() {
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 0;
+  z-index: 1;
   overflow: hidden;
   pointer-events: none;
-}
-
-.mine-hero__bg {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  transform: scale(1.1);
-  transform-origin: 72% 42%;
-}
-
-.mine-hero__shade {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.26) 0%,
-    rgba(255, 255, 255, 0) 18%,
-    rgba(255, 120, 48, 0.08) 42%,
-    rgba(255, 100, 30, 0.22) 72%,
-    rgba(248, 248, 248, 1) 100%
-  );
 }
 
 .mine-hero__inner {
@@ -586,7 +576,7 @@ function handleLogout() {
   padding-left: calc(24rpx + constant(safe-area-inset-left));
   padding-left: calc(24rpx + env(safe-area-inset-left));
   padding-right: 24rpx;
-  padding-bottom: 72rpx;
+  padding-bottom: 40rpx;
   box-sizing: border-box;
 }
 
@@ -634,8 +624,8 @@ function handleLogout() {
 .mine-avatar-img,
 .mine-avatar-fallback {
   display: block;
-  width: 118rpx;
-  height: 118rpx;
+  width: 140rpx;
+  height: 140rpx;
   border-radius: 50%;
   box-sizing: border-box;
 }
@@ -645,7 +635,7 @@ function handleLogout() {
   color: #ff8e24;
   font-size: 46rpx;
   font-weight: 800;
-  line-height: 118rpx;
+  line-height: 140rpx;
   text-align: center;
 }
 
@@ -667,14 +657,13 @@ function handleLogout() {
 .mine-name {
   color: #1f2937;
   font-size: 32rpx;
-  font-weight: 800;
+  font-weight: 500;
   font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
   letter-spacing: 0.5rpx;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.22);
 }
 
 .mine-name-arrow {
@@ -720,7 +709,8 @@ function handleLogout() {
 }
 
 .mine-body {
-  margin-top: -44rpx;
+  /* 白底区不整体上移压头图；仅 .stats-card 用负 margin 叠在头图上 */
+  margin-top: 0;
   padding-top: 0;
   padding-bottom: 40rpx;
   padding-left: calc(24rpx + constant(safe-area-inset-left));
@@ -729,17 +719,44 @@ function handleLogout() {
   padding-right: calc(24rpx + env(safe-area-inset-right));
   position: relative;
   z-index: 3;
+  background-color: rgba(246, 246, 246, 1);
+}
+
+.mine-top-surface {
+  box-sizing: border-box;
+  width: 750rpx;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  /* 与下方「我的数字人」区间距由 .tools-panel margin-top 控制 */
+  padding-bottom: 0;
+  /* 与 tools-panel 一致：抵消 .mine-body 左右 padding，白底区 750rpx 通栏 */
+  margin-left: calc(-24rpx - constant(safe-area-inset-left));
+  margin-left: calc(-24rpx - env(safe-area-inset-left));
+  margin-right: calc(-24rpx - constant(safe-area-inset-right));
+  margin-right: calc(-24rpx - env(safe-area-inset-right));
+  overflow: visible;
 }
 
 .stats-card {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  align-items: stretch;
-  padding: 26rpx 52rpx 26rpx 56rpx;
-  border-radius: 26rpx;
-  background: #ffffff;
-  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.07);
+  align-items: center;
+  width: 688rpx;
+  height: 92rpx;
+  /* 约一半压在头图上：92rpx 高的一半 ≈ 46rpx */
+  margin-top: -46rpx;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  padding: 0 52rpx 0 56rpx;
+  border-radius: 24rpx;
+  background-color: rgba(255, 255, 255, 1);
+  box-shadow: 0rpx 4rpx 12rpx 0rpx rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 5;
 }
 
 .stats-col {
@@ -795,8 +812,9 @@ function handleLogout() {
 
 .stats-divider {
   width: 1rpx;
-  align-self: stretch;
-  margin: 8rpx 4rpx;
+  height: 48rpx;
+  align-self: center;
+  margin: 0 4rpx;
   background: #eeeeee;
   flex-shrink: 0;
 }
@@ -806,8 +824,9 @@ function handleLogout() {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 18rpx;
+  gap: 28rpx;
   margin-top: 22rpx;
+  margin-bottom: 28rpx;
 }
 
 .promo-card {
@@ -947,12 +966,14 @@ function handleLogout() {
 .tools-panel {
   box-sizing: border-box;
   width: 750rpx;
-  max-width: 100%;
   height: 210rpx;
-  margin-top: 24rpx;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0 12rpx;
+  margin-top: 20rpx;
+  /* 抵消 .mine-body 左右 padding，与最外层同宽 750rpx 平铺 */
+  margin-left: calc(-24rpx - constant(safe-area-inset-left));
+  margin-left: calc(-24rpx - env(safe-area-inset-left));
+  margin-right: calc(-24rpx - constant(safe-area-inset-right));
+  margin-right: calc(-24rpx - env(safe-area-inset-right));
+  padding: 0;
   background: #ffffff;
   border-radius: 0;
   display: flex;
@@ -993,10 +1014,33 @@ function handleLogout() {
   line-height: 1.35;
 }
 
+.works-block {
+  box-sizing: border-box;
+  width: 750rpx;
+  margin-top: 20rpx;
+  margin-left: calc(-24rpx - constant(safe-area-inset-left));
+  margin-left: calc(-24rpx - env(safe-area-inset-left));
+  margin-right: calc(-24rpx - constant(safe-area-inset-right));
+  margin-right: calc(-24rpx - env(safe-area-inset-right));
+  padding-top: 44rpx;
+  padding-left: 0;
+  padding-right: 0;
+  background-color: #ffffff;
+}
+
 .tabs-scroll {
   width: 100%;
-  margin-top: 26rpx;
+  margin-top: 0;
   white-space: nowrap;
+}
+
+.works-block__body {
+  box-sizing: border-box;
+  width: 100%;
+  padding-left: calc(24rpx + constant(safe-area-inset-left));
+  padding-left: calc(24rpx + env(safe-area-inset-left));
+  padding-right: calc(24rpx + constant(safe-area-inset-right));
+  padding-right: calc(24rpx + env(safe-area-inset-right));
 }
 
 .tabs-inner {
@@ -1004,29 +1048,52 @@ function handleLogout() {
   flex-direction: row;
   align-items: flex-end;
   padding-bottom: 2rpx;
+  /* Tab 文案左右留白；白底仍由外层 .works-block 通栏铺满 */
+  padding-left: calc(24rpx + constant(safe-area-inset-left));
+  padding-left: calc(24rpx + env(safe-area-inset-left));
+  padding-right: calc(24rpx + constant(safe-area-inset-right));
+  padding-right: calc(24rpx + env(safe-area-inset-right));
 }
 
 .tab-item {
   flex-shrink: 0;
   margin-right: 36rpx;
-  padding-bottom: 10rpx;
-  border-bottom: 6rpx solid transparent;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.tab-item__mark-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 12rpx;
+  margin-top: 8rpx;
+}
+
+.tab-item__mark {
+  width: 40rpx;
+  height: 12rpx;
+  border-radius: 8rpx;
+  background-color: rgba(255, 165, 84, 1);
+  flex-shrink: 0;
 }
 
 .tab-label {
-  font-size: 26rpx;
-  color: #999999;
-  font-weight: 500;
+  font-size: 28rpx;
+  font-weight: 400;
+  color: #6b7280;
   font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
-.tab-item--active {
-  border-bottom-color: #ff8e24;
-}
-
 .tab-item--active .tab-label {
-  color: #222222;
-  font-weight: 800;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: rgba(16, 16, 16, 1);
+  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
 }
 
 .works-banner {
@@ -1034,12 +1101,13 @@ function handleLogout() {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 18rpx;
   padding: 16rpx 20rpx;
   border-radius: 22rpx;
   border: 1rpx solid rgba(255, 255, 255, 1);
   background-color: rgba(255, 241, 226, 1);
-  box-sizing: border-box;
 }
 
 .works-banner__text {
@@ -1081,6 +1149,8 @@ function handleLogout() {
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 14rpx;
 }
 
@@ -1150,11 +1220,13 @@ function handleLogout() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 32rpx;
-  padding: 48rpx 32rpx;
-  border-radius: 24rpx;
-  background: #ffffff;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.04);
+  padding: 48rpx 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .works-empty__text {
