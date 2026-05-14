@@ -86,7 +86,7 @@
 
     <view class="score-card__content">
       <view class="score-card__score">
-        <text class="score-card__number">{{ summary.score }}</text>
+        <text class="score-card__number">{{ summary?.score ?? '—' }}</text>
         <image
           class="score-card__fire-img"
           :src="scoreFlameIcon"
@@ -96,16 +96,20 @@
       <view class="score-card__metrics">
         <view class="score-card__metric">
           <text class="score-card__metric-label">线索下单</text>
-          <text class="score-card__metric-value">{{ summary.clueCount }}</text>
+          <text class="score-card__metric-value">{{
+            summary?.clueCount ?? '—'
+          }}</text>
         </view>
         <view class="score-card__metric">
           <text class="score-card__metric-label">视频发布</text>
-          <text class="score-card__metric-value">{{ summary.viewCount }}</text>
+          <text class="score-card__metric-value">{{
+            summary?.viewCount ?? '—'
+          }}</text>
         </view>
         <view class="score-card__metric">
           <text class="score-card__metric-label">转化率</text>
           <text class="score-card__metric-value">{{
-            summary.conversionRate
+            summary?.conversionRate ?? '—'
           }}</text>
         </view>
       </view>

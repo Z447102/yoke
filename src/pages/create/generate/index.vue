@@ -302,7 +302,11 @@
         <view class="popup-handle"></view>
         <view class="popup-title">选择主营业务</view>
 
-        <view class="business-list">
+        <scroll-view
+          scroll-y
+          class="business-list-scroll"
+          :style="{ height: businessListScrollHeightRpx + 'rpx' }"
+        >
           <view
             v-for="(business, businessIndex) in businessOptions"
             :key="business.id"
@@ -348,7 +352,7 @@
               />
             </view>
           </view>
-        </view>
+        </scroll-view>
 
         <view class="business-actions-row">
           <view class="business-add" @tap.stop="onBusinessAdd">
@@ -387,7 +391,11 @@
     >
       <view class="delete-main-business-dialog" @tap.stop>
         <view class="delete-main-business-dialog__title">
-          <text class="delete-main-business-dialog__title-icon">ⓘ</text>
+          <image
+            class="delete-main-business-dialog__title-icon-img"
+            :src="deleteMainBusinessInfoIcon"
+            mode="aspectFit"
+          />
           <text class="delete-main-business-dialog__title-text">
             是否要删除{{ deleteMainBusinessConfirmSlotTitle }}
           </text>
@@ -528,6 +536,7 @@ const createIconStack = `${StaticPath}create/create-icon-stack.png`
 const createIconBusinessEdit = `${StaticPath}create/create-icon-business-edit.png`
 const createIconBusinessEditChevron = `${StaticPath}create/create-icon-business-edit-chevron.png`
 const createIconAttention = `${StaticPath}create/create-icon-attention.png`
+const deleteMainBusinessInfoIcon = `${StaticPath}create/delete-main-business-info-icon.png`
 import { onReady, onShow } from '@dcloudio/uni-app'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
@@ -678,6 +687,14 @@ const platformOptions = PLATFORM_OPTIONS
 const selectedBusiness = ref('business1')
 const tempBusiness = ref('business1')
 const showBusinessPopup = ref(false)
+/** 选择主营业务弹窗：列表单行 90rpx + 上边距 18rpx，可视区默认 4 条，超出纵向滚动 */
+const BUSINESS_LIST_ROW_HEIGHT_RPX = 108
+const BUSINESS_LIST_VISIBLE_ROWS = 4
+const businessListScrollHeightRpx = computed(() => {
+  const n = businessOptions.value?.length ?? 0
+  const rows = Math.min(Math.max(n, 0), BUSINESS_LIST_VISIBLE_ROWS)
+  return rows * BUSINESS_LIST_ROW_HEIGHT_RPX
+})
 /** 删除主营业务：居中确认弹窗 */
 const showDeleteMainBusinessConfirm = ref(false)
 const deleteMainBusinessTargetId = ref('')
@@ -840,7 +857,9 @@ const pendingAddNewBusiness = ref(false)
 // --- 展示用 computed ---
 const currentBusiness = computed(
   () =>
-    businessOptions.value.find((item) => item.id === selectedBusiness.value) ||
+    businessOptions.value.find(
+      (item) => String(item.id) === String(selectedBusiness.value)
+    ) ||
     businessOptions.value[0]
 )
 
@@ -853,13 +872,14 @@ function businessSlotTitle(index) {
 const deleteMainBusinessConfirmSlotTitle = computed(() => {
   const id = String(deleteMainBusinessTargetId.value ?? '').trim()
   if (!id) return '该项主营业务'
-  const idx = businessOptions.value.findIndex((b) => b.id === id)
+  const idx = businessOptions.value.findIndex((b) => String(b.id) === id)
   return idx >= 0 ? businessSlotTitle(idx) : '该项主营业务'
 })
 
 const currentBusinessSlotTitle = computed(() => {
   const list = businessOptions.value
-  const idx = list.findIndex((b) => b.id === selectedBusiness.value)
+  const sid = String(selectedBusiness.value ?? '')
+  const idx = list.findIndex((b) => String(b.id) === sid)
   return idx >= 0 ? businessSlotTitle(idx) : businessSlotTitle(0)
 })
 
@@ -947,12 +967,7 @@ onMounted(() => {
   } catch (_) {
     /* 忽略 */
   }
-  const biz = businessOptions.value.find(
-    (b) => b.id === selectedBusiness.value
-  )
-  const tags = tagLabelsForBusiness(biz || {})
-  businessSelectionTagLabels.value = [...tags]
-  businessTags.value = [...tags]
+  syncBusinessTagsFromSelectedBusinessOption()
 })
 
 onReady(() => {
@@ -990,7 +1005,7 @@ function readSelectedBusinessPayload() {
     }
   }
   if (!raw || typeof raw !== 'object') return null
-  if (!Array.isArray(raw.path)) return null
+  if (!Array.isArray(raw.path) || raw.path.length === 0) return null
   return raw
 }
 
@@ -1003,17 +1018,66 @@ function pathLabelsFromPayload(path) {
     .filter(Boolean)
 }
 
-/** 与商户页业务范围一致：含路径、维度标签、自定义场景（有则优先于仅 path）。 */
-function scopeTagNamesFromPayload(payload) {
-  const rows = payload?.scopeTagRows
-  if (Array.isArray(rows) && rows.length) {
-    return rows
-      .map((r) =>
-        String(r?.name ?? r?.label ?? r?.title ?? r?.categoryName ?? '').trim()
-      )
-      .filter(Boolean)
+/**
+ * 合并多路标签文案：保序、去重（先出现的优先）。
+ * @param {...unknown} lists
+ * @returns {string[]}
+ */
+function mergeBusinessTagLists(...lists) {
+  const out = []
+  const seen = new Set()
+  for (const list of lists) {
+    if (!Array.isArray(list)) continue
+    for (const x of list) {
+      const t = String(x ?? '').trim()
+      if (!t || seen.has(t)) continue
+      seen.add(t)
+      out.push(t)
+    }
   }
-  return pathLabelsFromPayload(payload?.path)
+  return out
+}
+
+/**
+ * 与商户页业务范围一致：path + 维度 + 自定义；若另有 scopeTagRows（常为后端简表）须合并，
+ * 不能一见 scopeTagRows 就 return，否则只剩二级等残缺项。
+ */
+function scopeTagNamesFromPayload(payload) {
+  if (!payload || typeof payload !== 'object') return []
+  const pathLabs = pathLabelsFromPayload(payload.path)
+  const dimLabs = []
+  const picks = Array.isArray(payload.dimensionPicks) ? payload.dimensionPicks : []
+  for (const g of picks) {
+    if (!g || typeof g !== 'object') continue
+    const st = Array.isArray(g.selectedTags) ? g.selectedTags : []
+    if (st.length) {
+      for (const x of st) {
+        const n = x && typeof x === 'object' ? String(x.name ?? '').trim() : ''
+        const id = x && typeof x === 'object' ? String(x.id ?? '').trim() : ''
+        const label = n || id
+        if (label) dimLabs.push(label)
+      }
+      continue
+    }
+    const ids = Array.isArray(g.selectedTagIds) ? g.selectedTagIds : []
+    for (const id of ids) {
+      const s = String(id ?? '').trim()
+      if (s) dimLabs.push(s)
+    }
+  }
+  const customs = Array.isArray(payload.customScenes) ? payload.customScenes : []
+  const customLabs = customs
+    .map((c) => (c && typeof c === 'object' ? String(c.sceneText ?? '').trim() : ''))
+    .filter(Boolean)
+  const scopeRows = payload.scopeTagRows
+  const scopeRowLabs = Array.isArray(scopeRows)
+    ? scopeRows
+        .map((r) =>
+          String(r?.name ?? r?.label ?? r?.title ?? r?.categoryName ?? '').trim()
+        )
+        .filter(Boolean)
+    : []
+  return mergeBusinessTagLists(pathLabs, dimLabs, customLabs, scopeRowLabs)
 }
 
 /** 头部标签行与每条主营业务绑定；无上送 tagLabels 时从 desc/path 推导 */
@@ -1086,13 +1150,21 @@ function applyMerchantDraft(draft) {
   createFlowIndustry.value = industry
   createFlowIndustryId.value = String(draft.industryId ?? '').trim()
   createFlowEnterpriseName.value = String(draft.shopName ?? '').trim()
-  const fromDraft =
-    Array.isArray(draft.businessTagLabels) && draft.businessTagLabels.length
-      ? draft.businessTagLabels
-          .map((t) => String(t).trim())
-          .filter(Boolean)
-      : pathLabelsFromPayload(draft.businessPath)
-  const labels = fromDraft
+  const labelsFromCard = Array.isArray(draft.businessTagLabels)
+    ? draft.businessTagLabels.map((t) => String(t).trim()).filter(Boolean)
+    : []
+  const labelsFromSnap = draft.selectedBusinessSnapshot
+    ? scopeTagNamesFromPayload(
+        /** @type {Record<string, unknown>} */ (draft.selectedBusinessSnapshot)
+      )
+    : []
+  const labelsFromPath = pathLabelsFromPayload(draft.businessPath)
+  /** 卡片标签可能只有末级；快照含 path + 维度 + 自定义，须合并避免成片页只显示二级。 */
+  const labels = mergeBusinessTagLists(
+    labelsFromCard,
+    labelsFromSnap,
+    labelsFromPath
+  )
   const desc = labels.join(' - ') || '未选择'
   const shortName = labels[labels.length - 1] || '主营业务'
   const createdId = String(draft.createdMainBusinessId ?? '').trim()
@@ -1160,7 +1232,7 @@ function applySelectedBusiness(payload) {
 
   const id = editingBusinessId.value || selectedBusiness.value
   const list = businessOptions.value
-  const idx = list.findIndex((b) => b.id === id)
+  const idx = list.findIndex((b) => String(b.id) === String(id))
   if (idx >= 0) {
     list[idx] = {
       ...list[idx],
@@ -1189,10 +1261,8 @@ function applySelectedBusiness(payload) {
   if (labels.length) {
     businessSelectionTagLabels.value = [...labels]
     businessTags.value = labels
-  } else {
-    businessSelectionTagLabels.value = []
-    businessTags.value = []
   }
+  /* 无可用标签时不清空，避免残缺 create:selected-business 冲掉商户草稿已写入的标签行 */
   if (payload.industry) {
     createFlowIndustry.value =
       String(payload.industry).trim() || createFlowIndustry.value
@@ -1238,16 +1308,23 @@ onShow(async () => {
   if (needRefreshList && isApiEnabled()) {
     await loadBusinessOptionsFromApi({ silent: true })
   }
+  pendingAddNewBusiness.value = false
+  const draft = readMerchantDraft()
+  if (draft) {
+    applyMerchantDraft(draft)
+    try {
+      uni.removeStorageSync('create:merchant-draft')
+    } catch (_) {
+      /* ignore */
+    }
+  }
   const selected = readSelectedBusinessPayload()
   if (selected) {
     applySelectedBusiness(selected)
-    uni.removeStorageSync('create:selected-business')
-  } else {
-    pendingAddNewBusiness.value = false
-    const draft = readMerchantDraft()
-    if (draft) {
-      applyMerchantDraft(draft)
-      uni.removeStorageSync('create:merchant-draft')
+    try {
+      uni.removeStorageSync('create:selected-business')
+    } catch (_) {
+      /* ignore */
     }
   }
   if (isApiEnabled()) {
@@ -1256,6 +1333,7 @@ onShow(async () => {
     }
     await loadVideoTemplatesFromApi({ silent: true })
   }
+  syncBusinessTagsFromSelectedBusinessOption()
 })
 
 // --- 页面导航 ---
@@ -1349,6 +1427,74 @@ async function resolveCreateFlowIndustryId() {
 }
 
 /**
+ * GET /api/member/main-businesses 单行 → 筛选项下标签行：路径 + 维度名 + 自定义（兼容多种后端字段）。
+ * @param {Record<string, unknown>} row
+ * @returns {string[]}
+ */
+function tagLabelsFromMainBusinessApiRow(row) {
+  if (!row || typeof row !== 'object') return []
+  const r = /** @type {Record<string, unknown>} */ (row)
+  const out = []
+  const pushUnique = (s) => {
+    const t = String(s ?? '').trim()
+    if (t && !out.includes(t)) out.push(t)
+  }
+  if (Array.isArray(r.industryTagPath)) {
+    for (const node of r.industryTagPath) {
+      if (node && typeof node === 'object') {
+        const o = /** @type {Record<string, unknown>} */ (node)
+        pushUnique(o.name ?? o.tagName ?? o.label ?? o.title ?? o.categoryName)
+      } else {
+        pushUnique(node)
+      }
+    }
+  }
+  const fullPath = String(
+    r.fullIndustryTagName ??
+      r.industryTagFullName ??
+      r.categoryPathNames ??
+      r.industryTagPathNames ??
+      ''
+  ).trim()
+  if (fullPath) {
+    fullPath.split(/[/／>]/).forEach((p) => pushUnique(p))
+  }
+  if (Array.isArray(r.tagLabels)) {
+    for (const x of r.tagLabels) pushUnique(x)
+  }
+  if (Array.isArray(r.industryTagLabelList)) {
+    for (const x of r.industryTagLabelList) pushUnique(x)
+  }
+  const leafName = String(r.industryTagName ?? r.tagName ?? '').trim()
+  if (leafName) pushUnique(leafName)
+  if (!out.length) {
+    const ind = String(r.industryName ?? '').trim()
+    if (ind) pushUnique(ind)
+  }
+  if (Array.isArray(r.dimensionTagNames)) {
+    for (const x of r.dimensionTagNames) pushUnique(x)
+  }
+  if (Array.isArray(r.dimensionTags)) {
+    for (const d of r.dimensionTags) {
+      if (d && typeof d === 'object') {
+        const o = /** @type {Record<string, unknown>} */ (d)
+        pushUnique(o.name ?? o.tagName ?? o.label)
+      }
+    }
+  }
+  if (Array.isArray(r.customSceneTexts)) {
+    for (const x of r.customSceneTexts) pushUnique(x)
+  }
+  if (Array.isArray(r.customScenes)) {
+    for (const c of r.customScenes) {
+      if (c && typeof c === 'object')
+        pushUnique((/** @type {Record<string, unknown>} */ (c)).sceneText)
+    }
+  }
+  return out
+}
+
+/**
  * GET /api/member/main-businesses 单行 → 弹窗选项。
  * tagLabels 仅用于类目相关展示，不含企业名、定位（筛选下标签行用 businessSelectionTagLabels）。
  * @param {Record<string, unknown>} row
@@ -1364,7 +1510,8 @@ function mapMainBusinessRowToOption(row) {
   const locationName = String(row.locationName ?? '').trim()
   const address = String(row.address ?? '').trim()
   const core = industryTagName || industryName
-  const tagLabels = core ? [core] : []
+  let tagLabels = tagLabelsFromMainBusinessApiRow(row)
+  if (!tagLabels.length && core) tagLabels = [core]
   const desc =
     [enterpriseName, locationName || address].filter(Boolean).join(' · ') ||
     enterpriseName ||
@@ -1377,6 +1524,38 @@ function mapMainBusinessRowToOption(row) {
     desc,
     tagLabels,
     popupIndustryName: industryName
+  }
+}
+
+/**
+ * 列表刷新后：用当前选中项的 tagLabels 刷新筛选栏下标签行。
+ * 须与「商户页/草稿已写入的 businessSelectionTagLabels」做并集：接口行常只有末级（如串串香），
+ * 直接覆盖会把火锅、维度、自定义等冲掉。
+ */
+function syncBusinessTagsFromSelectedBusinessOption() {
+  const sid = String(selectedBusiness.value || '').trim()
+  const opt = businessOptions.value.find((b) => String(b.id) === sid)
+  let tags = []
+  if (opt && Array.isArray(opt.tagLabels) && opt.tagLabels.length) {
+    tags = opt.tagLabels.map((t) => String(t).trim()).filter(Boolean)
+  }
+  if (!tags.length && opt) {
+    tags = tagLabelsForBusiness(opt)
+  }
+  const prevRow = Array.isArray(businessSelectionTagLabels.value)
+    ? businessSelectionTagLabels.value.map((t) => String(t).trim()).filter(Boolean)
+    : []
+  const merged = mergeBusinessTagLists(prevRow, tags)
+  if (merged.length) {
+    businessTags.value = [...merged]
+    businessSelectionTagLabels.value = [...merged]
+    const idx = businessOptions.value.findIndex((b) => String(b.id) === sid)
+    if (idx >= 0) {
+      businessOptions.value[idx] = {
+        ...businessOptions.value[idx],
+        tagLabels: [...merged]
+      }
+    }
   }
 }
 
@@ -1399,22 +1578,54 @@ async function loadBusinessOptionsFromApi(opts = {}) {
     uni.showLoading({ title: '加载中', mask: true })
   }
   try {
-    const data = await listMemberMainBusinesses({ industryId, enterpriseName })
+    const data = await listMemberMainBusinesses({
+      industryId,
+      enterpriseName,
+      pageNum: 1,
+      pageSize: 100
+    })
     const rows = Array.isArray(data?.rows) ? data.rows : []
+    const prevById = new Map(
+      businessOptions.value.map((b) => [String(b.id), b])
+    )
     const mapped = rows
       .map((r) => mapMainBusinessRowToOption(r))
       .filter(Boolean)
     if (!mapped.length) {
+      /* 静默刷新（删除后 / onShow）：接口无行须清空，否则会残留已删项 */
+      if (silent) {
+        businessOptions.value = []
+        selectedBusiness.value = ''
+        tempBusiness.value = ''
+        businessTags.value = []
+        businessSelectionTagLabels.value = []
+      }
       if (!silent) {
         uni.showToast({ title: '暂无匹配的主营业务', icon: 'none' })
       }
       return
     }
+    const sidSel = String(selectedBusiness.value || '').trim()
+    const screenTagRow =
+      Array.isArray(businessSelectionTagLabels.value) &&
+      businessSelectionTagLabels.value.length
+        ? businessSelectionTagLabels.value
+            .map((t) => String(t).trim())
+            .filter(Boolean)
+        : []
+    businessOptions.value = mapped.map((b) => {
+      const prevOpt = prevById.get(String(b.id))
+      const prevTags = Array.isArray(prevOpt?.tagLabels) ? prevOpt.tagLabels : []
+      const newTags = Array.isArray(b.tagLabels) ? b.tagLabels : []
+      const screen = sidSel && String(b.id) === sidSel ? screenTagRow : []
+      const merged = mergeBusinessTagLists(prevTags, screen, newTags)
+      return merged.length ? { ...b, tagLabels: merged } : b
+    })
     const prev = String(selectedBusiness.value || '').trim()
-    businessOptions.value = mapped
-    const still = mapped.some((b) => b.id === prev)
-    selectedBusiness.value = still ? prev : mapped[0].id
+    const still = mapped.some((b) => String(b.id) === prev)
+    selectedBusiness.value = still ? prev : String(mapped[0].id)
     tempBusiness.value = selectedBusiness.value
+    syncBusinessTagsFromSelectedBusinessOption()
   } catch (e) {
     if (!silent) {
       uni.showToast({
@@ -1804,6 +2015,12 @@ function closeDeleteMainBusinessConfirm() {
  */
 function selectBusiness(id) {
   tempBusiness.value = id
+  const opt = businessOptions.value.find((b) => String(b.id) === String(id))
+  const raw = opt && Array.isArray(opt.tagLabels) ? opt.tagLabels : []
+  const tags = raw.map((t) => String(t).trim()).filter(Boolean)
+  if (tags.length) {
+    businessSelectionTagLabels.value = [...tags]
+  }
 }
 
 /**
@@ -1811,7 +2028,10 @@ function selectBusiness(id) {
  */
 async function confirmBusiness() {
   selectedBusiness.value = tempBusiness.value
-  businessTags.value = [...businessSelectionTagLabels.value]
+  syncBusinessTagsFromSelectedBusinessOption()
+  if (!businessTags.value.length) {
+    businessTags.value = [...businessSelectionTagLabels.value]
+  }
   closeBusinessPopup()
   if (isApiEnabled()) {
     await loadVideoTemplatesFromApi({ silent: true })
@@ -1889,7 +2109,7 @@ async function confirmDeleteMainBusiness() {
       await loadBusinessOptionsFromApi({ silent: true })
     }
     if (businessOptions.value.some((b) => String(b.id) === id)) {
-      const list = businessOptions.value.filter((b) => b.id !== id)
+      const list = businessOptions.value.filter((b) => String(b.id) !== id)
       businessOptions.value = list
       const nextId = list.length ? String(list[0].id) : ''
       tempBusiness.value = nextId
@@ -1897,7 +2117,7 @@ async function confirmDeleteMainBusiness() {
     }
     const sid = String(selectedBusiness.value || '').trim()
     const nb =
-      (sid && businessOptions.value.find((b) => b.id === sid)) ||
+      (sid && businessOptions.value.find((b) => String(b.id) === sid)) ||
       businessOptions.value[0] ||
       {}
     const tags = tagLabelsForBusiness(nb)
@@ -3084,28 +3304,35 @@ function generateVideo() {
   border-radius: 44rpx;
   background-color: rgba(255, 255, 255, 1);
   box-sizing: border-box;
-  padding: 36rpx 40rpx 32rpx;
+  padding: 0 40rpx 32rpx;
   display: flex;
   flex-direction: column;
 }
 
 .delete-main-business-dialog__title {
+  box-sizing: border-box;
+  width: calc(100% + 80rpx);
+  max-width: calc(100% + 80rpx);
+  margin-left: -40rpx;
+  margin-right: -40rpx;
+  padding: 36rpx 40rpx 30rpx;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 8rpx;
+  justify-content: center;
+  border-bottom: 2rpx solid #bbbbbb;
 }
 
-.delete-main-business-dialog__title-icon {
+.delete-main-business-dialog__title-icon-img {
   flex-shrink: 0;
-  font-size: 32rpx;
-  line-height: 1.35;
-  color: #fd5656;
-  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 12rpx;
 }
 
 .delete-main-business-dialog__title-text {
-  flex: 1;
+  flex: 0 1 auto;
+  max-width: 100%;
   font-size: 32rpx;
   line-height: 1.35;
   color: #fd5656;
@@ -3113,34 +3340,39 @@ function generateVideo() {
 }
 
 .delete-main-business-dialog__hint {
-  margin-top: 24rpx;
+  margin-top: 48rpx;
+  margin-bottom: 54rpx;
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 4rpx;
-  flex: 1;
-  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .delete-main-business-dialog__hint-star {
   flex-shrink: 0;
   font-size: 28rpx;
   line-height: 1.45;
-  color: #1f2937;
+  color: #fd5656;
   font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .delete-main-business-dialog__hint-text {
-  flex: 1;
+  flex: 0 1 auto;
+  max-width: 100%;
   font-size: 28rpx;
   line-height: 1.45;
   color: #1f2937;
   font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+  text-align: center;
 }
 
 .delete-main-business-dialog__footer {
-  margin-top: auto;
-  padding-top: 8rpx;
+  margin-top: 0;
+  padding-top: 0;
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -3200,8 +3432,10 @@ function generateVideo() {
   text-align: center;
 }
 
-.business-list {
+.business-list-scroll {
   margin-top: 32rpx;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .business-option {

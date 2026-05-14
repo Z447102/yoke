@@ -470,7 +470,7 @@ function onPointsTap() {
 
 function goBusiness() {
   uni.navigateTo({
-    url: '/pages/create/business/index',
+    url: '/pages/home/mine/main-business/index',
     fail: () => {
       uni.showToast({ title: '页面打开失败', icon: 'none' })
     }

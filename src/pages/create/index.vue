@@ -53,7 +53,7 @@
         <view class="business-tags">
           <view
             v-for="(item, index) in businessPath"
-            :key="`${item.id}-${index}`"
+            :key="`${item.rowKind || 'row'}-${item.id}-${index}`"
             class="business-tag"
           >
             <text class="business-tag__text">{{ item.name }}</text>
@@ -202,6 +202,9 @@ const shopName = ref('')
  */
 const lastSelectedBusinessPayload = ref(null)
 
+/** 与 business/index 一致：再次进入主营业务子页时回显上次选择 */
+const BUSINESS_RESTORE_STORAGE_KEY = 'create:business-restore'
+
 /**
  * 函数：nodeDisplayName
  */
@@ -209,6 +212,114 @@ function nodeDisplayName(p) {
   if (!p || typeof p !== 'object') return ''
   const raw = p.name ?? p.label ?? p.title ?? p.categoryName
   return String(raw ?? '').trim()
+}
+
+/**
+ * 主营业务子页 payload → 商户页大卡片内标签行（路径 + 多维度 + 自定义）。
+ * @param {Record<string, unknown>} selectedBusiness
+ * @returns {Array<{ id: string, name: string, rowKind: string, pathIndex?: number, dimGroupIndex?: number, dimCategoryId?: string, dimTagId?: string, customKey?: string, customIndex?: number }>}
+ */
+function buildScopeDisplayRowsFromBusinessPayload(selectedBusiness) {
+  if (!selectedBusiness || typeof selectedBusiness !== 'object') return []
+
+  const path = Array.isArray(selectedBusiness.path) ? selectedBusiness.path : []
+  const dimPicks = Array.isArray(selectedBusiness.dimensionPicks)
+    ? selectedBusiness.dimensionPicks
+    : []
+  const customs = Array.isArray(selectedBusiness.customScenes)
+    ? selectedBusiness.customScenes
+    : []
+  /** 有 path/维度/自定义时走结构化行；勿被仅含二级的 scopeTagRows 短路掉。 */
+  const hasStructuredScope =
+    path.length > 0 || dimPicks.length > 0 || customs.length > 0
+
+  const scopeRows = selectedBusiness.scopeTagRows
+  if (
+    Array.isArray(scopeRows) &&
+    scopeRows.length &&
+    !hasStructuredScope
+  ) {
+    return scopeRows
+      .map((r, idx) => ({
+        id: r.id != null ? String(r.id) : `legacy-${idx}`,
+        name: nodeDisplayName(r),
+        rowKind: 'legacy'
+      }))
+      .filter((x) => x.name)
+  }
+
+  const rows = []
+  path.forEach((p, pathIndex) => {
+    const name = nodeDisplayName(p)
+    if (!name) return
+    rows.push({
+      id: p.id != null ? String(p.id) : `path-${pathIndex}`,
+      name,
+      rowKind: 'path',
+      pathIndex
+    })
+  })
+
+  dimPicks.forEach((g, gi) => {
+    if (!g || typeof g !== 'object') return
+    const catId = g.categoryId != null ? String(g.categoryId) : `g-${gi}`
+    const selectedTags = Array.isArray(g.selectedTags) ? g.selectedTags : null
+    const idList = Array.isArray(g.selectedTagIds) ? g.selectedTagIds : []
+
+    if (selectedTags && selectedTags.length) {
+      for (const st of selectedTags) {
+        const tid = st && typeof st === 'object' ? String(st.id ?? '').trim() : ''
+        const nm = st && typeof st === 'object' ? String(st.name ?? '').trim() : ''
+        const label = nm || tid
+        if (!label) continue
+        rows.push({
+          id: `dim:${catId}:${tid || label}`,
+          name: label,
+          rowKind: 'dimension',
+          dimGroupIndex: gi,
+          dimCategoryId: catId,
+          dimTagId: tid || label
+        })
+      }
+      return
+    }
+    for (const rawId of idList) {
+      const tid = String(rawId ?? '').trim()
+      if (!tid) continue
+      rows.push({
+        id: `dim:${catId}:${tid}`,
+        name: tid,
+        rowKind: 'dimension',
+        dimGroupIndex: gi,
+        dimCategoryId: catId,
+        dimTagId: tid
+      })
+    }
+  })
+
+  customs.forEach((c, customIndex) => {
+    if (!c || typeof c !== 'object') return
+    const text = String(c.sceneText ?? '').trim()
+    if (!text) return
+    const ck = c.key != null ? String(c.key) : ''
+    rows.push({
+      id: ck ? `custom:${ck}` : `custom:i${customIndex}`,
+      name: text,
+      rowKind: 'custom',
+      ...(ck ? { customKey: ck } : { customIndex })
+    })
+  })
+
+  return rows
+}
+
+function rebuildBusinessScopeDisplayFromPayload() {
+  const p = lastSelectedBusinessPayload.value
+  if (!p || typeof p !== 'object') {
+    businessPath.value = []
+    return
+  }
+  businessPath.value = buildScopeDisplayRowsFromBusinessPayload(p)
 }
 
 /** 读缓存：部分运行环境下 storage 可能为 JSON 字符串 */
@@ -229,6 +340,60 @@ function readSelectedBusinessPayload() {
 
 /** 删除对应标签（仅移除该项，不影响其余已选标签） */
 function removeBusinessTag(index) {
+  const row = businessPath.value[index]
+  const p = lastSelectedBusinessPayload.value
+  if (!row || !p || typeof p !== 'object') {
+    businessPath.value = businessPath.value.filter((_, i) => i !== index)
+    return
+  }
+
+  const kind = row.rowKind
+  if (kind === 'path' && typeof row.pathIndex === 'number') {
+    if (!Array.isArray(p.path)) {
+      businessPath.value = businessPath.value.filter((_, i) => i !== index)
+      return
+    }
+    p.path = p.path.slice(0, row.pathIndex)
+    const leaf = p.path.length ? p.path[p.path.length - 1] : null
+    p.industryTagIdForDimensions =
+      leaf && leaf.id != null ? String(leaf.id) : ''
+    rebuildBusinessScopeDisplayFromPayload()
+    return
+  }
+
+  if (
+    kind === 'dimension' &&
+    typeof row.dimGroupIndex === 'number' &&
+    row.dimTagId
+  ) {
+    const picks = Array.isArray(p.dimensionPicks) ? p.dimensionPicks : []
+    const g = picks[row.dimGroupIndex]
+    const tid = String(row.dimTagId).trim()
+    if (g && typeof g === 'object' && tid) {
+      if (Array.isArray(g.selectedTagIds)) {
+        g.selectedTagIds = g.selectedTagIds.filter((x) => String(x).trim() !== tid)
+      }
+      if (Array.isArray(g.selectedTags)) {
+        g.selectedTags = g.selectedTags.filter(
+          (x) => x && typeof x === 'object' && String(x.id ?? '').trim() !== tid
+        )
+      }
+    }
+    rebuildBusinessScopeDisplayFromPayload()
+    return
+  }
+
+  if (kind === 'custom') {
+    const scenes = Array.isArray(p.customScenes) ? p.customScenes : []
+    if (row.customKey) {
+      p.customScenes = scenes.filter((c) => c && c.key !== row.customKey)
+    } else if (typeof row.customIndex === 'number') {
+      p.customScenes = scenes.filter((_, j) => j !== row.customIndex)
+    }
+    rebuildBusinessScopeDisplayFromPayload()
+    return
+  }
+
   businessPath.value = businessPath.value.filter((_, i) => i !== index)
 }
 
@@ -351,20 +516,7 @@ onShow(() => {
           ? { ...selectedBusiness }
           : null
     }
-    const scopeRows = selectedBusiness.scopeTagRows
-    if (Array.isArray(scopeRows) && scopeRows.length) {
-      businessPath.value = scopeRows
-        .map((r) => ({
-          id: r.id != null ? String(r.id) : '',
-          name: nodeDisplayName(r)
-        }))
-        .filter((x) => x.name)
-    } else {
-      businessPath.value = selectedBusiness.path.map((p) => ({
-        id: p.id != null ? String(p.id) : '',
-        name: nodeDisplayName(p)
-      }))
-    }
+    businessPath.value = buildScopeDisplayRowsFromBusinessPayload(selectedBusiness)
     const ind = String(selectedBusiness.industry ?? '').trim()
     if (ind) selectedIndustry.value = ind
     const bid = String(selectedBusiness.industryId ?? '').trim()
@@ -475,6 +627,33 @@ function goToBusiness() {
     uni.showToast({ title: '请选择行业', icon: 'none' })
     return
   }
+  const ind = String(selectedIndustry.value || '').trim()
+  const p = lastSelectedBusinessPayload.value
+  if (p && typeof p === 'object') {
+    const same = String(p.industry ?? '').trim() === ind
+    if (same) {
+      try {
+        uni.setStorageSync(
+          BUSINESS_RESTORE_STORAGE_KEY,
+          JSON.parse(JSON.stringify(p))
+        )
+      } catch {
+        uni.setStorageSync(BUSINESS_RESTORE_STORAGE_KEY, { ...p })
+      }
+    } else {
+      try {
+        uni.removeStorageSync(BUSINESS_RESTORE_STORAGE_KEY)
+      } catch {
+        /* ignore */
+      }
+    }
+  } else {
+    try {
+      uni.removeStorageSync(BUSINESS_RESTORE_STORAGE_KEY)
+    } catch {
+      /* ignore */
+    }
+  }
   uni.navigateTo({
     url: `/pages/create/business/index?industry=${encodeURIComponent(selectedIndustry.value)}`
   })
@@ -535,6 +714,18 @@ async function goToGenerate() {
   const businessTagLabels = businessPath.value
     .map((p) => String(p.name || '').trim())
     .filter(Boolean)
+  let selectedBusinessSnapshot = null
+  try {
+    const snap = lastSelectedBusinessPayload.value
+    if (snap && typeof snap === 'object') {
+      selectedBusinessSnapshot = JSON.parse(JSON.stringify(snap))
+    }
+  } catch {
+    selectedBusinessSnapshot =
+      lastSelectedBusinessPayload.value && typeof lastSelectedBusinessPayload.value === 'object'
+        ? { ...lastSelectedBusinessPayload.value }
+        : null
+  }
   const draftBase = {
     industry: String(selectedIndustry.value || '').trim(),
     industryId: String(selectedIndustryId.value || '').trim(),
@@ -543,6 +734,7 @@ async function goToGenerate() {
       name: String(p.name || '').trim()
     })),
     businessTagLabels,
+    selectedBusinessSnapshot,
     shopName: String(shopName.value || '').trim(),
     location: loc
       ? {
@@ -557,6 +749,11 @@ async function goToGenerate() {
   }
 
   if (!isApiEnabled()) {
+    try {
+      uni.removeStorageSync('create:selected-business')
+    } catch {
+      /* ignore */
+    }
     uni.setStorageSync('create:merchant-draft', draftBase)
     uni.navigateTo({
       url: '/pages/create/generate/index'
@@ -600,6 +797,11 @@ async function goToGenerate() {
     const newId = pickCreatedMainBusinessId(
       created && typeof created === 'object' ? created : {}
     )
+    try {
+      uni.removeStorageSync('create:selected-business')
+    } catch {
+      /* ignore */
+    }
     uni.setStorageSync('create:merchant-draft', {
       ...draftBase,
       ...(newId ? { createdMainBusinessId: newId } : {})

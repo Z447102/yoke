@@ -54,6 +54,11 @@ if (!fs.existsSync(MP_APP_WXSS)) {
   bad('未找到 dist/build/mp-weixin/app.wxss，请先执行: npm run build:mp-weixin')
 } else {
   const wxss = fs.readFileSync(MP_APP_WXSS, 'utf8')
+  if (wxss.includes('../static/fonts/')) {
+    bad(
+      'app.wxss 中字体 url 含 ../static/fonts/：相对根目录 app.wxss 会解析到 dist/build/static（错误），源码请用 url("@/static/fonts/...")'
+    )
+  }
   const needles = [
     '@font-face',
     'OPPOSans-4.0.ttf',

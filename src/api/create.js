@@ -213,17 +213,39 @@ export function getMemberMainBusinessDetail(id) {
 }
 
 /**
- * 会员主营业务列表（按行业、企业名称模糊）。
- * GET /api/member/main-businesses?industryId=&enterpriseName=
- * @param {{ industryId?: string | number, enterpriseName?: string }} [params]
+ * 会员主营业务分页列表（当前登录会员；仅返回本人记录）。
+ * GET /api/member/main-businesses
+ * 查询：`industryId`、`enterpriseName` 可选；`pageNum`、`pageSize`、`orderBy` 等与后台 PageHelper 一致。
+ * @param {{
+ *   industryId?: string | number,
+ *   enterpriseName?: string,
+ *   pageNum?: number,
+ *   pageSize?: number,
+ *   orderBy?: string
+ * }} [params]
  * @returns {Promise<{ total?: number, rows?: unknown[] }>}
  */
 export function listMemberMainBusinesses(params = {}) {
-  const industryId = String(params.industryId ?? '').trim()
-  const enterpriseName = String(params.enterpriseName ?? '').trim()
   const q = []
+  const industryId = String(params.industryId ?? '').trim()
   if (industryId) q.push(`industryId=${encodeURIComponent(industryId)}`)
+  const enterpriseName = String(params.enterpriseName ?? '').trim()
   if (enterpriseName) q.push(`enterpriseName=${encodeURIComponent(enterpriseName)}`)
+
+  const pageNumRaw = Number(params.pageNum)
+  const pageNum =
+    Number.isFinite(pageNumRaw) && pageNumRaw >= 1 ? Math.trunc(pageNumRaw) : 1
+  const sizeRaw = Number(params.pageSize)
+  const pageSize =
+    Number.isFinite(sizeRaw) && sizeRaw >= 1
+      ? Math.min(200, Math.max(1, Math.trunc(sizeRaw)))
+      : 50
+  q.push(`pageNum=${encodeURIComponent(String(pageNum))}`)
+  q.push(`pageSize=${encodeURIComponent(String(pageSize))}`)
+
+  const orderBy = String(params.orderBy ?? '').trim()
+  if (orderBy) q.push(`orderBy=${encodeURIComponent(orderBy)}`)
+
   const qs = q.length ? `?${q.join('&')}` : ''
   return get(`/api/member/main-businesses${qs}`)
 }
@@ -252,13 +274,16 @@ export function updateMemberMainBusiness(id, body) {
 
 /**
  * 删除会员主营业务。
- * DELETE /api/member/main-businesses/{id}
- * @param {string|number} id
+ * `DELETE /api/member/main-businesses/{id}`，仅路径参数 `id`，无 query / body。
+ * @param {string|number} id 记录主键
  * @returns {Promise<unknown>}
  */
 export function deleteMemberMainBusiness(id) {
-  const bid = encodeURIComponent(String(id ?? '').trim())
-  return del(`/api/member/main-businesses/${bid}`)
+  const bid = String(id ?? '').trim()
+  if (!bid) {
+    return Promise.reject(new Error('缺少主营业务 id'))
+  }
+  return del(`/api/member/main-businesses/${encodeURIComponent(bid)}`)
 }
 
 /**

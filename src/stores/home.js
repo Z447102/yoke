@@ -7,7 +7,8 @@ import { getHomeDashboard, getHotContents } from '@/api/home'
 
 export const useHomeStore = defineStore('home', {
   state: () => ({
-    scoreSummary: null,
+    /** 空对象：避免 TodayScoreCard 在首屏/接口缺字段时对 null 读 .score 抛错 */
+    scoreSummary: {},
     scoreFilters: {
       platform: '平台',
       industry: '行业'
@@ -30,7 +31,9 @@ export const useHomeStore = defineStore('home', {
       this.loading = true
       try {
         const data = await getHomeDashboard(this.scoreFilters)
-        this.scoreSummary = data.scoreSummary
+        const raw = data?.scoreSummary
+        this.scoreSummary =
+          raw != null && typeof raw === 'object' ? raw : {}
         this.hotContents = data.hotContents || []
         this.digitalHumans = data.digitalHumans || []
         this.creationStats = data.creationStats || this.creationStats

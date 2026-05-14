@@ -139,7 +139,7 @@ export function request(options) {
 
   const {
     url,
-    method = 'GET',
+    method: methodRaw,
     data,
     header = {},
     timeout = getApiTimeout(),
@@ -149,6 +149,8 @@ export function request(options) {
     bizDataKey = 'data',
     bizMsgKey = 'message'
   } = options
+
+  const method = String(methodRaw || 'GET').toUpperCase()
 
   const headers = mergeHeaders(
     {
@@ -264,20 +266,28 @@ export function request(options) {
 
 /** GET 请求封装。 */
 export function get(url, data, opts = {}) {
-  return request({ ...opts, url, method: 'GET', data })
+  const o = opts && typeof opts === 'object' ? { ...opts } : {}
+  delete o.method
+  return request({ ...o, url, method: 'GET', data })
 }
 
 /** POST 请求封装。 */
 export function post(url, data, opts = {}) {
-  return request({ ...opts, url, method: 'POST', data })
+  const o = opts && typeof opts === 'object' ? { ...opts } : {}
+  delete o.method
+  return request({ ...o, url, method: 'POST', data: data ?? {} })
 }
 
 /** PUT 请求封装。 */
 export function put(url, data, opts = {}) {
-  return request({ ...opts, url, method: 'PUT', data })
+  const o = opts && typeof opts === 'object' ? { ...opts } : {}
+  delete o.method
+  return request({ ...o, url, method: 'PUT', data: data ?? {} })
 }
 
 /** DELETE 请求封装。 */
 export function del(url, data, opts = {}) {
-  return request({ ...opts, url, method: 'DELETE', data })
+  const o = opts && typeof opts === 'object' ? { ...opts } : {}
+  delete o.method
+  return request({ ...o, url, method: 'DELETE', data: data ?? {} })
 }
