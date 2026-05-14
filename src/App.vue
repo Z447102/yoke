@@ -14,6 +14,7 @@ export default {
     console.log('onLaunch')
     uni.loadFontFace({
       family: 'OPPOSans',
+	  global: true,
       source: `url("${StaticPath}fonts/OPPOSans-4.0.ttf")`,
       success: () => {
         console.log('字体加载成功')
