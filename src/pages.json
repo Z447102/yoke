@@ -1,7 +1,7 @@
 {
   "pages": [
     {
-      "path": "pages/splash/index",
+      "path": "main-pages/splash/index",
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "",
@@ -13,11 +13,11 @@
   ],
   "subPackages": [
     {
-      "root": "pages/home",
-      "name": "home",
+      "root": "pages",
+      "name": "pages",
       "pages": [
         {
-          "path": "index",
+          "path": "home/index",
           "style": {
             "navigationBarTitleText": "yoke",
             "navigationStyle": "custom",
@@ -25,7 +25,7 @@
           }
         },
         {
-          "path": "mine/index",
+          "path": "home/mine/index",
           "style": {
             "navigationBarTitleText": "我的",
             "navigationStyle": "custom",
@@ -33,57 +33,52 @@
             "backgroundColor": "#f8f8f8",
             "backgroundTextStyle": "dark"
           }
-        }
-      ]
-    },
-    {
-      "root": "pages/login",
-      "name": "login",
-      "pages": [
+        },
         {
-          "path": "index",
+          "path": "home/mine/vip/index",
+          "style": {
+            "navigationBarTitleText": "会员中心",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "login/index",
           "style": {
             "navigationBarTitleText": "登录",
             "navigationStyle": "custom",
             "backgroundColor": "#f7f7f7"
           }
-        }
-      ]
-    },
-    {
-      "root": "pages/create",
-      "name": "create",
-      "pages": [
+        },
         {
-          "path": "index",
+          "path": "create/index",
           "style": {
             "navigationBarTitleText": "创作",
             "navigationStyle": "custom"
           }
         },
         {
-          "path": "business/index",
+          "path": "create/business/index",
           "style": {
             "navigationBarTitleText": "主营业务",
             "navigationStyle": "custom"
           }
         },
         {
-          "path": "location/index",
+          "path": "create/location/index",
           "style": {
             "navigationBarTitleText": "选择位置",
             "navigationStyle": "custom"
           }
         },
         {
-          "path": "generate/index",
+          "path": "create/generate/index",
           "style": {
             "navigationBarTitleText": "生成视频",
             "navigationStyle": "custom"
           }
         },
         {
-          "path": "photo-examples/index",
+          "path": "create/photo-examples/index",
           "style": {
             "navigationBarTitleText": "照片示例",
             "navigationStyle": "custom",
@@ -91,7 +86,7 @@
           }
         },
         {
-          "path": "works/index",
+          "path": "create/works/index",
           "style": {
             "navigationBarTitleText": "查看成片",
             "navigationStyle": "custom",
@@ -100,34 +95,28 @@
           }
         },
         {
-          "path": "works/detail",
+          "path": "create/works/detail",
           "style": {
             "navigationBarTitleText": "成片详情",
             "navigationStyle": "custom"
           }
         },
         {
-          "path": "works/publish",
+          "path": "create/works/publish",
           "style": {
             "navigationBarTitleText": "发布成片",
             "navigationStyle": "custom"
           }
-        }
-      ]
-    },
-    {
-      "root": "pages/legal",
-      "name": "legal",
-      "pages": [
+        },
         {
-          "path": "user-agreement",
+          "path": "legal/user-agreement",
           "style": {
             "navigationBarTitleText": "用户软件许可协议",
             "backgroundColor": "#f7f7f7"
           }
         },
         {
-          "path": "privacy",
+          "path": "legal/privacy",
           "style": {
             "navigationBarTitleText": "隐私政策",
             "backgroundColor": "#f7f7f7"
@@ -137,13 +126,13 @@
     }
   ],
   "preloadRule": {
-    "pages/splash/index": {
+    "main-pages/splash/index": {
       "network": "all",
-      "packages": ["home", "login", "create"]
+      "packages": ["pages"]
     },
     "pages/home/index": {
       "network": "all",
-      "packages": ["create"]
+      "packages": ["pages"]
     }
   },
   "globalStyle": {
