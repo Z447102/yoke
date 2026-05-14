@@ -275,30 +275,31 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { computed, onMounted, ref } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
 import {
   CREATE_SELECTED_PLATFORM_STORAGE_KEY,
   PLATFORM_OPTIONS
 } from '@/constants/create-selected-platform'
-import createBackIcon from '@/static/create/create-back-icon.png'
-import publishMetaIconTime from '@/static/create/publish-meta-icon-time.png'
-import publishMetaIconDuration from '@/static/create/publish-meta-icon-duration.png'
-import publishMetaIconHd from '@/static/create/publish-meta-icon-hd.png'
-import publishMetaIconAd from '@/static/create/publish-meta-icon-ad.png'
-import publishMetaIconSuggestTime from '@/static/create/publish-meta-icon-suggest-time.png'
-import publishSuggestIconTrend from '@/static/create/publish-suggest-icon-trend.png'
-import publishPlatformDouyin from '@/static/create/publish-platform-douyin.png'
-import publishPlatformKuaishou from '@/static/create/publish-platform-kuaishou.png'
-import publishPlatformShipinhao from '@/static/create/publish-platform-shipinhao.png'
-import publishPlatformXiaohongshu from '@/static/create/publish-platform-xiaohongshu.png'
-import publishContentIconCopy from '@/static/create/publish-content-icon-copy.png'
-import publishVisitTipIconLocation from '@/static/create/publish-visit-tip-icon-location.png'
-import publishVisitTipIconChat from '@/static/create/publish-visit-tip-icon-chat.png'
-import publishStepIcon1 from '@/static/create/publish-step-icon-1.png'
-import publishActionIconSave from '@/static/create/publish-action-icon-save.png'
-import publishStepIcon2 from '@/static/create/publish-step-icon-2.png'
-import publishStepIcon3 from '@/static/create/publish-step-icon-3.png'
+const createBackIcon = `${StaticPath}create/create-back-icon.png`
+const publishMetaIconTime = `${StaticPath}create/publish-meta-icon-time.png`
+const publishMetaIconDuration = `${StaticPath}create/publish-meta-icon-duration.png`
+const publishMetaIconHd = `${StaticPath}create/publish-meta-icon-hd.png`
+const publishMetaIconAd = `${StaticPath}create/publish-meta-icon-ad.png`
+const publishMetaIconSuggestTime = `${StaticPath}create/publish-meta-icon-suggest-time.png`
+const publishSuggestIconTrend = `${StaticPath}create/publish-suggest-icon-trend.png`
+const publishPlatformDouyin = `${StaticPath}create/publish-platform-douyin.png`
+const publishPlatformKuaishou = `${StaticPath}create/publish-platform-kuaishou.png`
+const publishPlatformShipinhao = `${StaticPath}create/publish-platform-shipinhao.png`
+const publishPlatformXiaohongshu = `${StaticPath}create/publish-platform-xiaohongshu.png`
+const publishContentIconCopy = `${StaticPath}create/publish-content-icon-copy.png`
+const publishVisitTipIconLocation = `${StaticPath}create/publish-visit-tip-icon-location.png`
+const publishVisitTipIconChat = `${StaticPath}create/publish-visit-tip-icon-chat.png`
+const publishStepIcon1 = `${StaticPath}create/publish-step-icon-1.png`
+const publishActionIconSave = `${StaticPath}create/publish-action-icon-save.png`
+const publishStepIcon2 = `${StaticPath}create/publish-step-icon-2.png`
+const publishStepIcon3 = `${StaticPath}create/publish-step-icon-3.png`
 import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh

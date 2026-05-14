@@ -26,8 +26,9 @@
 </template>
 
 <script setup>
-import quickCreateIcon from '@/static/home/home-quick-create-icon.png'
-import quickDrainIcon from '@/static/home/home-quick-drain-icon.png'
+import { StaticPath } from '@/config'
+const quickCreateIcon = `${StaticPath}home/home-quick-create-icon.png`
+const quickDrainIcon = `${StaticPath}home/home-quick-drain-icon.png`
 
 /**
  * 页面跳转：goToCreate

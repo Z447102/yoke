@@ -170,23 +170,24 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { computed, getCurrentInstance, nextTick, onMounted, ref } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
 import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh
 } from '@/utils/create-nav-bar-style'
-import createBackIcon from '@/static/create/create-back-icon.png'
-import createPhotoExamplesTabScrollLeft from '@/static/create/create-photo-examples-tab-scroll-left.png'
-import createSuggestHeadCamera from '@/static/create/create-suggest-head-camera.png'
-import createSuggestTipFrame from '@/static/create/create-suggest-tip-frame.png'
-import createSuggestTipBan from '@/static/create/create-suggest-tip-ban.png'
-import createSuggestTipSun from '@/static/create/create-suggest-tip-sun.png'
-import createSuggestBottomTip from '@/static/create/create-suggest-bottom-tip.png'
-import createPhotoExampleOkIcon from '@/static/create/create-photo-example-ok-icon.png'
-import createPhotoExampleBadIcon from '@/static/create/create-photo-example-bad-icon.png'
-import createPhotoExampleFootOkIcon from '@/static/create/create-photo-example-foot-ok-icon.png'
-import createPhotoExampleFootBadIcon from '@/static/create/create-photo-example-foot-bad-icon.png'
+const createBackIcon = `${StaticPath}create/create-back-icon.png`
+const createPhotoExamplesTabScrollLeft = `${StaticPath}create/create-photo-examples-tab-scroll-left.png`
+const createSuggestHeadCamera = `${StaticPath}create/create-suggest-head-camera.png`
+const createSuggestTipFrame = `${StaticPath}create/create-suggest-tip-frame.png`
+const createSuggestTipBan = `${StaticPath}create/create-suggest-tip-ban.png`
+const createSuggestTipSun = `${StaticPath}create/create-suggest-tip-sun.png`
+const createSuggestBottomTip = `${StaticPath}create/create-suggest-bottom-tip.png`
+const createPhotoExampleOkIcon = `${StaticPath}create/create-photo-example-ok-icon.png`
+const createPhotoExampleBadIcon = `${StaticPath}create/create-photo-example-bad-icon.png`
+const createPhotoExampleFootOkIcon = `${StaticPath}create/create-photo-example-foot-ok-icon.png`
+const createPhotoExampleFootBadIcon = `${StaticPath}create/create-photo-example-foot-bad-icon.png`
 
 const TAB_KEYS = ['facade', 'dish', 'env1', 'env2']
 

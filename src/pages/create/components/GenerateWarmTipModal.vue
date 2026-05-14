@@ -28,11 +28,12 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 生成视频前「温馨提示」：引导用户通过「查看成片」跟进进度；支持「下次不再提示」。
  */
 import { ref, watch } from 'vue'
-import tipIcon from '@/static/create/create-icon-wave-hand.png'
+const tipIcon = `${StaticPath}create/create-icon-wave-hand.png`
 
 const props = defineProps({
   show: { type: Boolean, default: false }

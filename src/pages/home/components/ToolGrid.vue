@@ -99,10 +99,11 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { ref, computed } from 'vue'
 import SectionTitle from './SectionTitle.vue'
-import toolGridCtaBg from '@/static/home/home-tool-grid-cta-bg.png'
-import toolGridCtaArrow from '@/static/home/home-tool-grid-cta-arrow.png'
+const toolGridCtaBg = `${StaticPath}home/home-tool-grid-cta-bg.png`
+const toolGridCtaArrow = `${StaticPath}home/home-tool-grid-cta-arrow.png`
 
 const props = defineProps({
   title: {

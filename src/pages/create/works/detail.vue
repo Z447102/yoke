@@ -45,6 +45,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 【成片详情】联调后可播 videoUrl；当前 Mock 为空时展示封面与说明。
  */
@@ -56,7 +57,7 @@ import {
 } from '@/utils/create-nav-bar-style'
 import { showPageLoading, hidePageLoading } from '@/utils/page-loading'
 import { getFinishedVideoDetail } from '@/api/finished-videos'
-import createBackIcon from '@/static/create/create-back-icon.png'
+const createBackIcon = `${StaticPath}create/create-back-icon.png`
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 const detail = ref(null)

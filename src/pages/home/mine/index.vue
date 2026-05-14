@@ -211,6 +211,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { onPullDownRefresh, onReady, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
@@ -218,19 +219,19 @@ import { performLogout } from '@/hooks/use-login'
 import { getMinePageData } from '@/api/mine'
 import { hidePageLoading, showPageLoading } from '@/utils/page-loading'
 import HomeTabBar from '@/pages/home/components/HomeTabBar.vue'
-import mineHeaderBg from '@/static/mine/mine-header-bg.png'
-import iconPoints from '@/static/mine/icon-points.png'
-import iconBusiness from '@/static/mine/icon-business.png'
-import iconStatsChevronRight from '@/static/mine/mine-stats-chevron-right.png'
-import mineNameChevron from '@/static/mine/mine-name-chevron.png'
-import iconPromoNext from '@/static/mine/mine-promo-next-icon.png'
-import minePromoVipBg from '@/static/mine/mine-promo-vip-bg.png'
-import minePromoVipBadge from '@/static/mine/mine-promo-vip-badge.png'
-import minePromoPointsBg from '@/static/mine/mine-promo-points-bg.png'
-import mineToolDigitalHuman from '@/static/mine/mine-tool-digital-human.png'
-import mineToolLearning from '@/static/mine/mine-tool-learning.png'
-import mineToolNotice from '@/static/mine/mine-tool-notice.png'
-import mineToolService from '@/static/mine/mine-tool-service.png'
+const mineHeaderBg = `${StaticPath}mine/mine-header-bg.png`
+const iconPoints = `${StaticPath}mine/icon-points.png`
+const iconBusiness = `${StaticPath}mine/icon-business.png`
+const iconStatsChevronRight = `${StaticPath}mine/mine-stats-chevron-right.png`
+const mineNameChevron = `${StaticPath}mine/mine-name-chevron.png`
+const iconPromoNext = `${StaticPath}mine/mine-promo-next-icon.png`
+const minePromoVipBg = `${StaticPath}mine/mine-promo-vip-bg.png`
+const minePromoVipBadge = `${StaticPath}mine/mine-promo-vip-badge.png`
+const minePromoPointsBg = `${StaticPath}mine/mine-promo-points-bg.png`
+const mineToolDigitalHuman = `${StaticPath}mine/mine-tool-digital-human.png`
+const mineToolLearning = `${StaticPath}mine/mine-tool-learning.png`
+const mineToolNotice = `${StaticPath}mine/mine-tool-notice.png`
+const mineToolService = `${StaticPath}mine/mine-tool-service.png`
 
 const userStore = useUserStore()
 

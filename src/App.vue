@@ -10,6 +10,17 @@ export default {
   onLaunch() {
     const userStore = useUserStore()
     userStore.hydrateFromStorage()
+    console.log('onLaunch')
+    uni.loadFontFace({
+      family: 'OPPOSans',
+      source: 'url("https://www.jzdmedia.cn/OPPOSans-4.0.ttf")',
+      success: () => {
+        console.log('字体加载成功')
+      },
+      fail: () => {
+        console.log('字体加载失败')
+      }
+    })
   }
 }
 </script>

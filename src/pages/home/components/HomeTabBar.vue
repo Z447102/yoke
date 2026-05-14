@@ -21,13 +21,14 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import tabHome from '@/static/home/tabbar-home.png'
-import tabHomeActive from '@/static/home/tabbar-home-active.png'
-import tabMine from '@/static/home/tabbar-mine.png'
-import tabMineActive from '@/static/home/tabbar-mine-active.png'
-import tabCenter from '@/static/home/tabbar-center.png'
+const tabHome = `${StaticPath}home/tabbar-home.png`
+const tabHomeActive = `${StaticPath}home/tabbar-home-active.png`
+const tabMine = `${StaticPath}home/tabbar-mine.png`
+const tabMineActive = `${StaticPath}home/tabbar-mine-active.png`
+const tabCenter = `${StaticPath}home/tabbar-center.png`
 
 /** home | mine | create — 中间「创作」不高亮左右 icon */
 const activeKey = ref('home')

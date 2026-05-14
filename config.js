@@ -1,0 +1,1 @@
+StaticPath = "https://www.jzdmedia.cn/static/"

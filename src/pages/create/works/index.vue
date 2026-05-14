@@ -389,6 +389,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { computed, onMounted, ref } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
 import {
@@ -400,21 +401,21 @@ import {
   getFinishedVideoList
 } from '@/api/finished-videos'
 import { CREATE_SELECTED_PLATFORM_STORAGE_KEY } from '@/constants/create-selected-platform'
-import createBackIcon from '@/static/create/create-back-icon.png'
-import flowerIcon from '@/static/create/works-icon-flower.png'
-import worksEmptyListIcon from '@/static/create/works-empty-list-icon.png'
-import worksPublishIcon from '@/static/create/works-btn-publish-icon.png'
-import worksDeleteIcon from '@/static/create/works-icon-delete.png'
-import worksDeleteWarnIcon from '@/static/create/works-icon-delete-warning.png'
+const createBackIcon = `${StaticPath}create/create-back-icon.png`
+const flowerIcon = `${StaticPath}create/works-icon-flower.png`
+const worksEmptyListIcon = `${StaticPath}create/works-empty-list-icon.png`
+const worksPublishIcon = `${StaticPath}create/works-btn-publish-icon.png`
+const worksDeleteIcon = `${StaticPath}create/works-icon-delete.png`
+const worksDeleteWarnIcon = `${StaticPath}create/works-icon-delete-warning.png`
 /** 铃铛图，仅供「通知」 */
-import worksToolbarNoticeIcon from '@/static/create/works-icon-notice-v2.png'
+const worksToolbarNoticeIcon = `${StaticPath}create/works-icon-notice-v2.png`
 /** 宫格管理图，仅供「管理」 */
-import worksToolbarManageIcon from '@/static/create/works-icon-manage-v3.png'
-import worksFailedMascotIcon from '@/static/create/works-failed-mascot.png'
-import worksFailedRetryIcon from '@/static/create/works-failed-retry.png'
-import worksFailedReasonIcon from '@/static/create/works-failed-reason.png'
-import worksFailDialogHeroIcon from '@/static/create/works-fail-dialog-hero.png'
-import worksFailDialogCheckIcon from '@/static/create/works-fail-dialog-check.png'
+const worksToolbarManageIcon = `${StaticPath}create/works-icon-manage-v3.png`
+const worksFailedMascotIcon = `${StaticPath}create/works-failed-mascot.png`
+const worksFailedRetryIcon = `${StaticPath}create/works-failed-retry.png`
+const worksFailedReasonIcon = `${StaticPath}create/works-failed-reason.png`
+const worksFailDialogHeroIcon = `${StaticPath}create/works-fail-dialog-hero.png`
+const worksFailDialogCheckIcon = `${StaticPath}create/works-fail-dialog-check.png`
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 

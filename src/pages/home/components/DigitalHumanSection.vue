@@ -66,12 +66,13 @@
 </template>
 
 <script setup>
-import digitalTitleIcon from '@/static/home/home-digital-title-icon.png'
-import digitalMoreIcon from '@/static/home/home-digital-more-icon.png'
-import digitalCardArrowIcon from '@/static/home/home-digital-card-arrow-icon.png'
-import digitalTitleTrailIcon from '@/static/home/home-digital-title-trail-icon-v3.png'
-import digitalPlusIcon from '@/static/home/home-digital-plus-icon.png'
-import digitalScrollIcon from '@/static/home/home-digital-scroll-icon.png'
+import { StaticPath } from '@/config'
+const digitalTitleIcon = `${StaticPath}home/home-digital-title-icon.png`
+const digitalMoreIcon = `${StaticPath}home/home-digital-more-icon.png`
+const digitalCardArrowIcon = `${StaticPath}home/home-digital-card-arrow-icon.png`
+const digitalTitleTrailIcon = `${StaticPath}home/home-digital-title-trail-icon-v3.png`
+const digitalPlusIcon = `${StaticPath}home/home-digital-plus-icon.png`
+const digitalScrollIcon = `${StaticPath}home/home-digital-scroll-icon.png`
 
 defineProps({
   list: {
@@ -258,7 +259,7 @@ defineEmits(['create'])
   font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   text-align: center;
   line-height: 58rpx;
-  background-image: url('@/static/home/home-digital-tag-bg.png');
+  background-image: url("https://www.jzdmedia.cn/static/home/home-digital-tag-bg.png");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;

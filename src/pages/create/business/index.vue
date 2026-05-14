@@ -83,6 +83,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 【一键成片 · 主营业务选择】按接口 levels 动态渲染；选完回写 storage 并返回上页。
  */
@@ -100,9 +101,9 @@ import {
   hidePageLoading,
   showPageLoading
 } from '@/utils/page-loading'
-import createBackIcon from '@/static/create/create-back-icon.png'
-import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
-import createIconAttention from '@/static/create/create-icon-attention.png'
+const createBackIcon = `${StaticPath}create/create-back-icon.png`
+const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
+const createIconAttention = `${StaticPath}create/create-icon-attention.png`
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))

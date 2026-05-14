@@ -1,56 +1,48 @@
 /* OPPO Sans 4.0：大字体文件在 src/assets/fonts，避免复制进主包 static */
-@font-face {
-  font-family: 'OPPOSans';
-  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+// @font-face {
+//   font-family: 'OPPOSans';
+//   src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
+//   font-weight: normal;
+//   font-style: normal;
+//   font-display: swap;
+// }
 
-@font-face {
-  font-family: 'OPPOSans-regular';
-  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+// @font-face {
+//   font-family: 'OPPOSans-regular';
+//   src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
+//   font-weight: normal;
+//   font-style: normal;
+//   font-display: swap;
+// }
 
-@font-face {
-  font-family: 'OPPOSans-medium';
-  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+// @font-face {
+//   font-family: 'OPPOSans-medium';
+//   src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
+//   font-weight: normal;
+//   font-style: normal;
+//   font-display: swap;
+// }
 
-@font-face {
-  font-family: 'OPPOSans-bold';
-  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+// @font-face {
+//   font-family: 'OPPOSans-bold';
+//   src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
+//   font-weight: normal;
+//   font-style: normal;
+//   font-display: swap;
+// }
 
-@font-face {
-  font-family: 'OPPOSans-light';
-  src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+// @font-face {
+//   font-family: 'OPPOSans-light';
+//   src: url('../assets/fonts/OPPOSans-4.0.ttf') format('truetype');
+//   font-weight: normal;
+//   font-style: normal;
+//   font-display: swap;
+// }
 
 page {
   background: #f7f7f7;
   color: #222222;
-  font-family:
-    OPPOSans-regular,
-    OPPOSans,
-    -apple-system,
-    BlinkMacSystemFont,
-    'PingFang SC',
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
+  font-family: 'OPPOSans', sans-serif;
 }
 
 /*
@@ -75,4 +67,32 @@ swiper-item {
 
 image {
   display: block;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-black {
+  font-weight: 900;
+}
+
+.font-regular {
+  font-weight: 400;
+}
+
+html, body, page, view, text {
+  font-family: 'OPPOSans';
+}
+
+/* 让表单元素也继承全局字体，因为它们默认不继承 */
+input,
+button,
+textarea,
+select {
+  font-family: inherit;
 }

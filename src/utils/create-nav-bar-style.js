@@ -1,5 +1,6 @@
+import { StaticPath } from '@/config'
 import { nextTick } from 'vue'
-import createNavTopBg from '@/static/create/create-nav-top-bg.png'
+const createNavTopBg = `${StaticPath}create/create-nav-top-bg.png`
 import { getCreateNavBarPaddingTopPx } from '@/utils/create-nav-padding'
 
 /**

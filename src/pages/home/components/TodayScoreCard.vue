@@ -145,11 +145,12 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { computed, ref } from 'vue'
 import { useHomeStore } from '@/stores/home'
-import arrowIcon from '@/static/home/icon-score-select-arrow.png'
-import scoreFlameIcon from '@/static/home/icon-title-hot-flame.png'
-import homeScoreTipEmoji from '@/static/home/home-score-tip-emoji.png'
+const arrowIcon = `${StaticPath}home/icon-score-select-arrow.png`
+const scoreFlameIcon = `${StaticPath}home/icon-title-hot-flame.png`
+const homeScoreTipEmoji = `${StaticPath}home/home-score-tip-emoji.png`
 
 /** 小程序端用根路径静态资源，避免组件内 import 在部分真机/分包下 src 异常 */
 const HOME_LOC_PIN_SRC = '/static/home/home-loc-pin.png'

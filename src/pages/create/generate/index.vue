@@ -476,6 +476,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 【一键成片 · 生成配置页】pages/create/generate/index.vue
  *
@@ -516,17 +517,17 @@ import {
   splitTextBySensitiveWords,
   textContainsSensitive
 } from '@/utils/script-sensitive-words'
-import createBackIcon from '@/static/create/create-back-icon.png'
-import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
-import createIconViewFilm from '@/static/create/create-icon-view-film.png'
-import createIconTemplateCheck from '@/static/create/create-icon-template-check.png'
-import createIconUploadHelp from '@/static/create/create-icon-upload-help.png'
-import createPhotoExamplesChevron from '@/static/create/create-icon-business-edit-chevron.png'
-import createIconPhotoPlus from '@/static/create/create-icon-photo-plus.png'
-import createIconStack from '@/static/create/create-icon-stack.png'
-import createIconBusinessEdit from '@/static/create/create-icon-business-edit.png'
-import createIconBusinessEditChevron from '@/static/create/create-icon-business-edit-chevron.png'
-import createIconAttention from '@/static/create/create-icon-attention.png'
+const createBackIcon = `${StaticPath}create/create-back-icon.png`
+const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
+const createIconViewFilm = `${StaticPath}create/create-icon-view-film.png`
+const createIconTemplateCheck = `${StaticPath}create/create-icon-template-check.png`
+const createIconUploadHelp = `${StaticPath}create/create-icon-upload-help.png`
+const createPhotoExamplesChevron = `${StaticPath}create/create-icon-business-edit-chevron.png`
+const createIconPhotoPlus = `${StaticPath}create/create-icon-photo-plus.png`
+const createIconStack = `${StaticPath}create/create-icon-stack.png`
+const createIconBusinessEdit = `${StaticPath}create/create-icon-business-edit.png`
+const createIconBusinessEditChevron = `${StaticPath}create/create-icon-business-edit-chevron.png`
+const createIconAttention = `${StaticPath}create/create-icon-attention.png`
 import { onReady, onShow } from '@dcloudio/uni-app'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())

@@ -23,12 +23,12 @@ export function isApiEnabled() {
 }
 
 /**
- * 请求超时时间（毫秒），未配置或非法时使用 15000。
+ * 请求超时时间（毫秒），未配置或非法时使用 60000。
  * @returns {number}
  */
 export function getApiTimeout() {
   const n = Number(import.meta.env.VITE_API_TIMEOUT)
-  return Number.isFinite(n) && n > 0 ? n : 15000
+  return Number.isFinite(n) && n > 0 ? n : 60000
 }
 
 /**

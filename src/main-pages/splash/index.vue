@@ -82,8 +82,9 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { ref, onMounted, computed } from 'vue'
-import splashImg from '@/static/splash/launch-screen.png'
+const splashImg = `${StaticPath}splash/launch-screen.png`
 import { getApiBaseUrl } from '@/config/env'
 import { isApiEnabled } from '@/utils/request'
 import { hasPrivacyAgreed, setPrivacyAgreed } from '@/utils/privacy'

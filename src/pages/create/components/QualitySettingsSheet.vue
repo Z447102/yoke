@@ -93,13 +93,14 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 事件：close | resolution-tap(item) | model-tap(id) | generate
  */
-import createVipBadgeBg from '@/static/create/create-vip-badge-bg.png'
-import createVipBadgeLabel from '@/static/create/create-vip-badge-label.png'
-import createIconStack from '@/static/create/create-icon-stack.png'
-import createIconAttention from '@/static/create/create-icon-attention.png'
+const createVipBadgeBg = `${StaticPath}create/create-vip-badge-bg.png`
+const createVipBadgeLabel = `${StaticPath}create/create-vip-badge-label.png`
+const createIconStack = `${StaticPath}create/create-icon-stack.png`
+const createIconAttention = `${StaticPath}create/create-icon-attention.png`
 
 defineProps({
   show: { type: Boolean, default: false },

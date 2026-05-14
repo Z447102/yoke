@@ -153,6 +153,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 【一键成片 · 商户信息】pages/create/index.vue
  * 收集行业与店铺信息，跳转 generate；地图/主营业务回传见 onShow + storage。
@@ -163,11 +164,11 @@ import {
   getCreateNavBarInlineStyle,
   scheduleCreateNavBarStyleRefresh
 } from '@/utils/create-nav-bar-style'
-import createBackIcon from '@/static/create/create-back-icon.png'
-import createIconWaveHand from '@/static/create/create-icon-wave-hand.png'
-import createIconArrowDown from '@/static/create/create-icon-arrow-down.png'
-import createIconMapPin from '@/static/create/create-icon-map-pin.png'
-import createIconAttention from '@/static/create/create-icon-attention.png'
+const createBackIcon = `${StaticPath}create/create-back-icon.png`
+const createIconWaveHand = `${StaticPath}create/create-icon-wave-hand.png`
+const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
+const createIconMapPin = `${StaticPath}create/create-icon-map-pin.png`
+const createIconAttention = `${StaticPath}create/create-icon-attention.png`
 import { CREATE_INDUSTRY_OPTIONS } from '@/constants/create'
 import { listIndustries } from '@/api/metadata'
 import { createMemberMainBusiness } from '@/api/create'

@@ -103,13 +103,14 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { loginWithSmsCredentials } from '@/hooks/use-login'
 import { sendSmsCode } from '@/api/auth'
-import loginHeroTopBg from '@/static/login/login-hero-top-bg.png'
-import smsHelpIcon from '@/static/login/sms-help-icon.png'
+const loginHeroTopBg = `${StaticPath}login/login-hero-top-bg.png`
+const smsHelpIcon = `${StaticPath}login/sms-help-icon.png`
 
 const userStore = useUserStore()
 

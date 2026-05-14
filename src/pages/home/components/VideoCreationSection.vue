@@ -90,12 +90,13 @@
 </template>
 
 <script setup>
-import videoCreateTitleIcon from '@/static/home/home-video-create-title-icon.png'
-import videoCreateTipsIcon from '@/static/home/home-video-create-tips-icon.png'
-import videoCreateStartIcon from '@/static/home/home-video-create-start-icon.png'
-import videoDigitalCreateIcon from '@/static/home/home-video-digital-create-icon.png'
-import videoCreateFolderIcon from '@/static/home/home-video-create-folder-icon.png'
-import digitalMoreIcon from '@/static/home/home-digital-more-icon.png'
+import { StaticPath } from '@/config'
+const videoCreateTitleIcon = `${StaticPath}home/home-video-create-title-icon.png`
+const videoCreateTipsIcon = `${StaticPath}home/home-video-create-tips-icon.png`
+const videoCreateStartIcon = `${StaticPath}home/home-video-create-start-icon.png`
+const videoDigitalCreateIcon = `${StaticPath}home/home-video-digital-create-icon.png`
+const videoCreateFolderIcon = `${StaticPath}home/home-video-create-folder-icon.png`
+const digitalMoreIcon = `${StaticPath}home/home-digital-more-icon.png`
 
 defineProps({
   stats: {
@@ -276,11 +277,11 @@ defineProps({
 }
 
 .video-action--image-to-video {
-  background-image: url('@/static/home/home-video-action-image-to-video-bg.png');
+  background-image: url("https://www.jzdmedia.cn/static/home/home-video-action-image-to-video-bg.png");
 }
 
 .video-action--video-edit {
-  background-image: url('@/static/home/home-video-action-video-edit-bg.png');
+  background-image: url("https://www.jzdmedia.cn/static/home/home-video-action-video-edit-bg.png");
 }
 
 .video-action__title {
@@ -336,7 +337,7 @@ defineProps({
   width: 38rpx;
   height: 28rpx;
   flex-shrink: 0;
-  background-image: url('@/static/home/home-video-action-line-icon.png');
+  background-image: url("https://www.jzdmedia.cn/static/home/home-video-action-line-icon.png");
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;

@@ -86,6 +86,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
   POINTS_RECHARGE_PACKAGES,
@@ -93,9 +94,9 @@ import {
   defaultPackageIdForDeficit
 } from '@/constants/points-recharge'
 /** 选中态（深色底）：浅色金币栈 */
-import coinImgSelected from '@/static/create/points-recharge-coin-selected.png'
+const coinImgSelected = `${StaticPath}create/points-recharge-coin-selected.png`
 /** 未选中态（浅色底）：深色金币栈 */
-import coinImgUnselected from '@/static/create/points-recharge-coin-unselected.png'
+const coinImgUnselected = `${StaticPath}create/points-recharge-coin-unselected.png`
 
 const props = defineProps({
   show: { type: Boolean, default: false },

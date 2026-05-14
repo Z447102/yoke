@@ -26,9 +26,10 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 import { computed, ref, onMounted } from 'vue'
-import homeBrandYokeZh from '@/static/home/home-brand-yoke-zh.png'
-import homeBrandYokeEn from '@/static/home/home-brand-yoke-en.png'
+const homeBrandYokeZh = `${StaticPath}home/home-brand-yoke-zh.png`
+const homeBrandYokeEn = `${StaticPath}home/home-brand-yoke-en.png`
 
 const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 

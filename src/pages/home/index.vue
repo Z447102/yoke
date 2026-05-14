@@ -48,6 +48,7 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 【首页】登录后工作台：数据由 homeStore 拉取（api/home Mock），下拉刷新见 onPullDownRefresh。
  * 水平边距：顶区 hero / 快捷入口 / 分区标题与卡片统一 24rpx；安全区同时写 constant + env。
@@ -63,22 +64,22 @@ import HomeQuickActions from './components/HomeQuickActions.vue'
 // import VideoCreationSection from './components/VideoCreationSection.vue'
 // import ToolGrid from './components/ToolGrid.vue'
 import HomeTabBar from './components/HomeTabBar.vue'
-import heroTopSkinBg from '@/static/home/home-top-skin-bg.png'
-// import homeToolGridSmartIcon from '@/static/home/home-tool-grid-smart-icon.png'
-// import homeToolGridCopywritingIcon from '@/static/home/home-tool-grid-copywriting-icon.png'
-import homeToolModuleChat from '@/static/home/home-tool-module-chat.png'
-import homeToolModuleDress from '@/static/home/home-tool-module-dress.png'
-import homeToolModuleHd from '@/static/home/home-tool-module-hd.png'
-import homeToolModuleVoice from '@/static/home/home-tool-module-voice.png'
-import homeToolModuleFace from '@/static/home/home-tool-module-face.png'
-import homeToolModulePhoto from '@/static/home/home-tool-module-photo.png'
-import homeToolModuleGoods from '@/static/home/home-tool-module-goods.png'
-import homeToolModuleHair from '@/static/home/home-tool-module-hairstyle.png'
+const heroTopSkinBg = `${StaticPath}home/home-top-skin-bg.png`
+// const homeToolGridSmartIcon = `${StaticPath}home/home-tool-grid-smart-icon.png`
+// const homeToolGridCopywritingIcon = `${StaticPath}home/home-tool-grid-copywriting-icon.png`
+const homeToolModuleChat = `${StaticPath}home/home-tool-module-chat.png`
+const homeToolModuleDress = `${StaticPath}home/home-tool-module-dress.png`
+const homeToolModuleHd = `${StaticPath}home/home-tool-module-hd.png`
+const homeToolModuleVoice = `${StaticPath}home/home-tool-module-voice.png`
+const homeToolModuleFace = `${StaticPath}home/home-tool-module-face.png`
+const homeToolModulePhoto = `${StaticPath}home/home-tool-module-photo.png`
+const homeToolModuleGoods = `${StaticPath}home/home-tool-module-goods.png`
+const homeToolModuleHair = `${StaticPath}home/home-tool-module-hairstyle.png`
 
 
-import homeCopywritingModule1 from '@/static/home/home-copywriting-module-1.png'
-import homeCopywritingModule2 from '@/static/home/home-copywriting-module-2.png'
-import homeCopywritingModule3 from '@/static/home/home-copywriting-module-3.png'
+const homeCopywritingModule1 = `${StaticPath}home/home-copywriting-module-1.png`
+const homeCopywritingModule2 = `${StaticPath}home/home-copywriting-module-2.png`
+const homeCopywritingModule3 = `${StaticPath}home/home-copywriting-module-3.png`
 
 const homeStore = useHomeStore()
 

@@ -77,8 +77,9 @@
 </template>
 
 <script setup>
-import hotContentFlameIcon from '@/static/home/icon-title-hot-flame.png'
-import hotRefreshIcon from '@/static/home/home-hot-refresh-icon.png'
+import { StaticPath } from '@/config'
+const hotContentFlameIcon = `${StaticPath}home/icon-title-hot-flame.png`
+const hotRefreshIcon = `${StaticPath}home/home-hot-refresh-icon.png`
 
 defineProps({
   list: {

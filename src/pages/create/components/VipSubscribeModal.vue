@@ -201,16 +201,17 @@
 </template>
 
 <script setup>
+import { StaticPath } from '@/config'
 /**
  * 事件：close | confirm({ plan, variant }) | aux-buy({ kind })
  */
 import { computed, ref, watch } from 'vue'
-import vipModalFullBg from '@/static/create/vip-modal-full-bg.png'
-import vipModalTitleImg from '@/static/create/vip-modal-title-youke-vip.png'
-import vipHighlight200PointsBg from '@/static/create/vip-highlight-200-points-bg.png'
-import vipHighlightPointsCoin from '@/static/create/vip-highlight-points-coin.png'
-import vipModalBodyTrayBg from '@/static/create/vip-modal-body-tray-bg.png'
-import iconChevronRightLight from '@/static/mine/icon-chevron-right-light.svg'
+const vipModalFullBg = `${StaticPath}create/vip-modal-full-bg.png`
+const vipModalTitleImg = `${StaticPath}create/vip-modal-title-youke-vip.png`
+const vipHighlight200PointsBg = `${StaticPath}create/vip-highlight-200-points-bg.png`
+const vipHighlightPointsCoin = `${StaticPath}create/vip-highlight-points-coin.png`
+const vipModalBodyTrayBg = `${StaticPath}create/vip-modal-body-tray-bg.png`
+const iconChevronRightLight = `${StaticPath}mine/icon-chevron-right-light.svg`
 
 const props = defineProps({
   show: { type: Boolean, default: false },
