@@ -286,16 +286,16 @@ function readSelectedLocationPayload() {
 
 // --- 从子页返回时读取地图选点 / 主营业务 ---
 onShow(() => {
-  const raw = readSelectedLocationPayload()
-  if (raw) {
-    locationPick.value = {
-      id: raw.id != null ? String(raw.id) : '',
-      name: raw.name != null ? String(raw.name) : '',
-      address: raw.address != null ? String(raw.address) : '',
-      distance: raw.distance != null ? String(raw.distance) : ''
-    }
-    uni.removeStorageSync('create:selected-location')
-  }
+  // const raw = readSelectedLocationPayload()
+  // if (raw) {
+  //   locationPick.value = {
+  //     id: raw.id != null ? String(raw.id) : '',
+  //     name: raw.name != null ? String(raw.name) : '',
+  //     address: raw.address != null ? String(raw.address) : '',
+  //     distance: raw.distance != null ? String(raw.distance) : ''
+  //   }
+  //   uni.removeStorageSync('create:selected-location')
+  // }
 
   const selectedBusiness = readSelectedBusinessPayload()
   if (selectedBusiness) {
@@ -354,9 +354,30 @@ function goToBusiness() {
 }
 
 function goToLocation() {
-  uni.navigateTo({
-    url: '/pages/create/location/index'
+  uni.chooseLocation({
+    success: (res) => {
+      console.log(res)
+      locationPick.value = {
+        name: res.name,
+        address: res.address
+      }
+      // if (raw) {
+  //   locationPick.value = {
+  //     id: raw.id != null ? String(raw.id) : '',
+  //     name: raw.name != null ? String(raw.name) : '',
+  //     address: raw.address != null ? String(raw.address) : '',
+  //     distance: raw.distance != null ? String(raw.distance) : ''
+  //   }
+  //   uni.removeStorageSync('create:selected-location')
+  // }
+    },
+    fail: (err) => {
+      console.log(err)
+    }
   })
+  // uni.navigateTo({
+  //   url: '/pages/create/location/index'
+  // })
 }
 
 function goToGenerate() {
@@ -473,16 +494,20 @@ function goToGenerate() {
 	font-size: 40rpx;
 	color: #1F2937;
 	font-family: OPPOSans-medium;
+  letter-spacing: 1rpx;
 }
 .intro-desc {
   display: block;
   margin-top: 6rpx;
   color: #6B7280;
   font-size: 28rpx;
+  letter-spacing: 1rpx;
+	font-family: OPPOSans-regular;
 }
 
 .form {
   background: #ffffff;
+	font-family: OPPOSans-regular;
 }
 
 .form-row {
@@ -498,6 +523,7 @@ function goToGenerate() {
   color: #1F2937;
   font-size: 28rpx;
   font-weight: 600;
+	font-family: OPPOSans-medium;
 }
 
 .required {

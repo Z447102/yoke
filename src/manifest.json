@@ -19,7 +19,12 @@
         "desc": "用于同城爆款评分等与位置相关的展示（用户点击获取定位时触发）"
       }
     },
-    "requiredPrivateInfos": ["getLocation"]
+    "requiredPrivateInfos": ["getLocation", "chooseLocation"],
+	  "mp-weixin": {
+      "requiredPrivateInfos" : [ 
+        "chooseLocation"
+      ]
+    }
   },
   "vueVersion": "3"
 }
