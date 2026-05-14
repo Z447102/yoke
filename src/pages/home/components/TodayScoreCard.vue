@@ -431,19 +431,17 @@ async function selectIndustry(val) {
 
 .score-card__metric-label {
   display: block;
-  margin-bottom: 6rpx;
-  color: #9d7651;
+  margin-bottom: 4rpx;
+  color: rgba(61, 45, 31, 0.7);
   font-size: 18rpx;
-  line-height: 1.2;
   text-align: center;
 }
 
 .score-card__metric-value {
   display: block;
-  color: #344055;
-  font-size: 28rpx;
+  color: #1F2937;
+  font-size: 32rpx;
   font-weight: 700;
-  line-height: 1.1;
   text-align: center;
 }
 

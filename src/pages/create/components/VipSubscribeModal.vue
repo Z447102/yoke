@@ -10,8 +10,8 @@
         aria-hidden="true"
       />
       <view class="vip-modal-header">
-        <view class="vip-modal-drag" aria-hidden="true" />
-        <view class="vip-modal-close" aria-label="关闭" @tap="emit('close')">
+        <view v-if="showDrag" class="vip-modal-drag" aria-hidden="true" />
+        <view v-if="showClose" class="vip-modal-close" aria-label="关闭" @tap="emit('close')">
           <text class="vip-modal-close__x">×</text>
         </view>
         <image
@@ -214,6 +214,10 @@ import iconChevronRightLight from '@/static/mine/icon-chevron-right-light.svg'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
+  /** 是否显示顶部拖拽条 */
+  showDrag: { type: Boolean, default: true },
+  /** 是否显示关闭按钮 */
+  showClose: { type: Boolean, default: true },
   /** 设计一：支持连续订阅；设计二：不支持连续且首购；设计三：不支持连续且非首购 */
   variant: {
     type: String,

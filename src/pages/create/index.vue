@@ -488,7 +488,7 @@ function goToLocation() {
       console.log(res)
       locationPick.value = {
         name: res.name,
-        address: res.address，
+        address: res.address,
         latitude: res.latitude,
         longitude: res.longitude
       }

@@ -486,7 +486,12 @@ function goCreate() {
 }
 
 function onVipTap() {
-  toastSoon('VIP 会员中心')
+  uni.navigateTo({
+    url: '/pages/home/mine/vip/index',
+    fail: () => {
+      uni.showToast({ title: '页面打开失败', icon: 'none' })
+    }
+  })
 }
 
 function onRechargeTap() {
