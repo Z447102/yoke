@@ -1,5 +1,6 @@
 <script>
 import { useUserStore } from '@/stores/user'
+import { StaticPath } from '@/config'
 
 /**
  * 应用根组件：全局样式入口（docs §4、§8）。
@@ -13,7 +14,7 @@ export default {
     console.log('onLaunch')
     uni.loadFontFace({
       family: 'OPPOSans',
-      source: 'url("https://www.jzdmedia.cn/OPPOSans-4.0.ttf")',
+      source: `url("${StaticPath}fonts/OPPOSans-4.0.ttf")`,
       success: () => {
         console.log('字体加载成功')
       },

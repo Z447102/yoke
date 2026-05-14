@@ -1,1 +1,1 @@
-export const StaticPath = "https://www.jzdmedia.cn/static/";
+export const StaticPath = "https://static.compoai.cn/static/";
