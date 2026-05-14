@@ -25,6 +25,7 @@ export const useHomeStore = defineStore('home', {
     loaded: false
   }),
   actions: {
+    /** 拉取首页工作台聚合数据（评分、爆款、数字人、工具等） */
     async fetchDashboard() {
       this.loading = true
       try {
@@ -40,10 +41,12 @@ export const useHomeStore = defineStore('home', {
         this.loading = false
       }
     },
+    /** 仅刷新爆款内容列表，保留当前筛选项 */
     async refreshHotContents() {
       const data = await getHotContents(this.scoreFilters)
       this.hotContents = data.list || []
     },
+    /** 更新评分卡筛选项（平台 / 行业） */
     setScoreFilter(key, value) {
       this.scoreFilters[key] = value
     }

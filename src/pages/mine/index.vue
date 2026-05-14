@@ -275,6 +275,9 @@ const pointsPromoBgStyle = {
   backgroundPosition: 'center'
 }
 
+/**
+ * 读取：readMenuButtonRect
+ */
 function readMenuButtonRect() {
   try {
     if (typeof wx !== 'undefined' && typeof wx.getMenuButtonBoundingClientRect === 'function') {
@@ -304,6 +307,9 @@ function navBarBottomPx(mb) {
   return Math.max(byBottom, byTop)
 }
 
+/**
+ * 同步：syncHeroLayout
+ */
 function syncHeroLayout() {
   let navPlaceholderPx = 0
   try {
@@ -343,6 +349,9 @@ function syncHeroLayout() {
   }
 }
 
+/**
+ * 调度/延后执行：scheduleHeroLayoutSync
+ */
 function scheduleHeroLayoutSync() {
   syncHeroLayout()
   nextTick(() => {
@@ -413,6 +422,9 @@ const worksCountByTab = ref({
 
 const worksList = ref([])
 
+/**
+ * 加载数据：loadMineWorks
+ */
 async function loadMineWorks() {
   try {
     const data = await getMinePageData(activeWorkTab.value)
@@ -434,10 +446,16 @@ const worksSummary = computed(() => {
   return `您已创作 ${n} 条${label}`
 })
 
+/**
+ * 函数：toastSoon
+ */
 function toastSoon(name) {
   uni.showToast({ title: `${name}（待接入）`, icon: 'none' })
 }
 
+/**
+ * 函数：goAccountSecurity
+ */
 function goAccountSecurity() {
   if (!userStore.isLogin) {
     uni.navigateTo({
@@ -451,6 +469,9 @@ function goAccountSecurity() {
   toastSoon('账号与安全')
 }
 
+/**
+ * 事件处理：onAccountTap
+ */
 function onAccountTap() {
   if (!userStore.isLogin) {
     goAccountSecurity()
@@ -459,14 +480,23 @@ function onAccountTap() {
   toastSoon('个人资料')
 }
 
+/**
+ * 事件处理：onMemberExchange
+ */
 function onMemberExchange() {
   toastSoon('会员兑换')
 }
 
+/**
+ * 事件处理：onPointsTap
+ */
 function onPointsTap() {
   uni.showToast({ title: `当前点数 ${pointsDisplay.value}`, icon: 'none' })
 }
 
+/**
+ * 函数：goBusiness
+ */
 function goBusiness() {
   uni.navigateTo({
     url: '/pages/create/business/index',
@@ -476,6 +506,9 @@ function goBusiness() {
   })
 }
 
+/**
+ * 函数：goCreate
+ */
 function goCreate() {
   uni.redirectTo({
     url: '/pages/create/index',
@@ -485,22 +518,37 @@ function goCreate() {
   })
 }
 
+/**
+ * 事件处理：onVipTap
+ */
 function onVipTap() {
   toastSoon('VIP 会员中心')
 }
 
+/**
+ * 事件处理：onRechargeTap
+ */
 function onRechargeTap() {
   toastSoon('点数充值')
 }
 
+/**
+ * 事件处理：onManageWorks
+ */
 function onManageWorks() {
   toastSoon('作品管理')
 }
 
+/**
+ * 事件处理：onWorkTap
+ */
 function onWorkTap(item) {
   uni.showToast({ title: `作品 ${item.id}`, icon: 'none' })
 }
 
+/**
+ * 处理：handleLogout
+ */
 function handleLogout() {
   if (!userStore.isLogin) {
     uni.showToast({ title: '当前未登录', icon: 'none' })

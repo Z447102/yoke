@@ -89,6 +89,9 @@ const fallbackHint = computed(() => {
   return '播放器地址待接口返回（videoUrl）；当前展示封面预览'
 })
 
+/**
+ * 返回上一页
+ */
 function goBack() {
   uni.navigateBack()
 }

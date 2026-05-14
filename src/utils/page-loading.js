@@ -5,6 +5,9 @@
 
 export const DEFAULT_LOADING_TITLE = '加载中...'
 
+/**
+ * 显隐：showPageLoading
+ */
 export function showPageLoading(title = DEFAULT_LOADING_TITLE) {
   try {
     uni.showLoading({ title: String(title), mask: true })
@@ -13,6 +16,9 @@ export function showPageLoading(title = DEFAULT_LOADING_TITLE) {
   }
 }
 
+/**
+ * 显隐：hidePageLoading
+ */
 export function hidePageLoading() {
   try {
     uni.hideLoading()

@@ -49,6 +49,9 @@ watch(
   }
 )
 
+/**
+ * 事件处理：onConfirm
+ */
 function onConfirm() {
   emit('confirm', { skipNextTime: skipNext.value })
 }

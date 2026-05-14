@@ -65,6 +65,9 @@ import { computed, ref, onMounted, nextTick } from 'vue'
 import { onReady } from '@dcloudio/uni-app'
 import { getCreateSafeAreaTopPx } from '@/utils/create-nav-padding'
 
+/**
+ * 构建数据：buildLocationOverlayStyles
+ */
 function buildLocationOverlayStyles() {
   const safeTopPx = getCreateSafeAreaTopPx()
   const rowH =
@@ -78,6 +81,9 @@ function buildLocationOverlayStyles() {
   }
 }
 
+/**
+ * 函数：refreshLocationOverlay
+ */
 function refreshLocationOverlay() {
   const s = buildLocationOverlayStyles()
   locationStatusRowStyle.value = s.statusRow
@@ -88,6 +94,9 @@ const _locationOverlayInit = buildLocationOverlayStyles()
 const locationStatusRowStyle = ref(_locationOverlayInit.statusRow)
 const locationMapActionsStyle = ref(_locationOverlayInit.mapActions)
 
+/**
+ * 调度/延后执行：scheduleLocationOverlayRefresh
+ */
 function scheduleLocationOverlayRefresh() {
   refreshLocationOverlay()
   nextTick(refreshLocationOverlay)
@@ -127,10 +136,16 @@ const filteredPois = computed(() => {
   return pois.filter((item) => item.name.includes(value))
 })
 
+/**
+ * 选择项：selectPoi
+ */
 function selectPoi(item) {
   selectedPoi.value = item
 }
 
+/**
+ * 确认操作：confirmLocation
+ */
 function confirmLocation() {
   if (!selectedPoi.value) {
     uni.showToast({
@@ -151,6 +166,9 @@ function confirmLocation() {
   }, 300)
 }
 
+/**
+ * 返回上一页
+ */
 function goBack() {
   uni.navigateBack()
 }

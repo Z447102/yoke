@@ -135,6 +135,9 @@ const ctaTextOpacity = ref(1)
 
 const displayedTools = computed(() => (props.tools || []).slice(0, 3))
 
+/**
+ * 函数：moduleIconAt
+ */
 function moduleIconAt(index) {
   const list = props.moduleIconSrcs || []
   return list[index] || ''

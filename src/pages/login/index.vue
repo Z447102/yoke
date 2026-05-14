@@ -165,6 +165,9 @@ onMounted(() => {
   heroInnerPaddingTopPx.value = base + extraPx
 })
 
+/**
+ * 切换状态：toggleAgree
+ */
 function toggleAgree() {
   agreedToTerms.value = !agreedToTerms.value
 }
@@ -186,6 +189,9 @@ onUnmounted(() => {
   }
 })
 
+/**
+ * 清空状态：clearSmsCooldownTimer
+ */
 function clearSmsCooldownTimer() {
   if (smsCooldownTimer != null) {
     clearInterval(smsCooldownTimer)
@@ -193,6 +199,9 @@ function clearSmsCooldownTimer() {
   }
 }
 
+/**
+ * 函数：startSmsCooldown
+ */
 function startSmsCooldown() {
   clearSmsCooldownTimer()
   smsCooldownSec.value = 60
@@ -205,6 +214,9 @@ function startSmsCooldown() {
   }, 1000)
 }
 
+/**
+ * 事件处理：onSendSmsCode
+ */
 async function onSendSmsCode() {
   if (loadingSmsSend.value || loadingSms.value) return
   if (smsCooldownSec.value > 0) return
@@ -228,6 +240,9 @@ async function onSendSmsCode() {
   }
 }
 
+/**
+ * 事件处理：onSmsHelpTap
+ */
 function onSmsHelpTap() {
   uni.showModal({
     title: '收不到验证码？',
@@ -238,6 +253,9 @@ function onSmsHelpTap() {
   })
 }
 
+/**
+ * 事件处理：onSmsLogin
+ */
 async function onSmsLogin() {
   if (!agreedToTerms.value) {
     uni.showToast({ title: '请先阅读并勾选同意协议', icon: 'none' })
@@ -262,14 +280,23 @@ async function onSmsLogin() {
   }
 }
 
+/**
+ * 打开界面/弹层：openUserAgreement
+ */
 function openUserAgreement() {
   uni.navigateTo({ url: '/pages/legal/user-agreement' })
 }
 
+/**
+ * 打开界面/弹层：openPrivacy
+ */
 function openPrivacy() {
   uni.navigateTo({ url: '/pages/legal/privacy' })
 }
 
+/**
+ * 尝试流程：tryNavigateAfterLogin
+ */
 function tryNavigateAfterLogin() {
   const url = redirect.value
   if (url && url.startsWith('/')) {

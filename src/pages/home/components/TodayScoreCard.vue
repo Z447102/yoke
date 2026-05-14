@@ -178,6 +178,9 @@ const tipDisplay = computed(
     '小提示：紧跟视频，客户会越来越多'
 )
 
+/**
+ * 事件处理：onRequestLocation
+ */
 function onRequestLocation() {
   uni.getLocation({
     type: 'gcj02',
@@ -194,14 +197,23 @@ function onRequestLocation() {
   })
 }
 
+/**
+ * 切换状态：toggleDropdown
+ */
 function toggleDropdown(which) {
   openDropdown.value = openDropdown.value === which ? null : which
 }
 
+/**
+ * 关闭界面/弹层：closeDropdown
+ */
 function closeDropdown() {
   openDropdown.value = null
 }
 
+/**
+ * 选择项：selectPlatform
+ */
 async function selectPlatform(val) {
   if (val === props.filters.platform) {
     closeDropdown()
@@ -212,6 +224,9 @@ async function selectPlatform(val) {
   await homeStore.fetchDashboard()
 }
 
+/**
+ * 选择项：selectIndustry
+ */
 async function selectIndustry(val) {
   if (val === props.filters.industry) {
     closeDropdown()
