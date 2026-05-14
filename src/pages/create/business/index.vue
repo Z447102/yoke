@@ -43,6 +43,84 @@
       </view>
     </view>
 
+    <view
+      v-if="showCategorySection && showDimensionSection"
+      class="dimension-section"
+    >
+      <view v-if="dimensionLoading" class="dimension-loading">
+        <text>加载多维度标签…</text>
+      </view>
+      <view v-else-if="dimensionLoadError" class="dimension-error">
+        <text>{{ dimensionLoadError }}</text>
+      </view>
+      <template v-else>
+        <view v-if="dimensionSectionTitle" class="dimension-head">
+          <text>{{ dimensionSectionTitle }}</text>
+        </view>
+        <view
+          v-for="(g, gi) in dimensionGroups"
+          :key="dimensionGroupKey(g, gi)"
+          class="dimension-group"
+        >
+          <view class="category-title dimension-group__title">
+            <text>{{ g.categoryName }}</text>
+          </view>
+          <view class="tag-list">
+            <view
+              v-for="opt in g.options"
+              :key="opt.id"
+              class="category-tag"
+              :class="{ active: isDimTagSelected(gi, opt.id) }"
+              @tap="toggleDimTag(gi, opt.id)"
+            >
+              <text>+ {{ opt.name }}</text>
+            </view>
+          </view>
+        </view>
+      </template>
+    </view>
+
+    <view
+      v-if="showCategorySection && showCustomSection"
+      class="custom-section"
+    >
+      <view class="category-title custom-section__title">
+        <text>自定义</text>
+      </view>
+      <view class="tag-list">
+        <view
+          v-for="(c, ci) in customScenes"
+          :key="c.key"
+          class="category-tag active custom-chip"
+        >
+          <text class="custom-chip__text">{{ c.sceneText }}</text>
+          <view
+            v-if="customDeleteMode"
+            class="custom-chip__remove"
+            @tap.stop="removeCustomScene(ci)"
+          >
+            <text class="custom-chip__minus">−</text>
+          </view>
+        </view>
+        <view
+          v-if="customScenes.length >= 1"
+          class="category-tag custom-add-btn"
+          :class="{ active: customDeleteMode }"
+          @tap.stop="toggleCustomDeleteMode"
+        >
+          <text>− 删除</text>
+        </view>
+        <view
+          v-if="customScenes.length < CUSTOM_SCENE_MAX"
+          class="category-tag custom-add-btn"
+          :class="{ active: showCustomTagSheet }"
+          @tap="openAddCustomScene"
+        >
+          <text>+ 添加</text>
+        </view>
+      </view>
+    </view>
+
     <view class="bottom-action">
       <button
         class="confirm-btn"
@@ -79,6 +157,37 @@
         <button class="industry-sheet__confirm" @tap="confirmIndustryPicker">确定</button>
       </view>
     </view>
+
+    <view
+      v-if="showCustomTagSheet"
+      class="custom-tag-sheet-mask"
+      @touchmove.stop.prevent="noop"
+      @tap="closeCustomTagSheet"
+    >
+      <view class="custom-tag-sheet" @tap.stop>
+        <view class="custom-tag-sheet__head">
+          <text class="custom-tag-sheet__cancel" @tap="closeCustomTagSheet">取消</text>
+          <text class="custom-tag-sheet__title-text">自定义标签</text>
+          <text class="custom-tag-sheet__create" @tap="confirmCustomTagSheet">创建</text>
+        </view>
+        <view class="custom-tag-sheet__field">
+          <input
+            class="custom-tag-sheet__input"
+            type="text"
+            :value="customTagDraft"
+            :focus="customTagInputFocus"
+            :maxlength="CUSTOM_TAG_INPUT_MAX"
+            placeholder="请输入标签"
+            placeholder-class="custom-tag-sheet__ph"
+            confirm-type="done"
+            adjust-position
+            @input="onCustomTagDraftInput"
+            @confirm="confirmCustomTagSheet"
+          />
+          <text class="custom-tag-sheet__counter">{{ customTagDraft.length }}/{{ CUSTOM_TAG_INPUT_MAX }}字</text>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -87,10 +196,18 @@ import { StaticPath } from '@/config'
 /**
  * 【一键成片 · 主营业务选择】按接口 levels 动态渲染；选完回写 storage 并返回上页。
  */
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
 import { getBusinessCategories } from '@/api/create'
-import { listSecondTags, mapTagRowsToLeafCategoryNodes } from '@/api/metadata'
+import {
+  listSecondTags,
+  mapTagRowsToLeafCategoryNodes,
+  listIndustryDimensions,
+  listDimensionOptionGroups,
+  normalizeIndustryDimensionOptionGroups,
+  buildDimensionSelectionsForFullGroupsFromOptionGroups,
+  dimensionGroupKey
+} from '@/api/metadata'
 import { CREATE_INDUSTRY_OPTIONS } from '@/constants/create'
 import { isApiEnabled } from '@/utils/request'
 import {
@@ -104,6 +221,17 @@ import {
 const createBackIcon = `${StaticPath}create/create-back-icon.png`
 const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
 const createIconAttention = `${StaticPath}create/create-icon-attention.png`
+
+/** 与 create/index `collectCustomSceneTextsFromPayload` 上限一致 */
+const CUSTOM_SCENE_MAX = 50
+/** 单次自定义标签字数（与产品设计一致） */
+const CUSTOM_TAG_INPUT_MAX = 10
+
+/** 一键成片商户页再次进入主营业务子页时，用于回显上次「确定」前的完整选择（与 create/index 写入一致） */
+const BUSINESS_RESTORE_STORAGE_KEY = 'create:business-restore'
+
+/** 成片页「编辑」跳转前写入，本页 intent=edit 时用于类目/维度/自定义回显 */
+const STORAGE_EDIT_MAIN_BUSINESS_DETAIL = 'create:edit-main-business-detail'
 
 const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
@@ -123,10 +251,53 @@ const selectedPath = ref([])
 const resolvedIndustryId = ref(null)
 /** 为 true：一级无 children，点选一级后 GET …/second-tags 再挂二级 */
 const useSecondTagsEndpoint = ref(false)
+/** second-tags 接口返回的二级品类区块标题（替代写死的「2级品类」） */
+const secondLevelCategoryTitle = ref('')
 /** 一级拉二级期间，避免 children 未返回时误判为「无二级」 */
 const coreTagsLoadingRootId = ref('')
 const showIndustryPopup = ref(false)
 const tempIndustry = ref('')
+
+/** 多维度：GET …/dimensions 渲染全量；GET …/dimension-option-groups 仅默认选中 */
+const dimensionLoading = ref(false)
+const dimensionLoadError = ref('')
+const dimensionSectionTitle = ref('')
+/** @type {import('vue').Ref<Array<{ categoryId: string, categoryName: string, sort: number, options: Array<{ id: string, name: string }> }>>} */
+const dimensionGroups = ref([])
+/** 维度分组多选：key 为 dimensionGroupKey，值为 tagId[] */
+const dimensionSelections = ref(/** @type {Record<string, string[]>} */ ({}))
+
+/** 自定义场景文案（写入 create:selected-business.customScenes） */
+const customScenes = ref(/** @type {Array<{ key: string, sceneText: string }>} */ ([]))
+
+/** 自定义标签 ≥1 时显示「− 删除」；点按进入/退出删除模式，标签上出现 − 可删单条 */
+const customDeleteMode = ref(false)
+
+/** 底部「自定义标签」输入层 */
+const showCustomTagSheet = ref(false)
+const customTagDraft = ref('')
+const customTagInputFocus = ref(false)
+
+function noop() {}
+function isBusinessCategoryLeafSelected() {
+  if (coreTagsLoadingRootId.value) return false
+  const p = selectedPath.value
+  if (!Array.isArray(p) || !p.length) return false
+  const last = p[p.length - 1]
+  if (!last || typeof last !== 'object') return false
+  const ch = last.children
+  return !ch || ch.length === 0
+}
+
+const showDimensionSection = computed(
+  () =>
+    dimensionLoading.value ||
+    Boolean(dimensionLoadError.value) ||
+    dimensionGroups.value.length > 0
+)
+
+/** 与「确定」可点条件一致：叶子品类选定后展示自定义区（贴底在维度区之下） */
+const showCustomSection = computed(() => isBusinessCategoryLeafSelected())
 
 /** 展示 URL/当前选中的行业（一键成片初始页已选行业会随 query 带入）；无值时兜底「选择行业」 */
 const industryRowLabel = computed(() => {
@@ -145,7 +316,12 @@ const visibleLevels = computed(() => {
 
   while (options && options.length) {
     levels.push({
-      title: levelIndex === 0 ? '核心品类' : `${levelIndex + 1}级品类`,
+      title:
+        levelIndex === 0
+          ? '核心品类'
+          : levelIndex === 1 && useSecondTagsEndpoint.value
+            ? secondLevelCategoryTitle.value.trim() || `${levelIndex + 1}级品类`
+            : `${levelIndex + 1}级品类`,
       options
     })
 
@@ -161,20 +337,507 @@ const visibleLevels = computed(() => {
   return levels
 })
 
-const canConfirm = computed(() => {
-  if (coreTagsLoadingRootId.value) return false
-  if (!selectedPath.value.length) return false
-  const lastSelected = selectedPath.value[selectedPath.value.length - 1]
-  return Boolean(lastSelected && !lastSelected.children?.length)
-})
+const canConfirm = computed(() => isBusinessCategoryLeafSelected())
+
+watch(
+  () => customScenes.value.length,
+  (len) => {
+    if (len < 1) customDeleteMode.value = false
+  }
+)
+
+function clearDimensionState() {
+  dimensionLoading.value = false
+  dimensionLoadError.value = ''
+  dimensionSectionTitle.value = ''
+  dimensionGroups.value = []
+  dimensionSelections.value = {}
+}
+
+/**
+ * @returns {Record<string, unknown> | null}
+ */
+function readBusinessRestorePayload() {
+  let raw = uni.getStorageSync(BUSINESS_RESTORE_STORAGE_KEY)
+  if (raw == null || raw === '') return null
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      return null
+    }
+  }
+  if (!raw || typeof raw !== 'object') return null
+  if (!Array.isArray(raw.path) || raw.path.length === 0) return null
+  return /** @type {Record<string, unknown>} */ (raw)
+}
+
+function clearBusinessRestoreStorage() {
+  try {
+    uni.removeStorageSync(BUSINESS_RESTORE_STORAGE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 当前 id 是否为类目树根节点（一级核心品类）。second-tags 接口仅允许传此类 id。
+ * @param {unknown} tagId
+ */
+function isIndustryRootCoreTagId(tagId) {
+  const id = String(tagId ?? '').trim()
+  if (!id) return false
+  return categoryTree.value.some((r) => String(r.id) === id)
+}
+
+/**
+ * 在 second-tags 拆流下，用叶子 id 反查其所属一级根，返回 [根, 叶子] 两段 path。
+ * @param {string} leafId
+ * @param {string} leafNameFallback
+ * @returns {Promise<Array<{ id: string, name: string }> | null>}
+ */
+async function expandLeafToSecondTagsRootPath(leafId, leafNameFallback) {
+  const lid = String(leafId ?? '').trim()
+  if (!lid || !useSecondTagsEndpoint.value || !isApiEnabled()) return null
+  for (const root of categoryTree.value) {
+    const rid = String(root.id ?? '').trim()
+    if (!rid) continue
+    await ensureSecondTagsForNode(rid, { silent: true })
+    const refreshed = categoryTree.value.find((r) => String(r.id) === rid)
+    const children = refreshed?.children || []
+    const leaf = children.find((c) => String(c.id) === lid)
+    if (leaf) {
+      return [
+        { id: String(root.id), name: String(root.name ?? '').trim() || rid },
+        {
+          id: String(leaf.id),
+          name: String(leaf.name ?? '').trim() || leafNameFallback || lid
+        }
+      ]
+    }
+  }
+  return null
+}
+
+/**
+ * 避免用叶子 id 调 core-tags/{id}/second-tags：首段非根时按叶子展开为 [根, 叶子]。
+ * @param {Array<{ id?: unknown, name?: unknown }>} pathNodes
+ * @returns {Promise<Array<{ id?: unknown, name?: unknown }>>}
+ */
+async function normalizePathNodesForSecondTagsFlow(pathNodes) {
+  if (
+    !useSecondTagsEndpoint.value ||
+    !isApiEnabled() ||
+    !Array.isArray(pathNodes) ||
+    !pathNodes.length ||
+    !categoryTree.value.length
+  ) {
+    return pathNodes
+  }
+  const firstId = String(pathNodes[0]?.id ?? '').trim()
+  if (firstId && isIndustryRootCoreTagId(firstId)) {
+    return pathNodes
+  }
+  const leafId =
+    pathNodes.length === 1
+      ? String(pathNodes[0]?.id ?? '').trim()
+      : String(pathNodes[pathNodes.length - 1]?.id ?? '').trim()
+  const leafName =
+    pathNodes.length === 1
+      ? String(pathNodes[0]?.name ?? '').trim()
+      : String(pathNodes[pathNodes.length - 1]?.name ?? '').trim()
+  if (!leafId) return pathNodes
+  const expanded = await expandLeafToSecondTagsRootPath(leafId, leafName)
+  return expanded && expanded.length ? expanded : pathNodes
+}
+
+/**
+ * 按 path 各级的 id 在 categoryTree 上还原 selectedPath（含 second-tags 补拉）。
+ * @param {Array<{ id?: unknown, name?: unknown }>} pathNodes
+ * @returns {Promise<boolean>}
+ */
+async function applyPathFromRestore(pathNodes) {
+  if (!Array.isArray(pathNodes) || !pathNodes.length) return false
+  const nodes = await normalizePathNodesForSecondTagsFlow(pathNodes)
+  const built = []
+  let options = categoryTree.value
+  for (let level = 0; level < nodes.length; level += 1) {
+    const wantId = String(nodes[level]?.id ?? '').trim()
+    if (!wantId) return false
+    let node = (options || []).find((n) => String(n.id) === wantId)
+    if (
+      !node &&
+      level === 0 &&
+      useSecondTagsEndpoint.value &&
+      resolvedIndustryId.value != null &&
+      isApiEnabled()
+    ) {
+      await ensureSecondTagsForNode(wantId, { silent: true })
+      options = categoryTree.value
+      node = (options || []).find((n) => String(n.id) === wantId)
+    }
+    if (!node) return false
+    built.push(node)
+
+    if (level < nodes.length - 1) {
+      let children = node.children
+      if (
+        (!children || !children.length) &&
+        level === 0 &&
+        useSecondTagsEndpoint.value &&
+        resolvedIndustryId.value != null &&
+        isApiEnabled()
+      ) {
+        await ensureSecondTagsForNode(node.id, { silent: true })
+        const refreshed = categoryTree.value.find((r) => String(r.id) === String(node.id))
+        if (refreshed) {
+          built[level] = refreshed
+          node = refreshed
+        }
+        children = node.children
+      }
+      if (!children || !children.length) return false
+      options = children
+    }
+  }
+  selectedPath.value = built
+  return true
+}
+
+/**
+ * 在 syncIndustryDimensionsForPath 之后，用缓存 payload 覆盖维度多选与自定义标签。
+ * @param {Record<string, unknown>} restore
+ */
+function applyDimensionAndCustomFromRestore(restore) {
+  const picks = Array.isArray(restore.dimensionPicks) ? restore.dimensionPicks : []
+  const nextSel = { ...dimensionSelections.value }
+  dimensionGroups.value.forEach((g, gi) => {
+    const key = dimensionGroupKey(g, gi)
+    const allowed = new Set((g.options || []).map((o) => String(o.id)))
+    let match = picks[gi]
+    if (
+      !match ||
+      typeof match !== 'object' ||
+      String(match.categoryId ?? '') !== String(g.categoryId ?? '')
+    ) {
+      match = picks.find(
+        (p) =>
+          p &&
+          typeof p === 'object' &&
+          String(p.categoryId ?? '').trim() === String(g.categoryId ?? '').trim()
+      )
+    }
+    if (!match || typeof match !== 'object') return
+    const ids = Array.isArray(match.selectedTagIds) ? match.selectedTagIds : []
+    const filtered = ids
+      .map((x) => String(x ?? '').trim())
+      .filter((id) => id && allowed.has(id))
+    if (filtered.length) nextSel[key] = filtered
+  })
+  dimensionSelections.value = nextSel
+
+  const cs = Array.isArray(restore.customScenes) ? restore.customScenes : []
+  const rows = []
+  for (let i = 0; i < cs.length; i += 1) {
+    const row = cs[i]
+    if (!row || typeof row !== 'object') continue
+    const sceneText = String(row.sceneText ?? '').trim()
+    if (!sceneText) continue
+    const k =
+      row.key != null && String(row.key).trim()
+        ? String(row.key).trim()
+        : `c_${Date.now()}_${i}`
+    rows.push({ key: k, sceneText })
+    if (rows.length >= CUSTOM_SCENE_MAX) break
+  }
+  customScenes.value = rows
+}
+
+/**
+ * 解包接口 data
+ * @param {unknown} raw
+ * @returns {Record<string, unknown>}
+ */
+function unwrapApiRecord(raw) {
+  if (raw && typeof raw === 'object' && raw.data != null && typeof raw.data === 'object') {
+    return /** @type {Record<string, unknown>} */ (raw.data)
+  }
+  return /** @type {Record<string, unknown>} */ (raw && typeof raw === 'object' ? raw : {})
+}
+
+/**
+ * GET 单条主营业务详情 → 与 create:selected-business 相近结构，供路径/维度/自定义回显。
+ * @param {Record<string, unknown>} rawDetail
+ * @returns {Record<string, unknown> | null}
+ */
+function buildRestorePayloadFromMainBusinessDetail(rawDetail) {
+  const d = unwrapApiRecord(rawDetail)
+  if (!d || typeof d !== 'object') return null
+  const industry = String(d.industryName ?? d.industry ?? '').trim()
+  const industryId = String(d.industryId ?? '').trim()
+  const path = []
+  const rawPath = d.industryTagPath ?? d.tagPath ?? d.categoryPath ?? d.pathNodes
+  if (Array.isArray(rawPath)) {
+    for (const n of rawPath) {
+      if (!n || typeof n !== 'object') continue
+      const id = String(n.id ?? n.tagId ?? '').trim()
+      const name = String(
+        n.name ?? n.tagName ?? n.label ?? n.industryTagName ?? ''
+      ).trim()
+      if (id || name) path.push({ id: id || name, name: name || id })
+    }
+  }
+  if (!path.length) {
+    const firstId = String(
+      d.firstIndustryTagId ??
+        d.coreIndustryTagId ??
+        d.rootIndustryTagId ??
+        d.parentIndustryTagId ??
+        ''
+    ).trim()
+    const firstName = String(
+      d.firstIndustryTagName ??
+        d.coreIndustryTagName ??
+        d.rootIndustryTagName ??
+        d.parentIndustryTagName ??
+        ''
+    ).trim()
+    const tid = String(d.industryTagId ?? d.tagId ?? '').trim()
+    const tname = String(d.industryTagName ?? d.tagName ?? '').trim()
+    if (firstId && tid && firstId !== tid) {
+      path.push(
+        { id: firstId, name: firstName || firstId },
+        { id: tid, name: tname || tid }
+      )
+    } else if (tid || tname) {
+      path.push({ id: tid || tname, name: tname || tid })
+    }
+  }
+  const leafId =
+    String(d.industryTagId ?? d.tagId ?? '').trim() ||
+    String(path[path.length - 1]?.id ?? '').trim()
+
+  let dimensionPicks = []
+  if (Array.isArray(d.dimensionPicks)) {
+    dimensionPicks = d.dimensionPicks
+      .filter((x) => x && typeof x === 'object')
+      .map((x) => ({ ...x }))
+  }
+
+  const customScenes = []
+  const ct = d.customSceneTexts ?? d.customSceneTextList
+  if (Array.isArray(ct)) {
+    ct.forEach((item, i) => {
+      if (typeof item === 'string') {
+        const sceneText = item.trim()
+        if (sceneText) customScenes.push({ key: `db_${Date.now()}_${i}`, sceneText })
+      } else if (item && typeof item === 'object') {
+        const sceneText = String(item.sceneText ?? item.text ?? '').trim()
+        if (sceneText) {
+          customScenes.push({
+            key: String(item.key ?? `db_${i}_${Date.now()}`),
+            sceneText
+          })
+        }
+      }
+    })
+  }
+
+  if (!path.length && !leafId) return null
+  return {
+    industry,
+    industryId,
+    path,
+    industryTagIdForDimensions: leafId,
+    dimensionPicks,
+    customScenes
+  }
+}
+
+/**
+ * 成片编辑入口：读详情缓存并回显类目路径、维度、自定义标签。
+ */
+async function applyEditMainBusinessDetailFromStorage() {
+  let raw = null
+  try {
+    raw = uni.getStorageSync(STORAGE_EDIT_MAIN_BUSINESS_DETAIL)
+  } catch (_) {
+    return
+  }
+  if (raw == null || raw === '') return
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      return
+    }
+  }
+  const payload = buildRestorePayloadFromMainBusinessDetail(
+    /** @type {Record<string, unknown>} */ (raw)
+  )
+  if (!payload || !Array.isArray(payload.path) || !payload.path.length) return
+  const ok = await applyPathFromRestore(
+    /** @type {Array<{ id?: unknown, name?: unknown }>} */ (payload.path)
+  )
+  if (!ok) return
+  await syncIndustryDimensionsForPath()
+  applyDimensionAndCustomFromRestore(payload)
+  try {
+    uni.removeStorageSync(STORAGE_EDIT_MAIN_BUSINESS_DETAIL)
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+async function syncIndustryDimensionsForPath() {
+  dimensionLoadError.value = ''
+  if (
+    !isApiEnabled() ||
+    resolvedIndustryId.value == null ||
+    !isBusinessCategoryLeafSelected()
+  ) {
+    clearDimensionState()
+    return
+  }
+  const leafId = String(pickLeafIndustryTagIdForSubmit() || '').trim()
+  if (!leafId) {
+    clearDimensionState()
+    return
+  }
+  dimensionLoading.value = true
+  try {
+    const dimRaw = await listIndustryDimensions(resolvedIndustryId.value)
+    const { dimensionTitle, groups } =
+      normalizeIndustryDimensionOptionGroups(dimRaw)
+    dimensionSectionTitle.value = dimensionTitle
+    dimensionGroups.value = groups
+
+    let selections = {}
+    try {
+      const ogRaw = await listDimensionOptionGroups(
+        resolvedIndustryId.value,
+        leafId
+      )
+      selections = buildDimensionSelectionsForFullGroupsFromOptionGroups(
+        groups,
+        ogRaw
+      )
+    } catch (ogErr) {
+      console.warn('[Yoke] dimension-option-groups 失败，仅展示全量维度无默认选中', ogErr)
+    }
+    dimensionSelections.value = { ...selections }
+  } catch (e) {
+    const msg = e?.message ? String(e.message) : '多维度标签加载失败'
+    dimensionLoadError.value = msg
+    dimensionSectionTitle.value = ''
+    dimensionGroups.value = []
+    dimensionSelections.value = {}
+    uni.showToast({ title: msg, icon: 'none' })
+  } finally {
+    dimensionLoading.value = false
+  }
+}
+
+/**
+ * @param {number} groupIndex
+ * @param {string} tagId
+ */
+function isDimTagSelected(groupIndex, tagId) {
+  const g = dimensionGroups.value[groupIndex]
+  if (!g) return false
+  const key = dimensionGroupKey(g, groupIndex)
+  const tid = String(tagId ?? '').trim()
+  return (dimensionSelections.value[key] || []).includes(tid)
+}
+
+/**
+ * @param {number} groupIndex
+ * @param {string} tagId
+ */
+function toggleDimTag(groupIndex, tagId) {
+  const g = dimensionGroups.value[groupIndex]
+  if (!g) return
+  const key = dimensionGroupKey(g, groupIndex)
+  const tid = String(tagId ?? '').trim()
+  if (!tid) return
+  const prev = dimensionSelections.value[key] || []
+  const has = prev.includes(tid)
+  const next = has ? prev.filter((x) => x !== tid) : [...prev, tid]
+  dimensionSelections.value = { ...dimensionSelections.value, [key]: next }
+}
+
+function removeCustomScene(index) {
+  customScenes.value = customScenes.value.filter((_, i) => i !== index)
+}
+
+function toggleCustomDeleteMode() {
+  if (customScenes.value.length < 1) {
+    customDeleteMode.value = false
+    return
+  }
+  customDeleteMode.value = !customDeleteMode.value
+}
+
+function closeCustomTagSheet() {
+  customTagInputFocus.value = false
+  showCustomTagSheet.value = false
+  customTagDraft.value = ''
+}
+
+function onCustomTagDraftInput(e) {
+  const v = String(e?.detail?.value ?? '').slice(0, CUSTOM_TAG_INPUT_MAX)
+  customTagDraft.value = v
+}
+
+function openAddCustomScene() {
+  if (customScenes.value.length >= CUSTOM_SCENE_MAX) {
+    uni.showToast({ title: `最多添加${CUSTOM_SCENE_MAX}条`, icon: 'none' })
+    return
+  }
+  customDeleteMode.value = false
+  customTagDraft.value = ''
+  customTagInputFocus.value = false
+  showCustomTagSheet.value = true
+  nextTick(() => {
+    customTagInputFocus.value = true
+    setTimeout(() => {
+      if (showCustomTagSheet.value) {
+        customTagInputFocus.value = true
+      }
+    }, 150)
+  })
+}
+
+function confirmCustomTagSheet() {
+  const t = String(customTagDraft.value || '').trim()
+  if (!t) {
+    uni.showToast({ title: '请输入标签', icon: 'none' })
+    return
+  }
+  if (customScenes.value.length >= CUSTOM_SCENE_MAX) {
+    uni.showToast({ title: `最多添加${CUSTOM_SCENE_MAX}条`, icon: 'none' })
+    closeCustomTagSheet()
+    return
+  }
+  if (customScenes.value.some((x) => x.sceneText === t)) {
+    uni.showToast({ title: '已存在相同标签', icon: 'none' })
+    return
+  }
+  customScenes.value = [
+    ...customScenes.value,
+    { key: `c_${Date.now()}`, sceneText: t.slice(0, CUSTOM_TAG_INPUT_MAX) }
+  ]
+  closeCustomTagSheet()
+}
 
 onLoad((query = {}) => {
   const rawIntent = typeof query.intent === 'string' ? query.intent : ''
   pageIntent.value = rawIntent.toLowerCase() === 'edit' ? 'edit' : 'add'
 
+  const from = String(query.from || '').toLowerCase()
   freshAddFromGenerate.value =
     pageIntent.value === 'add' &&
-    String(query.from || '').toLowerCase() === 'generate-add'
+    (from === 'generate-add' || from === 'mine-add')
 
   if (freshAddFromGenerate.value) {
     industry.value = ''
@@ -182,7 +845,12 @@ onLoad((query = {}) => {
     selectedPath.value = []
     resolvedIndustryId.value = null
     useSecondTagsEndpoint.value = false
+    secondLevelCategoryTitle.value = ''
     coreTagsLoadingRootId.value = ''
+    clearDimensionState()
+    customScenes.value = []
+    customDeleteMode.value = false
+    closeCustomTagSheet()
     return
   }
 
@@ -194,6 +862,8 @@ onLoad((query = {}) => {
 })
 
 function goBack() {
+  closeCustomTagSheet()
+  customDeleteMode.value = false
   uni.navigateBack()
 }
 
@@ -204,12 +874,31 @@ async function fetchCategoryTree() {
     selectedPath.value = []
     resolvedIndustryId.value = null
     useSecondTagsEndpoint.value = false
+    secondLevelCategoryTitle.value = ''
     coreTagsLoadingRootId.value = ''
+    clearDimensionState()
+    customScenes.value = []
+    customDeleteMode.value = false
+    closeCustomTagSheet()
     return
   }
 
   showPageLoading()
   try {
+    const restorePayload = readBusinessRestorePayload()
+    const restoreMatch =
+      !!restorePayload &&
+      pageIntent.value === 'add' &&
+      !freshAddFromGenerate.value &&
+      String(restorePayload.industry ?? '').trim() === key
+
+    if (restorePayload && !restoreMatch) {
+      clearBusinessRestoreStorage()
+    }
+
+    clearDimensionState()
+    customScenes.value = []
+    closeCustomTagSheet()
     const data = await getBusinessCategories(key)
     categoryTree.value = data.levels || []
     resolvedIndustryId.value =
@@ -217,16 +906,44 @@ async function fetchCategoryTree() {
         ? data.industryId
         : null
     useSecondTagsEndpoint.value = Boolean(data.useSecondTagsEndpoint)
+    secondLevelCategoryTitle.value = ''
     selectedPath.value = []
     coreTagsLoadingRootId.value = ''
+
+    let restoredPathOk = false
+    if (
+      restoreMatch &&
+      restorePayload &&
+      Array.isArray(restorePayload.path) &&
+      restorePayload.path.length
+    ) {
+      restoredPathOk = await applyPathFromRestore(
+        /** @type {Array<{ id?: unknown, name?: unknown }>} */ (restorePayload.path)
+      )
+      if (!restoredPathOk) {
+        uni.showToast({ title: '主营路径已变更，请重新选择', icon: 'none' })
+      }
+    }
 
     /** 仅「一键成片初始页」等带行业的 add：默认选第一条到叶子；生成页新增主营业务不做默认勾选 */
     const useAddDefaults =
       pageIntent.value === 'add' &&
       !freshAddFromGenerate.value &&
-      !useSecondTagsEndpoint.value
+      !useSecondTagsEndpoint.value &&
+      !restoredPathOk
+
     if (useAddDefaults) {
       applyFirstBranchLeafPath(categoryTree.value)
+    }
+    await syncIndustryDimensionsForPath()
+    if (restoreMatch && restorePayload && restoredPathOk) {
+      applyDimensionAndCustomFromRestore(restorePayload)
+    }
+    if (restorePayload) {
+      clearBusinessRestoreStorage()
+    }
+    if (pageIntent.value === 'edit') {
+      await applyEditMainBusinessDetailFromStorage()
     }
   } finally {
     hidePageLoading()
@@ -248,6 +965,7 @@ function applyFirstBranchLeafPath(nodes) {
 }
 
 function openIndustryPicker() {
+  closeCustomTagSheet()
   const cur = String(industry.value || '').trim()
   tempIndustry.value =
     cur && CREATE_INDUSTRY_OPTIONS.includes(cur)
@@ -281,14 +999,19 @@ async function ensureSecondTagsForNode(rootTagId, opts = {}) {
   }
   const id = String(rootTagId ?? '').trim()
   if (!id) return
+  const roots = categoryTree.value
+  if (!roots.some((r) => String(r.id) === id)) {
+    return
+  }
   if (!silent) {
     showPageLoading()
   }
   try {
-    const rows = await listSecondTags(resolvedIndustryId.value, id)
+    const { title, rows } = await listSecondTags(resolvedIndustryId.value, id)
+    const t = String(title ?? '').trim()
+    if (t) secondLevelCategoryTitle.value = t
     const children = mapTagRowsToLeafCategoryNodes(rows)
-    const roots = categoryTree.value
-    const idx = roots.findIndex((r) => r.id === id)
+    const idx = roots.findIndex((r) => String(r.id) === id)
     if (idx >= 0) {
       const prev = roots[idx]
       roots[idx] = {
@@ -298,10 +1021,12 @@ async function ensureSecondTagsForNode(rootTagId, opts = {}) {
       categoryTree.value = [...roots]
     }
   } catch (e) {
-    uni.showToast({
-      title: e?.message ? String(e.message) : '二级品类加载失败',
-      icon: 'none'
-    })
+    if (!silent) {
+      uni.showToast({
+        title: e?.message ? String(e.message) : '二级品类加载失败',
+        icon: 'none'
+      })
+    }
   } finally {
     if (!silent) {
       hidePageLoading()
@@ -323,7 +1048,13 @@ function pickLeafIndustryTagIdForSubmit() {
 }
 
 async function selectCategory(levelIndex, category) {
+  closeCustomTagSheet()
+  customDeleteMode.value = false
+  customScenes.value = []
   coreTagsLoadingRootId.value = ''
+  if (levelIndex === 0) {
+    secondLevelCategoryTitle.value = ''
+  }
   selectedPath.value = selectedPath.value.slice(0, levelIndex)
   selectedPath.value[levelIndex] = category
 
@@ -344,9 +1075,12 @@ async function selectCategory(levelIndex, category) {
       selectedPath.value[0] = updated
     }
   }
+  await syncIndustryDimensionsForPath()
 }
 
 function confirmSelection() {
+  closeCustomTagSheet()
+  customDeleteMode.value = false
   if (!String(industry.value || '').trim()) {
     uni.showToast({ title: '请先选择行业', icon: 'none' })
     return
@@ -375,7 +1109,26 @@ function confirmSelection() {
       id: item.id,
       name: item.name
     })),
-    industryTagIdForDimensions: leafTagId
+    industryTagIdForDimensions: leafTagId,
+    dimensionPicks: dimensionGroups.value.map((g, gi) => {
+      const key = dimensionGroupKey(g, gi)
+      const ids = [...(dimensionSelections.value[key] || [])]
+      const options = Array.isArray(g.options) ? g.options : []
+      return {
+        categoryId: g.categoryId,
+        categoryName: g.categoryName,
+        selectedTagIds: ids,
+        selectedTags: ids.map((tid) => {
+          const t = String(tid ?? '').trim()
+          const opt = options.find((o) => String(o.id) === t)
+          return {
+            id: t,
+            name: opt ? String(opt.name ?? '').trim() : ''
+          }
+        })
+      }
+    }),
+    customScenes: customScenes.value.map(({ key, sceneText }) => ({ key, sceneText }))
   })
   uni.showToast({
     title: '已选择主营业务',
@@ -471,6 +1224,83 @@ function confirmSelection() {
 
 .level-block + .level-block {
   margin-top: 32rpx;
+}
+
+.dimension-section {
+  padding: 0 20rpx 48rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.dimension-head {
+  padding-top: 28rpx;
+  color: #1f2933;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.dimension-group {
+  margin-top: 28rpx;
+}
+
+.dimension-loading,
+.dimension-error {
+  padding: 28rpx 0;
+  font-size: 26rpx;
+  color: #6b7280;
+}
+
+.dimension-error {
+  color: #ef4444;
+}
+
+.custom-section {
+  padding: 0 20rpx 48rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.custom-section__title {
+  padding-top: 28rpx;
+}
+
+.custom-chip {
+  position: relative;
+  padding-right: 12rpx;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.custom-chip__text {
+  max-width: 420rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-chip__remove {
+  position: absolute;
+  top: -10rpx;
+  right: -10rpx;
+  z-index: 2;
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50%;
+  background: #b8bcc4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-chip__minus {
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.custom-add-btn {
+  border-color: #e1e3e8;
+  background: #ffffff;
+  color: #9da5b2;
 }
 
 .category-title {
@@ -642,5 +1472,96 @@ function confirmSelection() {
 
 .industry-sheet__confirm::after {
   border: 0;
+}
+
+.custom-tag-sheet-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  box-sizing: border-box;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  background: rgba(0, 0, 0, 0.54);
+  display: flex;
+  align-items: flex-end;
+}
+
+.custom-tag-sheet {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 0 calc(28rpx + constant(safe-area-inset-bottom));
+  padding: 0 0 calc(28rpx + env(safe-area-inset-bottom));
+  border-radius: 28rpx 28rpx 0 0;
+  background: #ffffff;
+}
+
+.custom-tag-sheet__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 30rpx 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.custom-tag-sheet__cancel {
+  flex: 0 0 auto;
+  min-width: 80rpx;
+  font-size: 28rpx;
+  font-family: OPPOSans-regular, sans-serif;
+  color: #101010;
+}
+
+.custom-tag-sheet__title-text {
+  flex: 1;
+  text-align: center;
+  font-size: 28rpx;
+  font-family: OPPOSans-medium, sans-serif;
+  color: #101010;
+}
+
+.custom-tag-sheet__create {
+  flex: 0 0 auto;
+  min-width: 80rpx;
+  text-align: right;
+  font-size: 28rpx;
+  font-family: OPPOSans-regular, sans-serif;
+  color: #ffa554;
+}
+
+.custom-tag-sheet__field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  box-sizing: border-box;
+  width: 710rpx;
+  height: 68rpx;
+  margin: 32rpx auto 0;
+  padding: 0 20rpx;
+  border: 2rpx solid rgba(252, 240, 240, 1);
+  border-radius: 14rpx;
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.custom-tag-sheet__input {
+  flex: 1;
+  min-width: 0;
+  height: 68rpx;
+  line-height: 68rpx;
+  font-size: 28rpx;
+  font-family: PingFangSC-Regular, 'PingFang SC', sans-serif;
+  color: rgba(16, 16, 16, 1);
+  background: transparent;
+}
+
+.custom-tag-sheet__ph {
+  color: #9ca3af;
+}
+
+.custom-tag-sheet__counter {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  color: #9ca3af;
 }
 </style>

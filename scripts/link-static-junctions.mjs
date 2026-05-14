@@ -37,3 +37,15 @@ for (const name of segments) {
   }
   console.log(`[link-static] ${name} -> ${targetAbs}`)
 }
+
+/** 小程序构建不会带上 `src/assets/fonts`，@font-face 需走 `static/fonts` 才能进 dist */
+const fontSrc = path.join(root, 'src', 'assets', 'fonts', 'OPPOSans-4.0.ttf')
+const fontDestDir = path.join(srcStatic, 'fonts')
+const fontDest = path.join(fontDestDir, 'OPPOSans-4.0.ttf')
+if (fs.existsSync(fontSrc)) {
+  fs.mkdirSync(fontDestDir, { recursive: true })
+  fs.copyFileSync(fontSrc, fontDest)
+  console.log(`[link-static] font -> ${fontDest}`)
+} else {
+  console.warn(`[link-static] skip font: missing ${fontSrc}`)
+}

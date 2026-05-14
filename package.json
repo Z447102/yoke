@@ -8,6 +8,8 @@
     "dev:mp-weixin": "uni -p mp-weixin",
     "build:mp-weixin": "uni build -p mp-weixin",
     "verify:fonts": "node scripts/verify-fonts.mjs",
+    "verify:mp-static": "node scripts/verify-mp-assets-paths.mjs && node scripts/scan-mp-wxss-urls.mjs",
+    "test:login-flow": "vitest run src/api/auth.login-flow.test.js",
     "dev:h5": "uni",
     "build:h5": "uni build"
   },
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@dcloudio/vite-plugin-uni": "3.0.0-alpha-5000820260430001",
     "sass": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "vitest": "^3.0.5"
   }
 }

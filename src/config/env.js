@@ -1,7 +1,7 @@
 /**
  * 运行环境（Vite：根目录 .env / .env.development / .env.production 中 VITE_* 变量）
  *
- * 后端接口契约以部署环境的 OpenAPI 为准（示例：`/v3/api-docs`，如团队网关 http://47.107.171.124/v3/api-docs）。
+ * 后端接口契约以部署环境的 OpenAPI 为准（示例：`/v3/api-docs`，如 https://baseapi.compoai.cn/v3/api-docs）。
  */
 
 /**

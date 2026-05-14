@@ -1,4 +1,5 @@
 node_modules/
+.npm-cache/
 dist/
 .DS_Store
 npm-debug.log*
@@ -13,3 +14,6 @@ src/static/mine
 src/static/create
 src/static/login
 src/static/splash
+
+# postinstall 从 `src/assets/fonts` 拷贝的字体（勿提交副本）
+src/static/fonts/OPPOSans-4.0.ttf

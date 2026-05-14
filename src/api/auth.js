@@ -31,7 +31,7 @@
  *
  * 其它认证：`POST /api/auth/send-code`、`POST /api/auth/login`；登出 `POST /api/auth/logout`。
  */
-import { isApiEnabled, post } from '@/utils/request'
+import { isApiEnabled, post, request } from '@/utils/request'
 import {
   getAuthWechatSilentPath,
   getAuthWechatMobileLoginPath
@@ -306,12 +306,18 @@ function normalizeMobileLoginPayload(raw) {
 
 /**
  * 真实网络：微信 code → session（请求体字段名为 `loginCode`）。
+ * 使用 `request({ method: 'POST' })` 显式 POST，避免运行环境或调用方误传 `method` 导致走 GET。
  * @param {{ code: string }} param0 `uni.login` 得到的 code
  * @returns {Promise<object>}
  */
 async function silentLoginRequest({ code }) {
   const path = getAuthWechatSilentPath()
-  const raw = await post(path, { loginCode: code }, { auth: false })
+  const raw = await request({
+    url: path,
+    method: 'POST',
+    data: { loginCode: String(code ?? '') },
+    auth: false
+  })
   return normalizeSessionPayload(raw)
 }
 
@@ -340,7 +346,12 @@ async function mobileLoginRequest({ phoneCode, wxSessionUuid }) {
     err.code = 'NO_WX_SESSION'
     throw err
   }
-  const raw = await post(path, { uuid, phoneCode }, { auth: false })
+  const raw = await request({
+    url: path,
+    method: 'POST',
+    data: { uuid, phoneCode },
+    auth: false
+  })
   return normalizeMobileLoginPayload(raw)
 }
 

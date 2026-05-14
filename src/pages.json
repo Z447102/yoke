@@ -35,6 +35,14 @@
           }
         },
         {
+          "path": "home/mine/main-business/index",
+          "style": {
+            "navigationBarTitleText": "主营业务",
+            "navigationStyle": "custom",
+            "backgroundColor": "#ffffff"
+          }
+        },
+        {
           "path": "home/mine/vip/index",
           "style": {
             "navigationBarTitleText": "会员中心",
