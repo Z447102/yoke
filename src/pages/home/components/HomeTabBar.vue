@@ -7,7 +7,7 @@
         mode="aspectFit"
       />
     </view>
-    <view class="tab-main" @tap="goTo('/pages/create/index')">
+    <view class="tab-main" @tap="navigateTo('/pages/create/index')">
       <image class="tab-main-img" :src="tabCenter" mode="aspectFill" />
     </view>
     <view class="tab-item" @tap="goTo('/pages/home/mine/index')">
@@ -72,6 +72,10 @@ function goTo(url) {
   }
 
   uni.redirectTo({ url })
+}
+
+function navigateTo(url) {
+  uni.navigateTo({ url })
 }
 </script>
 
