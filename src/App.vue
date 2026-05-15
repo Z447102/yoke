@@ -11,6 +11,9 @@ export default {
   onLaunch() {
     const userStore = useUserStore()
     userStore.hydrateFromStorage()
+    if (userStore.token) {
+      userStore.refreshProfileFromApi().catch(() => {})
+    }
     console.log('onLaunch')
     uni.loadFontFace({
       family: 'OPPOSans',

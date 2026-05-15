@@ -267,12 +267,14 @@
     <!-- 底部：画质摘要 + 生成（消耗点数见 generateCostPoints） -->
     <view class="bottom-action">
       <view class="quality-select" @tap="openQualityPopup">
-        <text class="quality-main">{{ currentResolution.label }}</text>
-        <text class="quality-sub">{{ currentModel.label }}</text>
+        <view class="quality-select__text">
+          <text class="quality-main">{{ currentResolution.label }}</text>
+          <text class="quality-sub">{{ currentModel.label }}</text>
+        </view>
         <image
           class="quality-arrow-icon"
-          :src="createIconArrowDown"
-          mode="aspectFill"
+          :src="qualitySelectArrowDown"
+          mode="aspectFit"
         />
       </view>
       <button class="generate-btn" @tap="generateVideo">
@@ -512,7 +514,9 @@ import { isApiEnabled } from '@/utils/request'
 import {
   CREATE_MODEL_OPTIONS,
   CREATE_RESOLUTION_OPTIONS,
-  computeVideoGenerateCostPoints
+  computeVideoGenerateCostPoints,
+  isResolutionSupportedByModel,
+  pickDefaultResolutionForModel
 } from '@/constants/create'
 import {
   CREATE_SELECTED_PLATFORM_STORAGE_KEY,
@@ -529,6 +533,7 @@ import {
   splitTextBySensitiveWords,
   textContainsSensitive
 } from '@/utils/script-sensitive-words'
+import qualitySelectArrowDown from '../static/create-quality-select-arrow-down.png'
 const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
 const createIconViewFilm = `${StaticPath}create/create-icon-view-film.png`
 const createIconTemplateCheck = `${StaticPath}create/create-icon-template-check.png`
@@ -802,12 +807,12 @@ function assertScriptReadyForGenerate() {
 // --- 用户态：点数用于「生成视频」前校验 ---
 const userStore = useUserStore()
 
-// --- 成片参数：分辨率 / 模型（与常量表一致，二者独立） ---
+// --- 成片参数：分辨率 / 模型（与常量表一致，分辨率随模型联动） ---
 const resolutionOptions = CREATE_RESOLUTION_OPTIONS
 const modelOptions = CREATE_MODEL_OPTIONS
 
 const selectedResolution = ref('720p')
-const selectedModel = ref('seedance2')
+const selectedModel = ref('vidu')
 const showQualityPopup = ref(false)
 
 const selectedTemplateMeta = computed(() => {
@@ -2200,16 +2205,20 @@ function selectResolution(id) {
   selectedResolution.value = id
 }
 
-/** 选择分辨率：直接切换选中项；点数在「生成视频」时再校验 */
+/** 选择分辨率：不支持当前模型时不切换 */
 function onPickResolution(item) {
+  if (!isResolutionSupportedByModel(selectedModel.value, item.id)) return
   selectResolution(item.id)
 }
 
 /**
- * 选择项：selectModel
+ * 选择项：selectModel（切换后若当前分辨率不可用则回落推荐档）
  */
 function selectModel(id) {
   selectedModel.value = id
+  if (!isResolutionSupportedByModel(id, selectedResolution.value)) {
+    selectedResolution.value = pickDefaultResolutionForModel(id)
+  }
 }
 
 /**
@@ -3200,34 +3209,50 @@ function generateVideo() {
 .quality-select {
   width: 234rpx;
   height: 88rpx;
-  padding: 0 48rpx 0 40rpx;
+  padding: 0 20rpx 0 28rpx;
   border-radius: 999rpx;
   background: #d7d9de;
-  color: #526070;
-  flex-wrap: wrap;
   position: relative;
   box-sizing: border-box;
   flex-shrink: 0;
+  justify-content: space-between;
+}
+
+.quality-select__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .quality-main {
   width: 100%;
-  font-size: 30rpx;
-  font-weight: 800;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1f2937;
+  font-family: OPPOSans-bold, OPPOSans, -apple-system, sans-serif;
 }
 
 .quality-sub {
-  margin-top: -12rpx;
+  width: 100%;
+  margin-top: 4rpx;
+  text-align: center;
   font-size: 16rpx;
+  font-weight: 400;
+  line-height: 1.2;
+  color: #6b7280;
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
 }
 
 .quality-arrow-icon {
-  position: absolute;
-  right: 20rpx;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 28rpx;
-  height: 28rpx;
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+  display: block;
 }
 
 .generate-btn {

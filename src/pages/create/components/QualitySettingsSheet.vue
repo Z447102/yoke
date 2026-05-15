@@ -1,41 +1,10 @@
 <template>
-  <!-- 【一键成片】画质与模型底部弹窗：布局对齐设计稿（分辨率三卡 + 模型三卡 + 时长 + 生成 + 声明） -->
+  <!-- 【一键成片】画质与模型底部弹窗：模型在上、分辨率在下（与模型联动） -->
   <view v-if="show" class="qss-mask" @tap="emit('close')">
     <view class="quality-popup" @tap.stop>
       <view class="popup-handle"></view>
 
-      <view class="quality-section-title">选择视频分辨率</view>
-      <view class="resolution-row">
-        <view
-          v-for="item in resolutionOptions"
-          :key="item.id"
-          class="resolution-card"
-          :class="{
-            active: selectedResolution === item.id,
-            'resolution-card--vip': item.vip
-          }"
-          @tap="emit('resolution-tap', item)"
-        >
-          <view v-if="item.vip" class="resolution-vip" aria-hidden="true">
-            <image
-              class="resolution-vip__bg"
-              :src="createVipBadgeBg"
-              mode="aspectFill"
-            />
-            <image
-              class="resolution-vip__label"
-              :src="createVipBadgeLabel"
-              mode="aspectFit"
-            />
-          </view>
-          <view class="resolution-card__body">
-            <text class="resolution-label">{{ item.label }}</text>
-            <text class="resolution-hint">{{ item.hint }}</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="quality-section-title quality-section-title--spaced">选择模型</view>
+      <view class="quality-section-title">选择模型</view>
       <view class="model-row">
         <view
           v-for="item in modelOptions"
@@ -60,8 +29,73 @@
             />
           </view>
           <view class="model-card__body">
-            <text class="model-label">{{ item.label }}</text>
-            <text class="model-hint">{{ item.hint }}</text>
+            <view class="model-card__main">
+              <view class="model-card__brand-row">
+                <image
+                  class="model-card__icon"
+                  :src="modelIconSrc(item.id)"
+                  mode="aspectFit"
+                />
+                <text class="model-brand">{{ item.label }}</text>
+              </view>
+              <view
+                v-if="isModelRecommendedForResolution(item.id, selectedResolution)"
+                class="model-recommend"
+                aria-hidden="true"
+              >
+                <view class="model-recommend__tag">
+                  <image
+                    class="model-recommend__tag-img"
+                    :src="modelRecommendTagImg"
+                    mode="aspectFit"
+                  />
+                </view>
+                <text class="model-recommend__best">最适合</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="quality-section-title quality-section-title--spaced">选择分辨率</view>
+      <view class="resolution-row">
+        <view
+          v-for="item in resolutionOptions"
+          :key="item.id"
+          class="resolution-card"
+          :class="{
+            active:
+              selectedResolution === item.id &&
+              isResolutionSupportedByModel(selectedModel, item.id),
+            'resolution-card--vip': item.vip,
+            'resolution-card--disabled': !isResolutionSupportedByModel(
+              selectedModel,
+              item.id
+            )
+          }"
+          @tap="onResolutionTap(item)"
+        >
+          <view
+            v-if="item.vip"
+            class="resolution-vip"
+            aria-hidden="true"
+          >
+            <image
+              class="resolution-vip__bg"
+              :src="createVipBadgeBg"
+              mode="aspectFill"
+            />
+            <image
+              class="resolution-vip__label"
+              :src="createVipBadgeLabel"
+              mode="aspectFit"
+            />
+          </view>
+          <view class="resolution-card__body">
+            <text class="resolution-label">{{ item.label }}</text>
+            <text class="resolution-hint">{{
+              getResolutionHintForModel(selectedModel, item)
+            }}</text>
           </view>
         </view>
       </view>
@@ -94,6 +128,16 @@
 
 <script setup>
 import { StaticPath } from '@/config'
+import {
+  getResolutionHintForModel,
+  isModelRecommendedForResolution,
+  isResolutionSupportedByModel
+} from '@/constants/create'
+import modelIconVidu from '../static/create-model-icon-vidu.png'
+import modelIconPixverse from '../static/create-model-icon-pixverse.png'
+import modelIconSeedance from '../static/create-model-icon-seedance.png'
+import modelRecommendTagImg from '../static/create-model-recommend-tag.png'
+
 /**
  * 事件：close | resolution-tap(item) | model-tap(id) | generate
  */
@@ -101,19 +145,41 @@ const createVipBadgeBg = `${StaticPath}create/create-vip-badge-bg.png`
 const createVipBadgeLabel = `${StaticPath}create/create-vip-badge-label.png`
 const createIconStack = `${StaticPath}create/create-icon-stack.png`
 const createIconAttention = `${StaticPath}create/create-icon-attention.png`
+/** 模型图标走分包本地资源（CDN 未上传前也可用） */
+const modelIconById = {
+  vidu: modelIconVidu,
+  pixverse: modelIconPixverse,
+  seedance: modelIconSeedance
+}
 
-defineProps({
+/**
+ * @param {string} id
+ * @returns {string}
+ */
+function modelIconSrc(id) {
+  return modelIconById[id] || ''
+}
+
+const props = defineProps({
   show: { type: Boolean, default: false },
   costPoints: { type: Number, default: 20 },
   resolutionOptions: { type: Array, default: () => [] },
   modelOptions: { type: Array, default: () => [] },
   selectedResolution: { type: String, default: '720p' },
-  selectedModel: { type: String, default: 'seedance2' },
+  selectedModel: { type: String, default: 'vidu' },
   /** 设计稿「该视频时长为 N秒」；后续可接模板/接口 */
   videoDurationSec: { type: Number, default: 30 }
 })
 
 const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
+
+/**
+ * @param {{ id: string }} item
+ */
+function onResolutionTap(item) {
+  if (!isResolutionSupportedByModel(props.selectedModel, item.id)) return
+  emit('resolution-tap', item)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -169,8 +235,7 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   align-items: stretch;
 }
 
-.resolution-card,
-.model-card {
+.resolution-card {
   position: relative;
   flex: 0 0 224rpx;
   width: 224rpx;
@@ -180,15 +245,121 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   overflow: hidden;
 }
 
-.resolution-card {
-  border-radius: 16rpx;
-  background-color: rgba(253, 238, 219, 1);
-  color: #4d5560;
+.model-card {
+  position: relative;
+  flex: 0 0 224rpx;
+  width: 224rpx;
+  height: 150rpx;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 24rpx;
+  background-color: rgba(244, 244, 244, 1);
+  border: 1rpx solid rgba(238, 240, 243, 1);
 }
 
-/* 文案区铺满卡片并在内边距盒内水平垂直居中；VIP 卡通过加大上/右侧内边距避开角标后再居中 */
-.resolution-card__body,
+.model-card.active {
+  border: none;
+  background: linear-gradient(
+    156.23deg,
+    rgba(147, 170, 199, 1) 12.77%,
+    rgba(13, 23, 37, 1) 85.54%
+  );
+}
+
+.model-recommend {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  margin-top: 8rpx;
+}
+
+.model-recommend__tag {
+  flex-shrink: 0;
+  width: 52rpx;
+  height: 28rpx;
+  border-radius: 8rpx;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 197, 129, 1) 0%,
+    rgba(255, 148, 50, 1) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.model-recommend__tag-img {
+  width: 32rpx;
+  height: 16rpx;
+  display: block;
+}
+
+.model-recommend__best {
+  font-size: 20rpx;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+  line-height: 1.3;
+}
+
 .model-card__body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  padding: 12rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.model-card__main {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.model-card__brand-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.model-card__icon {
+  flex-shrink: 0;
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 8rpx;
+  display: block;
+}
+
+.model-brand {
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  color: #1f2937;
+  font-family: OPPOSans-bold, OPPOSans, -apple-system, sans-serif;
+}
+
+.model-card.active .model-brand {
+  color: #ffffff;
+}
+
+.resolution-card__body {
   position: absolute;
   left: 0;
   top: 0;
@@ -203,9 +374,10 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   z-index: 1;
 }
 
-.resolution-card--vip .resolution-card__body,
-.model-card--vip .model-card__body {
-  // padding: 40rpx 80rpx 12rpx 14rpx;
+.resolution-card {
+  border-radius: 16rpx;
+  background-color: rgba(253, 238, 219, 1);
+  color: #4d5560;
 }
 
 .resolution-card.active {
@@ -221,7 +393,17 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   color: rgba(255, 255, 255, 0.92);
 }
 
-/* 底图 + 「VIP」字图；贴卡片右上角，与 --vip 内边距配合不压文案 */
+.resolution-card--disabled {
+  opacity: 0.55;
+  background-color: #f3f4f6;
+  color: #9ca3af;
+}
+
+.resolution-card--disabled .resolution-hint {
+  color: #9ca3af;
+  font-size: 18rpx;
+}
+
 .resolution-vip,
 .model-vip {
   position: absolute;
@@ -230,7 +412,6 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
   right: 0;
   width: 72rpx;
   height: 34rpx;
-  // border-radius: 999rpx;
   box-sizing: border-box;
   overflow: hidden;
   display: flex;
@@ -268,44 +449,6 @@ const emit = defineEmits(['close', 'resolution-tap', 'model-tap', 'generate'])
 }
 
 .resolution-hint {
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 6rpx;
-  font-size: 20rpx;
-  color: #7a8490;
-  text-align: center;
-}
-
-.model-card {
-  border-radius: 16rpx;
-  background-color: rgba(244, 244, 244, 1);
-  color: #4d5560;
-}
-
-.model-card.active {
-  background: linear-gradient(
-    156.23deg,
-    rgba(210, 214, 223, 1) 8.94%,
-    rgba(68, 87, 115, 1) 85.54%
-  );
-  color: #ffffff;
-}
-
-.model-card.active .model-hint {
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.model-label {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  font-size: 24rpx;
-  font-weight: 700;
-  line-height: 1.3;
-  text-align: center;
-}
-
-.model-hint {
   width: 100%;
   box-sizing: border-box;
   margin-top: 6rpx;

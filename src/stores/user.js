@@ -5,11 +5,14 @@
  * - 资产：points；登录态与本地缓存同步
  */
 import { defineStore } from 'pinia'
+import { getCurrentUserInfo } from '@/api/user'
 import {
   readPersistedAuth,
   writePersistedAuth,
   clearPersistedAuth
 } from '@/utils/auth'
+import { isApiEnabled } from '@/utils/request'
+import { mapUserMeToProfile } from '@/utils/user-profile'
 
 /**
  * 将当前 store 中需持久化的字段写入 Storage。
@@ -142,6 +145,19 @@ export const useUserStore = defineStore('user', {
           : {}
       this.profile = { ...base, ...patch }
       persistSlice(this)
+    },
+
+    /**
+     * 拉取 GET /api/user/me 并合并到 profile（有 token 且已配置基址时）。
+     * @returns {Promise<Record<string, unknown> | null>}
+     */
+    async refreshProfileFromApi() {
+      if (!String(this.token || '').trim()) return null
+      if (!isApiEnabled()) return null
+      const data = await getCurrentUserInfo()
+      const profile = mapUserMeToProfile(data)
+      this.mergeProfile(profile)
+      return profile
     }
   }
 })
