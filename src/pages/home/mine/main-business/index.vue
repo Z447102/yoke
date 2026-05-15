@@ -1,12 +1,11 @@
 <template>
   <view class="mb-page">
-    <view class="mb-nav" :style="navBarStyle">
-      <view class="mb-nav__left" @tap="goBack">
-        <image class="mb-nav__back" :src="createBackIcon" mode="aspectFit" />
-        <text class="mb-nav__title">主营业务</text>
-      </view>
-      <view class="mb-nav__gap" aria-hidden="true" />
-    </view>
+    <CreateNavBar
+      title="主营业务"
+      variant="solid"
+      :icon-title-gap="12"
+      @back="goBack"
+    />
 
     <view class="mb-body">
       <view v-if="loading" class="mb-loading">
@@ -148,7 +147,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { isApiEnabled } from '@/utils/request'
@@ -158,15 +157,12 @@ import {
   deleteMemberMainBusiness
 } from '@/api/create'
 import { listIndustries } from '@/api/metadata'
-import createBackIcon from '@/static/create/create-back-icon.png'
-import createIconBusinessEdit from '@/static/create/create-icon-business-edit.png'
-import createIconBusinessEditChevron from '@/static/create/create-icon-business-edit-chevron.png'
-import emptyIllustration from '../../../mine/static/mine-main-business-empty.png'
-import deleteMainBusinessInfoIcon from '../../../create/static/delete-main-business-info-icon.png'
-import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
+import { StaticPath } from '@/config'
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
+const createIconBusinessEdit = `${StaticPath}create/create-icon-business-edit.png`
+const createIconBusinessEditChevron = `${StaticPath}create/create-icon-business-edit-chevron.png`
+const emptyIllustration = `${StaticPath}mine/mine-main-business-empty.png`
+const deleteMainBusinessInfoIcon = `${StaticPath}create/delete-main-business-info-icon.png`
 
 /** 与一键成片生成页编辑回显一致 */
 const STORAGE_EDIT_MAIN_BUSINESS_DETAIL = 'create:edit-main-business-detail'
@@ -174,7 +170,6 @@ const STORAGE_EDIT_MAIN_BUSINESS_DETAIL = 'create:edit-main-business-detail'
 const PRIMARY_BUSINESS_ID = 'primary'
 
 const userStore = useUserStore()
-const navBarStyle = ref(getCreateNavBarInlineStyle())
 const loading = ref(true)
 /**
  * @typedef {{ inner: string, dots: boolean }} MainBusinessParenBlock
@@ -469,12 +464,7 @@ async function confirmDeleteMainBusiness() {
   }
 }
 
-onMounted(() => {
-  scheduleCreateNavBarStyleRefresh(navBarStyle)
-})
-
 onShow(() => {
-  scheduleCreateNavBarStyleRefresh(navBarStyle)
   loadList()
 })
 </script>
@@ -488,42 +478,6 @@ onShow(() => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-}
-
-.mb-nav {
-  display: flex;
-  align-items: center;
-  padding-right: calc(18rpx + constant(safe-area-inset-right));
-  padding-right: calc(18rpx + env(safe-area-inset-right));
-  padding-left: calc(18rpx + constant(safe-area-inset-left));
-  padding-left: calc(18rpx + env(safe-area-inset-left));
-  padding-bottom: 16rpx;
-}
-
-.mb-nav__left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-}
-
-.mb-nav__back {
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 12rpx;
-  flex-shrink: 0;
-}
-
-.mb-nav__title {
-  font-size: 30rpx;
-  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
-  color: #1f2933;
-}
-
-.mb-nav__gap {
-  width: 174rpx;
-  height: 32rpx;
-  flex-shrink: 0;
 }
 
 .mb-body {

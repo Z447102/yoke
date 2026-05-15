@@ -277,11 +277,11 @@ defineProps({
 }
 
 .video-action--image-to-video {
-  background-image: url("https://www.jzdmedia.cn/static/home/home-video-action-image-to-video-bg.png");
+  background-image: url("https://static.compoai.cn/static/home/home-video-action-image-to-video-bg.png");
 }
 
 .video-action--video-edit {
-  background-image: url("https://www.jzdmedia.cn/static/home/home-video-action-video-edit-bg.png");
+  background-image: url("https://static.compoai.cn/static/home/home-video-action-video-edit-bg.png");
 }
 
 .video-action__title {
@@ -337,7 +337,7 @@ defineProps({
   width: 38rpx;
   height: 28rpx;
   flex-shrink: 0;
-  background-image: url("https://www.jzdmedia.cn/static/home/home-video-action-line-icon.png");
+  background-image: url("https://static.compoai.cn/static/home/home-video-action-line-icon.png");
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
