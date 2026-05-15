@@ -4,13 +4,12 @@
     class="works-page"
     :class="{ 'works-page--delbar': showDelBar }"
   >
-    <view class="nav-bar" :style="createNavBarStyle">
-      <view class="nav-left" @tap="goBack">
-        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text class="nav-left__title">查看成片</text>
-      </view>
-      <view class="nav-bar__gap" />
-    </view>
+    <CreateNavBar
+      title="查看成片"
+      title-class="nav-left__title"
+      :icon-title-gap="12"
+      @back="goBack"
+    />
 
     <!-- 有列表：图二 / 图三 -->
     <scroll-view
@@ -389,19 +388,15 @@
 </template>
 
 <script setup>
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
 import { StaticPath } from '@/config'
 import { computed, onMounted, ref } from 'vue'
-import { onLoad, onReady } from '@dcloudio/uni-app'
-import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
+import { onLoad } from '@dcloudio/uni-app'
 import {
   deleteFinishedVideos,
   getFinishedVideoList
 } from '@/api/finished-videos'
 import { CREATE_SELECTED_PLATFORM_STORAGE_KEY } from '@/constants/create-selected-platform'
-const createBackIcon = `${StaticPath}create/create-back-icon.png`
 const flowerIcon = `${StaticPath}create/works-icon-flower.png`
 const worksEmptyListIcon = `${StaticPath}create/works-empty-list-icon.png`
 const worksPublishIcon = `${StaticPath}create/works-btn-publish-icon.png`
@@ -416,8 +411,6 @@ const worksFailedRetryIcon = `${StaticPath}create/works-failed-retry.png`
 const worksFailedReasonIcon = `${StaticPath}create/works-failed-reason.png`
 const worksFailDialogHeroIcon = `${StaticPath}create/works-fail-dialog-hero.png`
 const worksFailDialogCheckIcon = `${StaticPath}create/works-fail-dialog-check.png`
-
-const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 
 /** 默认空列表；URL 加 `?mock=1` 可加载本地 Mock 数据（图二/图三） */
 const useMockList = ref(false)
@@ -491,10 +484,8 @@ onLoad((query) => {
 })
 
 onMounted(() => {
-  scheduleCreateNavBarStyleRefresh(createNavBarStyle)
   loadFirstPage()
 })
-onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
 /**
  * 返回上一页
@@ -798,48 +789,6 @@ function openDetail(item) {
 .works-page--delbar {
   padding-bottom: calc(120rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
-}
-
-.nav-bar {
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
-  padding-right: calc(18rpx + constant(safe-area-inset-right));
-  padding-right: calc(18rpx + env(safe-area-inset-right));
-  padding-left: calc(18rpx + constant(safe-area-inset-left));
-  padding-left: calc(18rpx + env(safe-area-inset-left));
-  padding-bottom: 16rpx;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.nav-left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  color: #1f2933;
-  font-size: 30rpx;
-}
-
-.nav-left__title {
-  font-family: OPPOSans-medium, OPPOSans, -apple-system, sans-serif;
-  font-weight: 500;
-}
-
-.back-icon {
-  flex-shrink: 0;
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 12rpx;
-  display: block;
-}
-
-.nav-bar__gap {
-  flex-shrink: 0;
-  width: 174rpx;
-  height: 32rpx;
 }
 
 /* —— 首屏加载 —— */

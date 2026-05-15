@@ -259,7 +259,7 @@ defineEmits(['create'])
   font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
   text-align: center;
   line-height: 58rpx;
-  background-image: url("https://www.jzdmedia.cn/static/home/home-digital-tag-bg.png");
+  background-image: url("https://static.compoai.cn/static/home/home-digital-tag-bg.png");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;

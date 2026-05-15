@@ -156,9 +156,8 @@ const arrowIcon = `${StaticPath}home/icon-score-select-arrow.png`
 const scoreFlameIcon = `${StaticPath}home/icon-title-hot-flame.png`
 const homeScoreTipEmoji = `${StaticPath}home/home-score-tip-emoji.png`
 
-/** 小程序端用根路径静态资源，避免组件内 import 在部分真机/分包下 src 异常 */
-const HOME_LOC_PIN_SRC = '/static/home/home-loc-pin.png'
-const HOME_LOC_CHEVRON_SRC = '/static/home/home-loc-chevron.png'
+const HOME_LOC_PIN_SRC = `${StaticPath}home/home-loc-pin.png`
+const HOME_LOC_CHEVRON_SRC = `${StaticPath}home/home-loc-chevron.png`
 
 const props = defineProps({
   summary: {

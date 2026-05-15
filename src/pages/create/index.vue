@@ -1,15 +1,7 @@
 <template>
   <!-- 一键成片 · 商户信息表单页：行业 → 主营业务 → 店铺与位置 → 下一步进入生成配置 -->
   <view class="create-page">
-    <!-- 顶部导航 -->
-    <view class="nav-bar" :style="createNavBarStyle">
-      <view class="nav-left" @tap="goBack">
-        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text class="back-text">一键成片</text>
-      </view>
-      <!-- 避让微信原生右上角菜单区，非模拟胶囊 -->
-      <view class="nav-bar__gap" aria-hidden="true" />
-    </view>
+    <CreateNavBar title="一键成片" title-class="back-text" @back="goBack" />
 
     <!-- 引导文案 -->
     <view class="intro">
@@ -153,18 +145,14 @@
 </template>
 
 <script setup>
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
 import { StaticPath } from '@/config'
 /**
  * 【一键成片 · 商户信息】pages/create/index.vue
  * 收集行业与店铺信息，跳转 generate；地图/主营业务回传见 onShow + storage。
  */
-import { ref, onMounted, watch, computed } from 'vue'
-import { onShow, onReady } from '@dcloudio/uni-app'
-import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
-const createBackIcon = `${StaticPath}create/create-back-icon.png`
+import { ref, watch, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 const createIconWaveHand = `${StaticPath}create/create-icon-wave-hand.png`
 const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
 const createIconMapPin = `${StaticPath}create/create-icon-map-pin.png`
@@ -174,10 +162,6 @@ import { listIndustries } from '@/api/metadata'
 import { createMemberMainBusiness } from '@/api/create'
 import { isApiEnabled } from '@/utils/request'
 import { hidePageLoading, showPageLoading } from '@/utils/page-loading'
-
-const createNavBarStyle = ref(getCreateNavBarInlineStyle())
-onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
-onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
 /** 行业下拉：已配置基址时打开弹窗前拉取 `/api/industries`，失败或未配置时用本地枚举兜底 */
 const industryOptions = ref([...CREATE_INDUSTRY_OPTIONS])
@@ -939,47 +923,6 @@ function pickCreatedMainBusinessId(res) {
   padding-bottom: calc(172rpx + env(safe-area-inset-bottom));
   background: #ffffff;
   color: #202633;
-}
-
-.nav-bar {
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
-  padding-right: calc(18rpx + constant(safe-area-inset-right));
-  padding-right: calc(18rpx + env(safe-area-inset-right));
-  padding-left: calc(18rpx + constant(safe-area-inset-left));
-  padding-left: calc(18rpx + env(safe-area-inset-left));
-  padding-bottom: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.nav-left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  color: #1f2933;
-  font-size: 30rpx;
-}
-
-.back-icon {
-  flex-shrink: 0;
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 8rpx;
-  display: block;
-}
-.back-text{
-	font-size: 30rpx;
-	color: #1F2937 ;
-}
-/* 与首页 HomeHeader 一致：约等于微信胶囊宽度，避免标题与系统按钮叠盖 */
-.nav-bar__gap {
-  flex-shrink: 0;
-  width: 174rpx;
-  height: 32rpx;
 }
 
 .intro {

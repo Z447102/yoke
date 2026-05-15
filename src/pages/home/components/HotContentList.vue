@@ -38,7 +38,7 @@
               <view class="hot-card__meta">
                 <text class="hot-card__tag">{{ item.tag }}</text>
                 <view class="hot-card__heat">
-                  <image src="../static/hone-like.svg" class="hot-card__heat-icon" mode="aspectFit" />
+                  <image :src="hotHeatLikeIcon" class="hot-card__heat-icon" mode="aspectFit" />
                   <text>{{ item.heat }}</text>
                 </view>
               </view>
@@ -64,7 +64,7 @@
               <view class="hot-card__meta">
                 <text class="hot-card__tag">{{ item.tag }}</text>
                 <view class="hot-card__heat">
-                  <image src="../static/hone-like.svg" class="hot-card__heat-icon" mode="aspectFit" />
+                  <image :src="hotHeatLikeIcon" class="hot-card__heat-icon" mode="aspectFit" />
                   <text>{{ item.heat }}</text>
                 </view>
               </view>
@@ -80,6 +80,7 @@
 import { StaticPath } from '@/config'
 const hotContentFlameIcon = `${StaticPath}home/icon-title-hot-flame.png`
 const hotRefreshIcon = `${StaticPath}home/home-hot-refresh-icon.png`
+const hotHeatLikeIcon = `${StaticPath}home/hone-like.svg`
 
 defineProps({
   list: {

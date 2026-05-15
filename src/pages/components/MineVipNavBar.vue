@@ -2,7 +2,7 @@
   <view class="van-nav-bar-wrapper">
     <!-- 占位元素 -->
     <view v-if="fixed && placeholder" :style="placeholderStyle"></view>
-    
+
     <!-- 导航栏主体 -->
     <view
       class="van-nav-bar"
@@ -20,12 +20,12 @@
             <text v-if="leftText" class="van-nav-bar__text">{{ leftText }}</text>
           </slot>
         </view>
-        
+
         <!-- 标题区域 -->
         <view class="van-nav-bar__title van-ellipsis">
           <slot name="title">{{ title }}</slot>
         </view>
-        
+
         <!-- 右侧区域 -->
         <view class="van-nav-bar__right" hover-class="van-nav-bar__active" hover-stay-time="70" @tap="onClickRight">
           <slot name="right">
@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   title: {
@@ -81,46 +81,45 @@ const props = defineProps({
     type: [Object, String],
     default: () => ({})
   }
-});
+})
 
-const emit = defineEmits(['click-left', 'click-right']);
+const emit = defineEmits(['click-left', 'click-right'])
 
 // 获取系统状态栏高度
-const systemInfo = uni.getSystemInfoSync();
-const statusBarHeight = ref(systemInfo.statusBarHeight || 0);
-const navBarHeight = 46; // 默认导航栏高度 46px
+const systemInfo = uni.getSystemInfoSync()
+const statusBarHeight = ref(systemInfo.statusBarHeight || 0)
+const navBarHeight = 46 // 默认导航栏高度 46px
 
 // 基础样式（包含安全区和 z-index）
 const baseStyle = computed(() => {
   const style = {
     zIndex: props.zIndex
-  };
-  
-  if (props.safeAreaInsetTop) {
-    style.paddingTop = `${statusBarHeight.value}px`;
   }
-  
-  return style;
-});
+
+  if (props.safeAreaInsetTop) {
+    style.paddingTop = `${statusBarHeight.value}px`
+  }
+
+  return style
+})
 
 // 占位元素样式
 const placeholderStyle = computed(() => {
-  const top = props.safeAreaInsetTop ? statusBarHeight.value : 0;
+  const top = props.safeAreaInsetTop ? statusBarHeight.value : 0
   return {
     height: `${navBarHeight + top}px`
-  };
-});
+  }
+})
 
 // 点击左侧
-const onClickLeft = () => {
-  // emit('click-left');
-  uni.navigateBack();
-};
+function onClickLeft() {
+  emit('click-left')
+}
 
 // 点击右侧
-const onClickRight = () => {
-  emit('click-right');
-};
+function onClickRight() {
+  emit('click-right')
+}
 </script>
 
 <style lang="scss" scoped>
@@ -172,7 +171,7 @@ const onClickRight = () => {
   }
 
   &__text {
-    color: #1F2937;
+    color: #1f2937;
   }
 
   &__title {
@@ -187,8 +186,8 @@ const onClickRight = () => {
     display: inline-block;
     width: 10px;
     height: 10px;
-    border-top: 2px solid #1F2937;
-    border-left: 2px solid #1F2937;
+    border-top: 2px solid #1f2937;
+    border-left: 2px solid #1f2937;
     transform: rotate(-45deg);
     margin-right: 4px;
     position: relative;

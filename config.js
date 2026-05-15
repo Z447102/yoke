@@ -1,1 +1,1 @@
-StaticPath = "https://www.jzdmedia.cn/static/"
+StaticPath = "https://static.compoai.cn/static/"

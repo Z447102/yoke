@@ -4,14 +4,7 @@
     class="generate-page"
     :class="{ 'generate-page--sensitive-banner': hasScriptSensitiveHit }"
   >
-    <!-- 顶部导航 -->
-    <view class="nav-bar" :style="createNavBarStyle">
-      <view class="nav-left" @tap="goBack">
-        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text>一键成片</text>
-      </view>
-      <view class="nav-bar__gap" aria-hidden="true" />
-    </view>
+    <CreateNavBar title="一键成片" @back="goBack" />
 
     <!-- 筛选：主营业务、发布平台 -->
     <view class="filter-bar">
@@ -77,8 +70,14 @@
             @tap="selectedTemplate = template.id"
           >
             <image class="template-image" :src="template.image" mode="aspectFill" />
-            <view v-if="selectedTemplate === template.id" class="template-check">
+            <view
+              class="template-check"
+              :class="{
+                'template-check--active': selectedTemplate === template.id
+              }"
+            >
               <image
+                v-if="selectedTemplate === template.id"
                 class="template-check__icon"
                 :src="createIconTemplateCheck"
                 mode="aspectFit"
@@ -524,16 +523,12 @@ import GeneratingQueueSheet from '../components/GeneratingQueueSheet.vue'
 import VipSubscribeModal from '../components/VipSubscribeModal.vue'
 import PointsRechargeModal from '../components/PointsRechargeModal.vue'
 import GenerateWarmTipModal from '../components/GenerateWarmTipModal.vue'
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
 import { supportsContinuousVipSubscription } from '@/utils/vip-subscription-platform'
-import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
 import {
   splitTextBySensitiveWords,
   textContainsSensitive
 } from '@/utils/script-sensitive-words'
-const createBackIcon = `${StaticPath}create/create-back-icon.png`
 const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
 const createIconViewFilm = `${StaticPath}create/create-icon-view-film.png`
 const createIconTemplateCheck = `${StaticPath}create/create-icon-template-check.png`
@@ -545,9 +540,7 @@ const createIconBusinessEdit = `${StaticPath}create/create-icon-business-edit.pn
 const createIconBusinessEditChevron = `${StaticPath}create/create-icon-business-edit-chevron.png`
 const createIconAttention = `${StaticPath}create/create-icon-attention.png`
 const deleteMainBusinessInfoIcon = `${StaticPath}create/delete-main-business-info-icon.png`
-import { onReady, onShow } from '@dcloudio/uni-app'
-
-const createNavBarStyle = ref(getCreateNavBarInlineStyle())
+import { onShow } from '@dcloudio/uni-app'
 
 const PRIMARY_BUSINESS_ID = 'primary'
 
@@ -967,7 +960,6 @@ function selectAvatar(id) {
 }
 
 onMounted(() => {
-  scheduleCreateNavBarStyleRefresh(createNavBarStyle)
   try {
     const savedPlat = uni.getStorageSync(CREATE_SELECTED_PLATFORM_STORAGE_KEY)
     if (savedPlat && platformOptions.some((p) => p.id === savedPlat)) {
@@ -978,10 +970,6 @@ onMounted(() => {
     /* 忽略 */
   }
   syncBusinessTagsFromSelectedBusinessOption()
-})
-
-onReady(() => {
-  scheduleCreateNavBarStyleRefresh(createNavBarStyle)
 })
 
 /**
@@ -2428,43 +2416,6 @@ function generateVideo() {
   padding-bottom: calc(360rpx + env(safe-area-inset-bottom));
 }
 
-.nav-bar {
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
-  padding-right: calc(18rpx + constant(safe-area-inset-right));
-  padding-right: calc(18rpx + env(safe-area-inset-right));
-  padding-left: calc(18rpx + constant(safe-area-inset-left));
-  padding-left: calc(18rpx + env(safe-area-inset-left));
-  padding-bottom: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.nav-left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  color: #1f2933;
-  font-size: 30rpx;
-}
-
-.back-icon {
-  flex-shrink: 0;
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 12rpx;
-  display: block;
-}
-
-.nav-bar__gap {
-  flex-shrink: 0;
-  width: 174rpx;
-  height: 32rpx;
-}
-
 .filter-bar {
   height: 82rpx;
   padding: 0 20rpx;
@@ -2721,14 +2672,15 @@ function generateVideo() {
   position: relative;
   overflow: hidden;
   width: 222rpx;
+  box-sizing: border-box;
   border: 2rpx solid transparent;
-  border-radius: 12rpx;
+  border-radius: 24rpx;
   background: #ffffff;
   box-shadow: 0 8rpx 20rpx rgba(255, 137, 30, 0.12);
 }
 
 .template-card.active {
-  border-color: #ff982f;
+  border: 4rpx solid #fba549;
 }
 
 .template-image {
@@ -2736,7 +2688,32 @@ function generateVideo() {
   height: 138rpx;
 }
 
-.template-check,
+.template-check {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  z-index: 2;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 10rpx;
+  background-color: rgba(255, 255, 255, 1);
+  box-shadow: 0rpx 4rpx 8rpx 0rpx rgba(0, 0, 0, 0.4);
+  border: 4rpx solid rgba(209, 209, 209, 1);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.template-check--active {
+  border: 4rpx solid rgba(255, 165, 84, 1);
+}
+
+.template-check__icon {
+  width: 22rpx;
+  height: 22rpx;
+}
+
 .avatar-check {
   position: absolute;
   top: 8rpx;
@@ -2750,7 +2727,6 @@ function generateVideo() {
   justify-content: center;
 }
 
-.template-check__icon,
 .avatar-check__icon {
   width: 22rpx;
   height: 22rpx;

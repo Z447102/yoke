@@ -1,13 +1,7 @@
 <template>
   <!-- 一键成片 · 主营业务：按行业拉取类目树，逐级单选/展开（api/getBusinessCategories） -->
   <view class="business-page">
-    <view class="nav-bar" :style="createNavBarStyle">
-      <view class="nav-left" @tap="goBack">
-        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text class="back-text">主营业务</text>
-      </view>
-      <view class="nav-bar__gap" aria-hidden="true" />
-    </view>
+    <CreateNavBar title="主营业务" title-class="back-text" @back="goBack" />
 
     <view class="industry-trigger" @tap="openIndustryPicker">
       <text class="industry-trigger__text">{{ industryRowLabel }}</text>
@@ -61,10 +55,8 @@
           v-for="(g, gi) in dimensionGroups"
           :key="dimensionGroupKey(g, gi)"
           class="dimension-group"
+          :class="{ 'dimension-group--split': gi > 0 }"
         >
-          <view class="category-title dimension-group__title">
-            <text>{{ g.categoryName }}</text>
-          </view>
           <view class="tag-list">
             <view
               v-for="opt in g.options"
@@ -192,6 +184,7 @@
 </template>
 
 <script setup>
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
 import { StaticPath } from '@/config'
 /**
  * 【一键成片 · 主营业务选择】按接口 levels 动态渲染；选完回写 storage 并返回上页。
@@ -211,14 +204,9 @@ import {
 import { CREATE_INDUSTRY_OPTIONS } from '@/constants/create'
 import { isApiEnabled } from '@/utils/request'
 import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
-import {
   hidePageLoading,
   showPageLoading
 } from '@/utils/page-loading'
-const createBackIcon = `${StaticPath}create/create-back-icon.png`
 const createIconArrowDown = `${StaticPath}create/create-icon-arrow-down.png`
 const createIconAttention = `${StaticPath}create/create-icon-attention.png`
 
@@ -232,10 +220,6 @@ const BUSINESS_RESTORE_STORAGE_KEY = 'create:business-restore'
 
 /** 成片页「编辑」跳转前写入，本页 intent=edit 时用于类目/维度/自定义回显 */
 const STORAGE_EDIT_MAIN_BUSINESS_DETAIL = 'create:edit-main-business-detail'
-
-const createNavBarStyle = ref(getCreateNavBarInlineStyle())
-onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
-onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
 const industry = ref('餐饮')
 /** add / edit：均可点行或底部面板更换行业 */
@@ -320,18 +304,41 @@ const visibleLevels = computed(() => {
         levelIndex === 0
           ? '核心品类'
           : levelIndex === 1 && useSecondTagsEndpoint.value
-            ? secondLevelCategoryTitle.value.trim() || `${levelIndex + 1}级品类`
+            ? secondLevelCategoryTitle.value.trim() || '二级品类'
             : `${levelIndex + 1}级品类`,
       options
     })
 
     const selected = selectedPath.value[levelIndex]
-    if (!selected || !selected.children?.length) {
+    if (!selected) {
       break
     }
 
-    options = selected.children
-    levelIndex += 1
+    const children = selected.children
+    const hasChildren = Array.isArray(children) && children.length > 0
+    if (hasChildren) {
+      options = children
+      levelIndex += 1
+      continue
+    }
+
+    /**
+     * second-tags 拆流：一级已选但二级列表为空或未返回时，仍保留占位行（标题 + *，标签可为空）。
+     */
+    if (
+      levelIndex === 0 &&
+      useSecondTagsEndpoint.value &&
+      selectedPath.value[0] &&
+      !hasChildren
+    ) {
+      const secondTitle =
+        secondLevelCategoryTitle.value.trim() || '二级品类'
+      levels.push({
+        title: secondTitle,
+        options: Array.isArray(children) ? children : []
+      })
+    }
+    break
   }
 
   return levels
@@ -1150,46 +1157,6 @@ function confirmSelection() {
   color: #202633;
 }
 
-.nav-bar {
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
-  padding-right: calc(18rpx + constant(safe-area-inset-right));
-  padding-right: calc(18rpx + env(safe-area-inset-right));
-  padding-left: calc(18rpx + constant(safe-area-inset-left));
-  padding-left: calc(18rpx + env(safe-area-inset-left));
-  padding-bottom: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.nav-left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  color: #1f2933;
-  font-size: 30rpx;
-}
-
-.back-icon {
-  flex-shrink: 0;
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 12rpx;
-  display: block;
-}
-.back-text{
-	font-size: 30rpx;
-	font-family:OPPOSans-regular;
-}
-.nav-bar__gap {
-  flex-shrink: 0;
-  width: 174rpx;
-  height: 32rpx;
-}
-
 .industry-trigger {
   height: 86rpx;
   border-bottom: 1rpx solid #eeeeee;
@@ -1239,6 +1206,13 @@ function confirmSelection() {
 }
 
 .dimension-group {
+  margin-top: 28rpx;
+}
+
+/* 多维度：除第一个分组外，上方加分隔线 */
+.dimension-group--split {
+  border-top: 1rpx solid #f0f0f0;
+  padding-top: 28rpx;
   margin-top: 28rpx;
 }
 

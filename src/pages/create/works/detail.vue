@@ -1,12 +1,12 @@
 <template>
   <view class="detail-page">
-    <view class="nav-bar" :style="createNavBarStyle">
-      <view class="nav-left" @tap="goBack">
-        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text>成片详情</text>
-      </view>
-      <view class="nav-bar__gap" aria-hidden="true" />
-    </view>
+    <CreateNavBar
+      title="成片详情"
+      variant="banner"
+      :icon-title-gap="12"
+      bottom-border
+      @back="goBack"
+    />
 
     <view v-if="detail" class="detail-body">
       <view v-if="detail.videoUrl" class="video-wrap">
@@ -45,21 +45,14 @@
 </template>
 
 <script setup>
-import { StaticPath } from '@/config'
 /**
  * 【成片详情】联调后可播 videoUrl；当前 Mock 为空时展示封面与说明。
  */
-import { computed, onMounted, ref } from 'vue'
-import { onLoad, onReady } from '@dcloudio/uni-app'
-import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
+import { computed, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { showPageLoading, hidePageLoading } from '@/utils/page-loading'
 import { getFinishedVideoDetail } from '@/api/finished-videos'
-const createBackIcon = `${StaticPath}create/create-back-icon.png`
-
-const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 const detail = ref(null)
 const videoId = ref('')
 
@@ -72,9 +65,6 @@ onLoad(async (query) => {
     hidePageLoading()
   }
 })
-
-onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
-onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 
 const statusText = computed(() => {
   const s = detail.value?.status
@@ -102,41 +92,6 @@ function goBack() {
 .detail-page {
   min-height: 100vh;
   background: #f7f7f7;
-}
-
-.nav-bar {
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
-  padding-right: calc(18rpx + constant(safe-area-inset-right));
-  padding-right: calc(18rpx + env(safe-area-inset-right));
-  padding-left: calc(18rpx + constant(safe-area-inset-left));
-  padding-left: calc(18rpx + env(safe-area-inset-left));
-  padding-bottom: 16rpx;
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  border-bottom: 1rpx solid #f1f1f1;
-}
-
-.nav-left {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  color: #1f2933;
-  font-size: 30rpx;
-}
-
-.back-icon {
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 12rpx;
-}
-
-.nav-bar__gap {
-  flex-shrink: 0;
-  width: 174rpx;
-  height: 32rpx;
 }
 
 .detail-body {

@@ -1,11 +1,11 @@
 <template>
   <view class="publish-page">
-    <view class="nav-bar" :style="createNavBarStyle">
-      <view class="nav-left" @tap="goBack">
-        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text>发布成片</text>
-      </view>
-    </view>
+    <CreateNavBar
+      title="发布成片"
+      variant="plain"
+      :icon-title-gap="12"
+      @back="goBack"
+    />
 
     <scroll-view scroll-y class="publish-scroll">
       <view class="hero-card">
@@ -275,14 +275,14 @@
 </template>
 
 <script setup>
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
 import { StaticPath } from '@/config'
-import { computed, onMounted, ref } from 'vue'
-import { onLoad, onReady } from '@dcloudio/uni-app'
+import { computed, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import {
   CREATE_SELECTED_PLATFORM_STORAGE_KEY,
   PLATFORM_OPTIONS
 } from '@/constants/create-selected-platform'
-const createBackIcon = `${StaticPath}create/create-back-icon.png`
 const publishMetaIconTime = `${StaticPath}create/publish-meta-icon-time.png`
 const publishMetaIconDuration = `${StaticPath}create/publish-meta-icon-duration.png`
 const publishMetaIconHd = `${StaticPath}create/publish-meta-icon-hd.png`
@@ -300,12 +300,6 @@ const publishStepIcon1 = `${StaticPath}create/publish-step-icon-1.png`
 const publishActionIconSave = `${StaticPath}create/publish-action-icon-save.png`
 const publishStepIcon2 = `${StaticPath}create/publish-step-icon-2.png`
 const publishStepIcon3 = `${StaticPath}create/publish-step-icon-3.png`
-import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
-
-const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 
 const platformOptions = PLATFORM_OPTIONS
 
@@ -358,9 +352,6 @@ onLoad((query = {}) => {
   }
 })
 
-onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
-onReady(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
-
 /**
  * 返回上一页
  */
@@ -406,9 +397,6 @@ function onCopyPublishCaption() {
 
 <style lang="scss" scoped>
 .publish-page { min-height: 100vh; background: #fffaf3; display: flex; flex-direction: column; }
-.nav-bar { padding: 0 18rpx 16rpx; display: flex; align-items: center; background:#fffaf3; }
-.nav-left { flex: 1; display: flex; align-items: center; font-size: 34rpx; color: #1f2937; font-weight: 600; }
-.back-icon { width: 36rpx; height: 36rpx; margin-right: 12rpx; }
 .publish-scroll { flex: 1; padding: 16rpx 16rpx 0; box-sizing: border-box; }
 .hero-card { display:flex; gap:26rpx; padding-right:48rpx; box-sizing:border-box; }
 .hero-cover-wrap { position: relative; width: 244rpx; height: 336rpx; flex-shrink: 0; }

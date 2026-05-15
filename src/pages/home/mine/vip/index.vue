@@ -3,24 +3,26 @@
     <image class="page-bg" :src="vipBg" mode="aspectFill" />
     
     <!-- Custom Navigation Bar -->
-    <Navbar 
-      left-text="会员中心" 
-      left-arrow 
+    <MineVipNavBar
+      left-text="会员中心"
+      left-arrow
       :custom-style="{ background: 'transparent' }"
       :border="false"
-      @click-left="goBack" 
+      @click-left="goBack"
     />
+    <!-- 保留 NavBar2 编译单元：部分真机/IDE 缓存仍会请求该路径，避免 ENOENT -->
+    <NavBar2 v-if="false" />
 
     <view class="content-wrapper">
       <view class="table-header" :class="{ 'is-scrolled': isScrolled }">
         <view class="col-title font-medium">权益</view>
         <view class="col-vip-year">
-          <image class="vip-icon" src="../static/vip/vip-year.png" mode="aspectFit" />
-          <image class="vip-text" src="../static/vip/vip-text.png" mode="aspectFit" />
+          <image class="vip-icon" :src="vipYearIcon" mode="aspectFit" />
+          <image class="vip-text" :src="vipTextIcon" mode="aspectFit" />
         </view>
         <view class="col-vip-month">
-           <image class="vip-icon" src="../static/vip/vip-month.png" mode="aspectFit" />
-           <image class="vip-text" src="../static/vip/vip-text.png" mode="aspectFit" />
+           <image class="vip-icon" :src="vipMonthIcon" mode="aspectFit" />
+           <image class="vip-text" :src="vipTextIcon" mode="aspectFit" />
         </view>
         <view class="col-normal font-medium">普通用户</view>
       </view>
@@ -49,7 +51,7 @@
         
         <!-- Scroll indicator -->
         <view class="scroll-indicator" :class="{ 'is-up': isAtBottom }">
-          <image class="indicator-icon-img" src="../static/vip/vip-arrow.png" mode="aspectFit" />
+          <image class="indicator-icon-img" :src="vipArrowIcon" mode="aspectFit" />
         </view>
       </view>
 
@@ -70,9 +72,16 @@
 
 <script setup>
 import { ref, onMounted, getCurrentInstance } from 'vue'
-import vipBg from '@/pages/home/mine/static/vip-bg.png'
+import { StaticPath } from '@/config'
 import VipSubscribeModal from '@/pages/create/components/VipSubscribeModal.vue'
-import Navbar from '@/pages/components/Navbar.vue'
+import MineVipNavBar from '@/pages/components/MineVipNavBar.vue'
+import NavBar2 from '@/pages/components/NavBar2.vue'
+
+const vipBg = `${StaticPath}mine/vip-bg.png`
+const vipYearIcon = `${StaticPath}mine/vip/vip-year.png`
+const vipMonthIcon = `${StaticPath}mine/vip/vip-month.png`
+const vipTextIcon = `${StaticPath}mine/vip/vip-text.png`
+const vipArrowIcon = `${StaticPath}mine/vip/vip-arrow.png`
 
 const isScrolled = ref(false)
 const isAtBottom = ref(false)

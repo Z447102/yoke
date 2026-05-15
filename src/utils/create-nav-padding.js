@@ -116,3 +116,38 @@ export function getCreateNavBarPaddingTopPx() {
     return 96
   }
 }
+
+/**
+ * 状态栏高度（px），用于顶栏首段 padding-top：内容从状态栏下缘开始排。
+ * @returns {number}
+ */
+export function getCreateNavBarStatusBarPaddingPx() {
+  try {
+    const si = uni.getSystemInfoSync()
+    const sb =
+      typeof si.statusBarHeight === 'number' && si.statusBarHeight > 0
+        ? si.statusBarHeight
+        : 0
+    const merged = Math.max(sb, 20)
+    return Math.round(merged > 0 ? merged : 44)
+  } catch {
+    return 44
+  }
+}
+
+/**
+ * 与微信小程序胶囊同一行的可视高度（px）：2×(胶囊顶 − 状态栏底) + 胶囊高。
+ * 无胶囊信息时回退为固定行高。
+ * @returns {number}
+ */
+export function getCreateNavBarCapsuleRowHeightPx() {
+  const mb = readMenuButtonRect()
+  const sb = getCreateNavBarStatusBarPaddingPx()
+  if (mb && typeof mb.top === 'number' && typeof mb.height === 'number' && mb.height > 0) {
+    const above = Math.max(0, mb.top - sb)
+    return Math.round(above * 2 + mb.height)
+  }
+  return typeof uni !== 'undefined' && typeof uni.upx2px === 'function'
+    ? Math.round(uni.upx2px(88))
+    : 44
+}

@@ -1,12 +1,11 @@
 <template>
   <view class="photo-ex-page">
-    <view class="nav-bar" :style="createNavBarStyle">
-      <view class="nav-left" @tap="goBack">
-        <image class="back-icon" :src="createBackIcon" mode="aspectFit" />
-        <text class="nav-title">照片示例</text>
-      </view>
-      <view class="nav-bar__gap" aria-hidden="true" />
-    </view>
+    <CreateNavBar
+      title="照片示例"
+      title-class="nav-title"
+      :icon-title-gap="12"
+      @back="goBack"
+    />
 
     <!-- 分类 Tab：横向滚动，选中粗体 + 底部橙色条 -->
     <view class="pe-tabs-wrap">
@@ -170,14 +169,10 @@
 </template>
 
 <script setup>
+import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
 import { StaticPath } from '@/config'
-import { computed, getCurrentInstance, nextTick, onMounted, ref } from 'vue'
+import { computed, getCurrentInstance, nextTick, ref } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
-import {
-  getCreateNavBarInlineStyle,
-  scheduleCreateNavBarStyleRefresh
-} from '@/utils/create-nav-bar-style'
-const createBackIcon = `${StaticPath}create/create-back-icon.png`
 const createPhotoExamplesTabScrollLeft = `${StaticPath}create/create-photo-examples-tab-scroll-left.png`
 const createSuggestHeadCamera = `${StaticPath}create/create-suggest-head-camera.png`
 const createSuggestTipFrame = `${StaticPath}create/create-suggest-tip-frame.png`
@@ -190,8 +185,6 @@ const createPhotoExampleFootOkIcon = `${StaticPath}create/create-photo-example-f
 const createPhotoExampleFootBadIcon = `${StaticPath}create/create-photo-example-foot-bad-icon.png`
 
 const TAB_KEYS = ['facade', 'dish', 'env1', 'env2']
-
-const createNavBarStyle = ref(getCreateNavBarInlineStyle())
 
 const categories = [
   {
@@ -331,9 +324,7 @@ onLoad((query = {}) => {
   if (idx >= 0) activeIndex.value = idx
 })
 
-onMounted(() => scheduleCreateNavBarStyleRefresh(createNavBarStyle))
 onReady(() => {
-  scheduleCreateNavBarStyleRefresh(createNavBarStyle)
   nextTick(() => {
     setTimeout(() => requestTabScrollIntoView(activeIndex.value), 50)
   })
@@ -435,47 +426,6 @@ function onTabsScroll(e) {
   flex-direction: column;
   background: #ffffff;
   box-sizing: border-box;
-}
-
-.nav-bar {
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
-  padding-right: calc(18rpx + constant(safe-area-inset-right));
-  padding-right: calc(18rpx + env(safe-area-inset-right));
-  padding-left: calc(18rpx + constant(safe-area-inset-left));
-  padding-left: calc(18rpx + env(safe-area-inset-left));
-  padding-bottom: 16rpx;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  background: #ffffff;
-}
-
-.nav-left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-
-.back-icon {
-  width: 36rpx;
-  height: 36rpx;
-  flex-shrink: 0;
-}
-
-.nav-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.nav-bar__gap {
-  flex-shrink: 0;
-  width: 174rpx;
-  height: 32rpx;
 }
 
 .pe-tabs-wrap {
