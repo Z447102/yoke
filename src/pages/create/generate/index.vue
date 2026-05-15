@@ -54,7 +54,7 @@
     <view class="section">
       <view class="section-header template-section-header">
         <text class="section-title template-section-title">请选择视频模板</text>
-        <view class="view-works-btn" @tap="openViewFinishedVideos">
+        <view class="view-works-btn" :class="{ 'view-works-btn__popup': showGeneratingQueueSheet }" @tap="openViewFinishedVideos">
           <view class="view-works-btn__icon-wrap" aria-hidden="true">
             <image
               class="view-works-btn__icon"
@@ -64,6 +64,7 @@
           </view>
           <!-- 小程序里 text 作 flex 子项易竖排，用 view 保证图标与文案同一行 -->
           <view class="view-works-btn__label">查看成片</view>
+          <image src="../static/create-icon-hand.png" class="view-works-btn__hand" />
         </view>
       </view>
       <scroll-view scroll-x class="template-scroll" :show-scrollbar="false">
@@ -480,6 +481,12 @@
       :show="showGenerateWarmTipModal"
       @confirm="onGenerateWarmTipConfirm"
     />
+
+    <!-- 排队弹窗 -->
+    <GeneratingQueueSheet
+      :show="showGeneratingQueueSheet"
+      @close="showGeneratingQueueSheet = false"
+    />
   </view>
 </template>
 
@@ -513,6 +520,7 @@ import {
   PLATFORM_OPTIONS
 } from '@/constants/create-selected-platform'
 import QualitySettingsSheet from '../components/QualitySettingsSheet.vue'
+import GeneratingQueueSheet from '../components/GeneratingQueueSheet.vue'
 import VipSubscribeModal from '../components/VipSubscribeModal.vue'
 import PointsRechargeModal from '../components/PointsRechargeModal.vue'
 import GenerateWarmTipModal from '../components/GenerateWarmTipModal.vue'
@@ -840,6 +848,8 @@ const vipModalVariant = ref('continuous')
 const showPointsRechargeModal = ref(false)
 const pointsRechargeDeficit = ref(0)
 const showGenerateWarmTipModal = ref(false)
+// 测试：你可以临时设置为true看看效果
+const showGeneratingQueueSheet = ref(false)
 // 本地直出「有优惠活动」版充值弹窗；联调后改回 userStore.pointsTopUpHasPromo
 const pointsRechargeHasPromo = computed(() => true)
 
@@ -2475,6 +2485,43 @@ function generateVideo() {
   align-items: center;
 }
 
+@keyframes promptPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 154, 49, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 16rpx rgba(255, 154, 49, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 154, 49, 0);
+  }
+}
+
+@keyframes handPoint {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16rpx);
+  }
+}
+
+.view-works-btn__popup {
+  position: relative;
+  z-index: 9999999;
+  animation: promptPulse 1.5s infinite;
+
+  .view-works-btn__hand {
+    display: block !important;
+    position: absolute;
+    width: 144rpx;
+    height: 178rpx;
+    bottom: -168rpx;
+    left: 68rpx;
+    animation: handPoint 1s ease-in-out infinite;
+  }
+}
+
 .filter-label {
   margin-right: 12rpx;
   color: #1f2933;
@@ -2574,6 +2621,10 @@ function generateVideo() {
   align-items: center;
   justify-content: center;
   position: relative;
+
+  .view-works-btn__hand {
+    display: none;
+  }
 }
 
 /* 无独立底色块：图标区透明，透出按钮渐变；黑底白标 PNG 用 screen 与底色融合，避免再叠一层黑/白底 */
