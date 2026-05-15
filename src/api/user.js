@@ -4,9 +4,10 @@
  * 鉴权：Authorization: Bearer &lt;token&gt;
  */
 import { get, put } from '@/utils/request'
+export { mapUserMeToProfile, nicknameAvatarLetter } from '@/utils/user-profile'
 
 /**
- * 获取当前登录会员资料
+ * 获取当前登录会员资料（用于恢复登录态与个人中心展示）
  * GET /api/user/me
  * @returns {Promise<{ memberId?: string, mobile?: string, nickname?: string, avatar?: string }>}
  */

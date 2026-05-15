@@ -218,6 +218,7 @@ import { useUserStore } from '@/stores/user'
 import { performLogout } from '@/hooks/use-login'
 import { getMinePageData } from '@/api/mine'
 import { hidePageLoading, showPageLoading } from '@/utils/page-loading'
+import { nicknameAvatarLetter } from '@/utils/user-profile'
 import HomeTabBar from '@/pages/home/components/HomeTabBar.vue'
 const mineHeaderBg = `${StaticPath}mine/mine-header-bg.png`
 const iconPoints = `${StaticPath}mine/icon-points.png`
@@ -241,9 +242,6 @@ const mineQuickTools = [
   { key: 'notice', label: '通知与反馈', icon: mineToolNotice },
   { key: 'service', label: '联系客服', icon: mineToolService }
 ]
-
-const DEFAULT_CAT_AVATAR =
-  'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=240&h=240&fit=crop'
 
 /** 顶区：仅胶囊下缘占位高度（px）；右侧 padding 见 .mine-hero__inner 样式 */
 const heroLayout = ref({
@@ -370,27 +368,37 @@ onReady(() => {
 onShow(() => {
   scheduleHeroLayoutSync()
   loadMineWorks()
+  refreshUserProfile()
 })
 
 onPullDownRefresh(async () => {
-  await loadMineWorks()
+  await Promise.all([loadMineWorks(), refreshUserProfile()])
   uni.stopPullDownRefresh()
 })
 
+async function refreshUserProfile() {
+  if (!userStore.isLogin || !String(userStore.token || '').trim()) return
+  try {
+    await userStore.refreshProfileFromApi()
+  } catch (_) {
+    /* 保留本地缓存资料 */
+  }
+}
+
 const displayName = computed(() => {
-  if (!userStore.isLogin || !userStore.profile) return '未登录'
-  return userStore.profile.nickname || 'Cat - 先生'
+  if (!userStore.isLogin) return '未登录'
+  const n = userStore.profile?.nickname
+  return n && String(n).trim() ? String(n).trim() : '用户'
 })
 
 const displayAvatarUrl = computed(() => {
   if (!userStore.isLogin || !userStore.profile) return ''
-  return userStore.profile.avatarUrl || DEFAULT_CAT_AVATAR
+  return String(
+    userStore.profile.avatarUrl ?? userStore.profile.avatar ?? ''
+  ).trim()
 })
 
-const avatarLetter = computed(() => {
-  const n = displayName.value || 'Y'
-  return String(n).slice(0, 1).toUpperCase()
-})
+const avatarLetter = computed(() => nicknameAvatarLetter(displayName.value))
 
 const memberLine = computed(() =>
   userStore.isLogin ? '未开通会员' : '未登录'
