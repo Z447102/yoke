@@ -162,13 +162,19 @@
         </scroll-view>
 
         <view class="works-block__body">
-          <view class="works-banner">
-            <text class="works-banner__text">{{ worksSummary }}</text>
-            <view class="works-manage" @tap="onManageWorks">
-              <text class="works-manage__icon">▦</text>
-              <text class="works-manage__text">管理</text>
-            </view>
+        <view class="works-banner">
+          <view class="works-banner__lead">
+            <view class="works-banner__text">{{ worksSummary }}</view>
           </view>
+          <view class="works-manage" @tap="onManageWorks">
+            <image
+              class="works-manage__icon-img"
+              :src="worksManageGridIcon"
+              mode="aspectFit"
+            />
+            <text class="works-manage__text">管理</text>
+          </view>
+        </view>
 
           <view v-if="worksList.length" class="works-grid">
             <view
@@ -233,6 +239,7 @@ const mineToolDigitalHuman = `${StaticPath}mine/mine-tool-digital-human.png`
 const mineToolLearning = `${StaticPath}mine/mine-tool-learning.png`
 const mineToolNotice = `${StaticPath}mine/mine-tool-notice.png`
 const mineToolService = `${StaticPath}mine/mine-tool-service.png`
+const worksManageGridIcon = `${StaticPath}mine/works-manage-grid-icon.png`
 
 const userStore = useUserStore()
 
@@ -1117,45 +1124,68 @@ function handleLogout() {
   justify-content: space-between;
   width: 100%;
   box-sizing: border-box;
-  margin-top: 18rpx;
-  padding: 16rpx 20rpx;
-  border-radius: 22rpx;
-  border: 1rpx solid rgba(255, 255, 255, 1);
-  background-color: rgba(255, 241, 226, 1);
+  margin-top: 28rpx;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+}
+
+.works-banner__lead {
+  flex: 1;
+  min-width: 0;
+  margin-right: 16rpx;
 }
 
 .works-banner__text {
-  flex: 1;
-  min-width: 0;
-  font-size: 24rpx;
-  color: #7a5220;
-  font-weight: 600;
-  font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  max-width: 100%;
+  height: 54rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 12rpx;
+  background-color: rgba(255, 231, 204, 1);
+  color: rgba(31, 41, 55, 1);
+  font-size: 28rpx;
+  font-family: OPPOSans-light, OPPOSans, -apple-system, sans-serif;
+  font-weight: 400;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .works-manage {
   flex-shrink: 0;
+  box-sizing: border-box;
+  width: 130rpx;
+  height: 54rpx;
+  padding: 0;
+  border-radius: 48rpx;
+  background-color: rgba(255, 255, 255, 1);
+  border: 1rpx solid rgba(221, 221, 221, 1);
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-left: 12rpx;
-  padding: 6rpx 18rpx;
-  border-radius: 999rpx;
-  background: #ffffff;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  justify-content: center;
+  margin-left: 0;
+  box-shadow: none;
 }
 
-.works-manage__icon {
-  margin-right: 6rpx;
-  font-size: 22rpx;
-  color: #666666;
+.works-manage__icon-img {
+  width: 26rpx;
+  height: 28rpx;
+  flex-shrink: 0;
+  margin-right: 4rpx;
+  display: block;
 }
 
 .works-manage__text {
-  font-size: 22rpx;
-  color: #666666;
-  font-weight: 600;
+  font-size: 20rpx;
+  color: #6b7280;
+  font-weight: 400;
   font-family: OPPOSans-regular, OPPOSans, -apple-system, sans-serif;
+  line-height: 1;
 }
 
 .works-grid {

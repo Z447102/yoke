@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "postinstall": "node scripts/link-static-junctions.mjs",
-    "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin",
+    "dev:mp-weixin": "node --max-old-space-size=8192 ./node_modules/@dcloudio/vite-plugin-uni/bin/uni.js -p mp-weixin",
+    "build:mp-weixin": "node --max-old-space-size=8192 ./node_modules/@dcloudio/vite-plugin-uni/bin/uni.js build -p mp-weixin",
     "verify:fonts": "node scripts/verify-fonts.mjs",
     "verify:mp-static": "node scripts/verify-mp-assets-paths.mjs && node scripts/scan-mp-wxss-urls.mjs",
     "test:login-flow": "vitest run src/api/auth.login-flow.test.js",

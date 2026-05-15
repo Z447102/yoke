@@ -357,7 +357,16 @@ function requestTabScrollIntoView(idx) {
  * 返回上一页
  */
 function goBack() {
-  uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/index' }) })
+  uni.navigateBack({
+    fail: () => {
+      uni.switchTab({
+        url: '/pages/home/index',
+        fail: () => {
+          uni.redirectTo({ url: '/pages/home/index' })
+        }
+      })
+    }
+  })
 }
 
 /** 右侧按钮：增大 scrollLeft，内容向左移，露出右侧被隐藏的 Tab（原先递减在 0 处无效） */

@@ -175,6 +175,13 @@ function toggleAgree() {
 
 onLoad((query) => {
   redirect.value = query.redirect ? decodeURIComponent(query.redirect) : ''
+  if (query.needReauth === '1' || query.needReauth === 'true') {
+    uni.showToast({
+      title: '登录已失效，请使用手机号验证码登录',
+      icon: 'none',
+      duration: 2800
+    })
+  }
 })
 
 onShow(() => {

@@ -17,7 +17,8 @@ export default {
     console.log('onLaunch')
     uni.loadFontFace({
       family: 'OPPOSans',
-	  global: true,
+      global: true,
+      /** 与各端一致：使用 CDN 字体（参见 src/config.js StaticPath）；小程序需在后台配置 downloadFile 合法域名 */
       source: `url("${StaticPath}fonts/OPPOSans-4.0.ttf")`,
       success: () => {
         console.log('字体加载成功')

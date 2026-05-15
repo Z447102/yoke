@@ -491,7 +491,16 @@ onMounted(() => {
  * 返回上一页
  */
 function goBack() {
-  uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/index' }) })
+  uni.navigateBack({
+    fail: () => {
+      uni.switchTab({
+        url: '/pages/home/index',
+        fail: () => {
+          uni.redirectTo({ url: '/pages/home/index' })
+        }
+      })
+    }
+  })
 }
 
 /**

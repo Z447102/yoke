@@ -94,6 +94,57 @@ async function exchangeWechatCodeForSession() {
   }
 }
 
+/** 进行中的一次静默刷新（token 失效后 uni.login → session），并发合并 */
+let silentRefreshTask = null
+
+/**
+ * 强制静默登录（无视本地是否已有 token），用于 Access Token 失效后换新会话。
+ * @returns {Promise<{ ok: true, data: object } | { ok: false, error?: unknown }>}
+ */
+export function silentLoginForceRefresh() {
+  if (silentRefreshTask) return silentRefreshTask
+  silentRefreshTask = Promise.resolve(exchangeWechatCodeForSession())
+    .then((data) => {
+      applyWechatSilentPayload(data)
+      return { ok: true, data }
+    })
+    .catch((error) => ({ ok: false, error }))
+    .finally(() => {
+      silentRefreshTask = null
+    })
+  return silentRefreshTask
+}
+
+/**
+ * 静默刷新失败或未拿到可用 token：跳转登录页，引导手机号验证码登录。
+ */
+export function navigateToReauthAfterSessionLost() {
+  try {
+    const pages = getCurrentPages()
+    const cur = pages[pages.length - 1]
+    const route = cur?.route ? String(cur.route) : ''
+    if (route.includes('pages/login/index')) {
+      uni.showToast({
+        title: '登录已失效，请使用手机号登录',
+        icon: 'none',
+        duration: 2500
+      })
+      return
+    }
+    const url =
+      '/pages/login/index?needReauth=1&redirect=' +
+      encodeURIComponent('/pages/home/index')
+    uni.navigateTo({
+      url,
+      fail: () => {
+        uni.reLaunch({ url: '/pages/login/index?needReauth=1' })
+      }
+    })
+  } catch (_) {
+    uni.reLaunch({ url: '/pages/login/index?needReauth=1' })
+  }
+}
+
 /**
  * 静默登录：无 token 时 `uni.login` + session；有 token 时跳过；并发复用同一 Promise。
  * 注意：**不会**在此函数内请求 `mobile-login`；该接口仅在用户授权手机号后由 `loginWithPhoneCode` 触发。

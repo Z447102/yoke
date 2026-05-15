@@ -30,6 +30,43 @@ function writeMpWeixinCommonAssetsShim(outDir) {
   )
 }
 
+/**
+ * 微信开发者工具 / 部分调试链路会把 `@/stores/home` 误解析为分包内路径
+ * `pages/home/stores/home.js`，导致 ENOENT。写入转发模块指向真实的根目录 stores/home.js。
+ */
+function writeMpWeixinHomeStorePathShim(outDir) {
+  if (!outDir || typeof outDir !== 'string') return
+  const norm = outDir.replace(/\\/g, '/')
+  if (!norm.includes('mp-weixin')) return
+  if (!existsSync(join(outDir, 'app.json'))) return
+
+  const shimDir = join(outDir, 'pages', 'home', 'stores')
+  const shimFile = join(shimDir, 'home.js')
+  try {
+    mkdirSync(shimDir, { recursive: true })
+  } catch {
+    /* ignore */
+  }
+  writeFileSync(
+    shimFile,
+    [
+      '"use strict";',
+      '/** Debug shim: real store is ../../stores/home.js from package root */',
+      'module.exports = require("../../../stores/home.js");',
+      ''
+    ].join('\n'),
+    'utf8'
+  )
+}
+
+function patchMpWeixinOutDirs(cwd = process.cwd()) {
+  for (const rel of ['dist/dev/mp-weixin', 'dist/build/mp-weixin']) {
+    const out = join(cwd, rel)
+    writeMpWeixinCommonAssetsShim(out)
+    writeMpWeixinHomeStorePathShim(out)
+  }
+}
+
 export default defineConfig({
   plugins: [
     uni(),
@@ -37,12 +74,11 @@ export default defineConfig({
       name: 'mp-weixin-common-assets-shim',
       writeBundle(options) {
         writeMpWeixinCommonAssetsShim(options.dir)
+        writeMpWeixinHomeStorePathShim(options.dir)
+        patchMpWeixinOutDirs(process.cwd())
       },
       closeBundle() {
-        const cwd = process.cwd()
-        for (const rel of ['dist/dev/mp-weixin', 'dist/build/mp-weixin']) {
-          writeMpWeixinCommonAssetsShim(join(cwd, rel))
-        }
+        patchMpWeixinOutDirs(process.cwd())
       }
     }
   ],

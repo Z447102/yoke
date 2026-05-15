@@ -1,4 +1,5 @@
 import md5 from 'blueimp-md5'
+import { getApiTimeout } from '@/config/env'
 
 const TENCENT_GEOCODER_PATH = '/ws/geocoder/v1'
 
@@ -42,6 +43,7 @@ export function reverseGeocodeByTencent({ latitude, longitude }) {
     uni.request({
       url: `https://apis.map.qq.com${TENCENT_GEOCODER_PATH}?${query}&sig=${sig}`,
       method: 'GET',
+      timeout: getApiTimeout(),
       success(res) {
         const body = res.data || {}
         if (body.status !== 0) {
