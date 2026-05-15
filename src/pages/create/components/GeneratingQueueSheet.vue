@@ -87,7 +87,7 @@ watch(
 .queue-mask {
   position: fixed;
   inset: 0;
-  z-index: 100; /* 与其他底部弹窗一致 */
+  z-index: 999; /* 与其他底部弹窗一致 */
   box-sizing: border-box;
   padding-top: constant(safe-area-inset-top);
   padding-top: env(safe-area-inset-top);

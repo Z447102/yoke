@@ -123,7 +123,7 @@
           mode="aspectFit"
           :lazy-load="false"
         />
-        <text class="score-card__loc-text">获取位置</text>
+        <text class="score-card__loc-text">{{ locationText }}</text>
         <image
           class="score-card__loc-chev-img"
           :src="HOME_LOC_CHEVRON_SRC"
@@ -152,6 +152,10 @@
 import { StaticPath } from '@/config'
 import { computed, ref } from 'vue'
 import { useHomeStore } from '@/stores/home'
+import {
+  pickTencentLocationLabel,
+  reverseGeocodeByTencent
+} from '@/utils/tencent-map'
 const arrowIcon = `${StaticPath}home/icon-score-select-arrow.png`
 const scoreFlameIcon = `${StaticPath}home/icon-title-hot-flame.png`
 const homeScoreTipEmoji = `${StaticPath}home/home-score-tip-emoji.png`
@@ -175,6 +179,7 @@ const industryOptions = ['餐饮', '零售', '美业', '教育', '家政']
 
 const homeStore = useHomeStore()
 const openDropdown = ref(null)
+const currentLocationLabel = ref('')
 
 const tipDisplay = computed(
   () =>
@@ -182,17 +187,31 @@ const tipDisplay = computed(
     '小提示：紧跟视频，客户会越来越多'
 )
 
+const locationText = computed(() => currentLocationLabel.value || '获取位置')
+
 /**
  * 事件处理：onRequestLocation
  */
 function onRequestLocation() {
   uni.getLocation({
     type: 'gcj02',
-    success() {
-      uni.showToast({ title: '定位成功', icon: 'none' })
-      homeStore.fetchDashboard().catch(() => {})
+    async success(res) {
+      try {
+        const location = await reverseGeocodeByTencent(res)
+        const label = pickTencentLocationLabel(location.ad_info)
+        if (label) currentLocationLabel.value = label
+        uni.showToast({ title: label || '定位成功', icon: 'none' })
+        homeStore.fetchDashboard().catch(() => {})
+      } catch (err) {
+        console.log(err)
+        uni.showToast({
+          title: err?.message || '位置解析失败',
+          icon: 'none'
+        })
+      }
     },
-    fail() {
+    fail(err) {
+      console.log(err)
       uni.showToast({
         title: '请开启位置权限',
         icon: 'none'
