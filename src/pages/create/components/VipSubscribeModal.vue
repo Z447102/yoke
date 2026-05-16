@@ -112,8 +112,9 @@
 <script setup>
 import { StaticPath } from '@/config'
 import { listVipProducts } from '@/api/vip'
+import { usePayStore } from '@/stores/pay'
 /**
- * 事件：close | confirm({ plan, variant, product, productId })
+ * 事件：close | confirm({ plan, variant, product, productId }) | success({ plan, variant, product, productId, order, detail })
  */
 import { computed, ref, watch } from 'vue'
 const vipModalFullBg = `${StaticPath}create/vip-modal-full-bg.png`
@@ -135,10 +136,14 @@ const props = defineProps({
     validator: (v) => ['', 'continuous', 'first_time_once', 'standard_once'].includes(v)
   },
   /** 兼容旧页面传参，组件展示始终以接口请求结果为准 */
-  vipProducts: { type: Array, default: () => [] }
+  vipProducts: { type: Array, default: () => [] },
+  /** 支付成功后是否自动 navigateBack 到上一页；嵌入式调用方（如创作流程）可置为 false */
+  autoBackOnSuccess: { type: Boolean, default: true }
 })
 
-const emit = defineEmits(['close', 'confirm', 'aux-buy'])
+const emit = defineEmits(['close', 'confirm', 'aux-buy', 'success'])
+
+const payStore = usePayStore()
 
 const selectedProductIndex = ref(0)
 const agreed = ref(false)
@@ -160,6 +165,7 @@ const highlightPoints = computed(() => {
 })
 
 const ctaLabel = computed(() => {
+  if (payStore.loading) return '支付中...'
   const savedPrice = productSavedPrice(selectedProduct.value)
   if (!selectedProductFirstOpen.value || !savedPrice) return '立即开通'
   const unit = isYearProduct(selectedProduct.value) ? '首年' : '首月'
@@ -172,6 +178,7 @@ const canConfirm = computed(
   () =>
     !productsLoading.value &&
     !productsError.value &&
+    !payStore.loading &&
     Boolean(selectedProduct.value) &&
     Boolean(productPrice(selectedProduct.value))
 )
@@ -341,8 +348,12 @@ watch(
 
 /**
  * 处理：handleConfirm
+ * 1) 校验商品与协议
+ * 2) 调起通用支付流程（创建订单 → 拉起微信支付 → 轮询订单详情确认 paid）
+ * 3) 成功后提示「购买成功」并按 autoBackOnSuccess 自动返回上一页
  */
-function handleConfirm() {
+async function handleConfirm() {
+  if (payStore.loading) return
   if (!selectedProduct.value) {
     uni.showToast({
       title: productsError.value || '暂无可购买的 VIP 商品',
@@ -357,12 +368,47 @@ function handleConfirm() {
     })
     return
   }
-  emit('confirm', {
+  const productCode = selectedProduct.value?.productCode
+  if (!productCode) {
+    uni.showToast({ title: '商品信息异常，请刷新后重试', icon: 'none' })
+    return
+  }
+
+  const payload = {
     plan: isYearProduct(selectedProduct.value) ? 'year' : 'month',
     variant: currentVariant.value,
     product: selectedProduct.value,
     productId: selectedProduct.value?.productId
-  })
+  }
+  emit('confirm', payload)
+
+  try {
+    const { order, detail } = await payStore.payByProductCode({
+      productCode,
+      channel: 'wechat',
+      showLoading: true,
+      loadingText: '正在发起支付...'
+    })
+    emit('success', { ...payload, order, detail })
+    uni.showToast({ title: '购买成功', icon: 'success', duration: 1500 })
+    if (props.autoBackOnSuccess) {
+      setTimeout(() => {
+        uni.navigateBack({
+          fail: () => {
+            uni.switchTab({
+              url: '/pages/home/index',
+              fail: () => {
+                uni.redirectTo({ url: '/pages/home/index' })
+              }
+            })
+          }
+        })
+      }, 800)
+    }
+  } catch (err) {
+    if (err?.cancel) return
+    uni.showToast({ title: err?.message || '支付失败，请稍后重试', icon: 'none' })
+  }
 }
 </script>
 

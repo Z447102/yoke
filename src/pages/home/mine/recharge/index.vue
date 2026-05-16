@@ -20,7 +20,7 @@
               {{ totalPointsInteger }}<text class="points-decimal">.{{ totalPointsDecimal }}</text>
             </text>
           </view>
-          <view class="details-btn">明细</view>
+          <view class="details-btn" @click="goToDetails">明细</view>
         </view>
         <view class="card-bottom">
           <view class="stat-item">
@@ -77,9 +77,12 @@
           <view class="checkbox" :class="{ 'is-checked': agree }"></view>
           <text>已阅读并同意《有客付费协议》</text>
         </view>
-        <view class="pay-btn" @click="handleBuy">
-          立即购买 ¥{{ formatYuan(selectedItem.price) }}
-          <text v-if="savedPrice > 0" class="pay-discount">已优惠¥{{ formatYuan(savedPrice) }}</text>
+        <view class="pay-btn" :class="{ 'is-disabled': payStore.loading }" @click="handleBuy">
+          <template v-if="payStore.loading">支付中...</template>
+          <template v-else>
+            立即购买 ¥{{ formatYuan(selectedItem.price) }}
+            <text v-if="savedPrice > 0" class="pay-discount">已优惠¥{{ formatYuan(savedPrice) }}</text>
+          </template>
         </view>
       </view>
     </view>
@@ -97,8 +100,10 @@ import {
 } from '@/api/points'
 import MineVipNavBar from '@/pages/components/MineVipNavBar.vue'
 import { useUserStore } from '@/stores/user'
+import { usePayStore } from '@/stores/pay'
 
 const userStore = useUserStore()
+const payStore = usePayStore()
 const agree = ref(false)
 const selectedIndex = ref(0)
 const rechargeEnter = ref(fallbackPointsRechargeEnter)
@@ -266,12 +271,35 @@ function stopPromoTimer() {
   promoTimer = null
 }
 
-function handleBuy() {
+async function handleBuy() {
+  if (payStore.loading) return
   if (!agree.value) {
     uni.showToast({ title: '请先阅读并同意付费协议', icon: 'none' })
     return
   }
-  uni.showToast({ title: '支付功能待接入', icon: 'none' })
+  const productCode = selectedItem.value?.raw?.productCode
+  if (!productCode) {
+    uni.showToast({ title: '商品信息异常，请刷新后重试', icon: 'none' })
+    return
+  }
+
+  try {
+    await payStore.payByProductCode({
+      productCode,
+      channel: 'wechat',
+      showLoading: true,
+      loadingText: '正在发起支付...'
+    })
+    uni.showToast({ title: '支付成功', icon: 'success' })
+    await refreshCurrentUserPoints()
+  } catch (err) {
+    if (err?.cancel) return
+    uni.showToast({ title: err?.message || '支付失败，请稍后重试', icon: 'none' })
+  }
+}
+
+function goToDetails() {
+  uni.navigateTo({ url: '/pages/home/mine/points-detail/index' })
 }
 
 function goBack() {
@@ -588,6 +616,10 @@ function goBack() {
   color: #1F2937;
   letter-spacing: 1rpx;
   background-color: rgba(255,241,226,1);
+}
+
+.pay-btn.is-disabled {
+  opacity: 0.6;
 }
 
 .pay-discount {

@@ -480,7 +480,13 @@ function onMemberExchange() {
 }
 
 function onPointsTap() {
-  uni.showToast({ title: `当前点数 ${pointsDisplay.value}`, icon: 'none' })
+  // uni.showToast({ title: `当前点数 ${pointsDisplay.value}`, icon: 'none' })
+  uni.navigateTo({
+    url: '/pages/home/mine/points-detail/index',
+    fail: () => {
+      uni.showToast({ title: '页面打开失败', icon: 'none' })
+    }
+  })
 }
 
 function goBusiness() {

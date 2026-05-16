@@ -38,3 +38,14 @@ export function enterPointsRechargePage() {
 export function listPointsProducts() {
   return get('/api/recharge/points/products')
 }
+
+/**
+ * 获取点数明细列表。
+ * GET /api/member/points/records
+ * @param {Object} params 
+ * @param {number} params.page
+ * @param {number} params.size
+ */
+export function getPointsDetailsList(params) {
+  return get('/api/member/points/records', params)
+}

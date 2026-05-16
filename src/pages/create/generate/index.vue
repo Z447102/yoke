@@ -340,8 +340,9 @@
     <VipSubscribeModal
       :show="showVipModal"
       :variant="vipModalVariant"
+      :auto-back-on-success="false"
       @close="closeVipModal"
-      @confirm="onVipSubscribeConfirm"
+      @success="onVipSubscribeConfirm"
       @aux-buy="onVipAuxBuy"
     />
 
