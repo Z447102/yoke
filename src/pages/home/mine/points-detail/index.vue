@@ -122,15 +122,21 @@ const giftPoints = computed(() => pointNumber(userStore.profile?.giftAvailablePo
 const groupedList = computed(() => {
   const groups = {}
   list.value.forEach(item => {
-    const date = parseTime(item.createTime) || new Date()
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-    const yearMonth = `${year}-${month}`
+    // 接口返回的 month 字段格式形如 "2026-05"，不可用时回退用 createTime 解析
+    let yearMonth = item.month
+    if (!yearMonth) {
+      const date = parseTime(item.createTime)
+      if (date) {
+        yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      }
+    }
+    if (!yearMonth) return
     
     if (!groups[yearMonth]) {
+      const [y, m] = yearMonth.split('-')
       groups[yearMonth] = {
-        month: month,
-        year: year,
+        year: Number(y),
+        month: Number(m),
         yearMonth: yearMonth,
         items: []
       }
@@ -138,30 +144,8 @@ const groupedList = computed(() => {
     groups[yearMonth].items.push(item)
   })
   
-  // Convert to array and sort by year-month descending
-  const result = Object.values(groups).sort((a, b) => {
-    if (b.year !== a.year) return b.year - a.year
-    return b.month - a.month
-  })
-  
-  // Add an empty month if needed (like the image showing 4月 暂无明细)
-  // Just for demonstration if there's only one month
-  if (result.length > 0) {
-    const lastGroup = result[result.length - 1]
-    let prevMonth = lastGroup.month - 1
-    if (prevMonth === 0) prevMonth = 12
-    
-    // Only add if we don't have many records
-    if (result.length === 1) {
-      result.push({
-        month: prevMonth,
-        yearMonth: `prev-${prevMonth}`,
-        items: []
-      })
-    }
-  }
-  
-  return result
+  // "YYYY-MM" 字符串按字典序倒序即按时间倒序
+  return Object.values(groups).sort((a, b) => (a.yearMonth < b.yearMonth ? 1 : -1))
 })
 
 onMounted(() => {
