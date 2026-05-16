@@ -1,14 +1,5 @@
 <template>
-  <view
-    class="score-card"
-    :class="{ 'score-card--dropdown-open': openDropdown }"
-  >
-    <view
-      v-if="openDropdown"
-      class="score-card__mask"
-      @tap="closeDropdown"
-    />
-
+  <view class="score-card">
     <view class="score-card__filters">
       <view class="score-card__title-wrap">
         <text class="score-card__title">今日爆款评分</text>
@@ -17,68 +8,32 @@
         <view class="score-card__dropdown-wrap">
           <view
             class="score-card__select score-card__select--trigger"
-            @tap.stop="toggleDropdown('platform')"
+            @tap.stop="onTriggerPlatform"
           >
-            <text class="score-card__select-text">{{
-              filters.platform || '平台'
-            }}</text>
+            <text class="score-card__select-text">{{ platformLabel }}</text>
             <image
               class="score-card__select-arrow"
-              :class="{ 'score-card__select-arrow--up': openDropdown === 'platform' }"
+              :class="{ 'score-card__select-arrow--up': platformOpen }"
               :src="arrowIcon"
               mode="aspectFit"
             />
-          </view>
-          <view
-            v-if="openDropdown === 'platform'"
-            class="score-card__menu"
-            @tap.stop
-          >
-            <view
-              v-for="opt in platformOptions"
-              :key="opt"
-              class="score-card__menu-item"
-              :class="{
-                'score-card__menu-item--active': opt === filters.platform
-              }"
-              @tap.stop="selectPlatform(opt)"
-            >
-              <text>{{ opt }}</text>
-            </view>
           </view>
         </view>
 
         <view class="score-card__dropdown-wrap">
           <view
             class="score-card__select score-card__select--trigger"
-            @tap.stop="toggleDropdown('industry')"
+            @tap.stop="onTriggerIndustry"
           >
             <text class="score-card__select-text">{{
               filters.industry || '行业'
             }}</text>
             <image
               class="score-card__select-arrow"
-              :class="{ 'score-card__select-arrow--up': openDropdown === 'industry' }"
+              :class="{ 'score-card__select-arrow--up': industryOpen }"
               :src="arrowIcon"
               mode="aspectFit"
             />
-          </view>
-          <view
-            v-if="openDropdown === 'industry'"
-            class="score-card__menu"
-            @tap.stop
-          >
-            <view
-              v-for="opt in industryOptions"
-              :key="opt"
-              class="score-card__menu-item"
-              :class="{
-                'score-card__menu-item--active': opt === filters.industry
-              }"
-              @tap.stop="selectIndustry(opt)"
-            >
-              <text>{{ opt }}</text>
-            </view>
           </view>
         </view>
       </view>
@@ -171,14 +126,37 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({})
+  },
+  /**
+   * 平台选项列表（与 generate 页一致的 `PLATFORM_OPTIONS`：`{ id, name, ... }[]`），
+   * 用于把 `filters.platform`（id，如 `'douyin'`）回显为对应中文名。
+   */
+  platformOptions: {
+    type: Array,
+    default: () => []
+  },
+  /** 行业弹窗是否处于打开态（由父级托管，用于箭头转向回显） */
+  industryOpen: {
+    type: Boolean,
+    default: false
+  },
+  /** 平台弹窗是否处于打开态（由父级托管，用于箭头转向回显） */
+  platformOpen: {
+    type: Boolean,
+    default: false
   }
 })
 
-const platformOptions = ['抖音', '快手', '小红书', '视频号', '美团']
-const industryOptions = ['餐饮', '零售', '美业', '教育', '家政']
+/**
+ * 事件契约：弹窗本体由 home/index.vue 在页面根节点渲染，避免被 .score-card 的
+ * overflow: hidden 与外层 .home-top-skin 的滚动/局部层叠上下文裁剪、或被 HomeTabBar 遮挡。
+ *
+ * - open-platform-picker：用户点击「平台」筛选触发
+ * - open-industry-picker：用户点击「行业」筛选触发
+ */
+const emit = defineEmits(['open-platform-picker', 'open-industry-picker'])
 
 const homeStore = useHomeStore()
-const openDropdown = ref(null)
 const currentLocationLabel = ref('')
 
 const tipDisplay = computed(
@@ -188,6 +166,16 @@ const tipDisplay = computed(
 )
 
 const locationText = computed(() => currentLocationLabel.value || '获取位置')
+
+/** 触发按钮的平台展示文案：用 id 反查 `platformOptions` 取 name；找不到则回落到 '平台' */
+const platformLabel = computed(() => {
+  const cur = String(props.filters?.platform ?? '').trim()
+  if (!cur) return '平台'
+  const hit = props.platformOptions.find(
+    (p) => p && String(p.id ?? '').trim() === cur
+  )
+  return hit?.name || '平台'
+})
 
 /**
  * 事件处理：onRequestLocation
@@ -220,44 +208,14 @@ function onRequestLocation() {
   })
 }
 
-/**
- * 切换状态：toggleDropdown
- */
-function toggleDropdown(which) {
-  openDropdown.value = openDropdown.value === which ? null : which
+/** 触发平台筛选：由父级（home/index.vue）托管 PlatformSelectPopup 的渲染与状态 */
+function onTriggerPlatform() {
+  emit('open-platform-picker')
 }
 
-/**
- * 关闭界面/弹层：closeDropdown
- */
-function closeDropdown() {
-  openDropdown.value = null
-}
-
-/**
- * 选择项：selectPlatform
- */
-async function selectPlatform(val) {
-  if (val === props.filters.platform) {
-    closeDropdown()
-    return
-  }
-  homeStore.setScoreFilter('platform', val)
-  closeDropdown()
-  await homeStore.fetchDashboard()
-}
-
-/**
- * 选择项：selectIndustry
- */
-async function selectIndustry(val) {
-  if (val === props.filters.industry) {
-    closeDropdown()
-    return
-  }
-  homeStore.setScoreFilter('industry', val)
-  closeDropdown()
-  await homeStore.fetchDashboard()
+/** 触发行业筛选：由父级（home/index.vue）托管 IndustrySelectPopup 的渲染与状态 */
+function onTriggerIndustry() {
+  emit('open-industry-picker')
 }
 </script>
 
@@ -277,22 +235,6 @@ async function selectIndustry(val) {
   background-color: rgba(255, 241, 226, 0.3);
   display: flex;
   flex-direction: column;
-}
-
-/* 展开时允许菜单超出卡片圆角区域，并压过下方「今日爆款内容」等板块 */
-.score-card--dropdown-open {
-  z-index: 500;
-  overflow: visible;
-}
-
-.score-card__mask {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 998;
-  background: transparent;
 }
 
 .score-card__filters,
@@ -379,32 +321,6 @@ async function selectIndustry(val) {
 
 .score-card__select-arrow--up {
   transform: rotate(180deg);
-}
-
-.score-card__menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 502;
-  margin-top: 8rpx;
-  min-width: 100%;
-  padding: 8rpx 0;
-  border-radius: 16rpx;
-  background: #fffdf8;
-  box-shadow: 0 12rpx 32rpx rgba(61, 45, 31, 0.18);
-}
-
-.score-card__menu-item {
-  padding: 16rpx 24rpx;
-  font-size: 24rpx;
-  color: #5c4030;
-  white-space: nowrap;
-}
-
-.score-card__menu-item--active {
-  color: #c26a0a;
-  font-weight: 600;
-  background: rgba(255, 228, 188, 0.55);
 }
 
 .score-card__content {

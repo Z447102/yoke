@@ -121,31 +121,19 @@
     </view>
 
     <!-- 行业选择 -->
-    <view v-if="showIndustryPopup" class="popup-mask" @tap="closeIndustryPopup">
-      <view class="industry-popup" @tap.stop>
-        <view class="popup-handle"></view>
-        <view class="popup-title">选择行业</view>
-
-        <view class="industry-grid">
-          <view
-            v-for="industry in industryOptions"
-            :key="industry"
-            class="industry-item"
-            :class="{ active: tempIndustry === industry }"
-            @tap="selectIndustry(industry)"
-          >
-            {{ industry }}
-          </view>
-        </view>
-
-        <button class="confirm-btn" @tap="confirmIndustry">确定</button>
-      </view>
-    </view>
+    <IndustrySelectPopup
+      :show="showIndustryPopup"
+      :options="industryOptions"
+      :selected-industry="selectedIndustry"
+      @close="closeIndustryPopup"
+      @confirm="confirmIndustry"
+    />
   </view>
 </template>
 
 <script setup>
 import CreateNavBar from '@/pages/create/components/CreateNavBar.vue'
+import IndustrySelectPopup from '@/pages/create/components/IndustrySelectPopup.vue'
 import { StaticPath } from '@/config'
 /**
  * 【一键成片 · 商户信息】pages/create/index.vue
@@ -169,7 +157,6 @@ const industryOptions = ref([...CREATE_INDUSTRY_OPTIONS])
 const selectedIndustry = ref('')
 /** 与 `selectedIndustry` 名称对应的行业 id（`/api/industries`），写入 generate 拉主营业务列表用 */
 const selectedIndustryId = ref('')
-const tempIndustry = ref('')
 const showIndustryPopup = ref(false)
 /** 打开行业弹窗时拉取的 `/api/industries` 原始行，用于名称 → id */
 const industryRowsForId = ref([])
@@ -569,10 +556,6 @@ async function openIndustryPopup() {
     }
   }
 
-  const list = industryOptions.value
-  const cur = String(selectedIndustry.value || '').trim()
-  tempIndustry.value =
-    cur && list.includes(cur) ? cur : list[0] || ''
   showIndustryPopup.value = true
 }
 
@@ -584,18 +567,12 @@ function closeIndustryPopup() {
 }
 
 /**
- * 选择项：selectIndustry
- */
-function selectIndustry(industry) {
-  tempIndustry.value = industry
-}
-
-/**
  * 确认操作：confirmIndustry
+ * @param {string} industry 子组件传回的行业名称
  */
-function confirmIndustry() {
-  selectedIndustry.value = tempIndustry.value
-  const name = String(tempIndustry.value || '').trim()
+function confirmIndustry(industry) {
+  const name = String(industry || '').trim()
+  selectedIndustry.value = name
   const hit = industryRowsForId.value.find(
     (x) => String(x.industryName ?? '').trim() === name
   )
@@ -1259,90 +1236,4 @@ function pickCreatedMainBusinessId(res) {
   font-size: 22rpx;
 }
 
-.popup-mask {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 50;
-  box-sizing: border-box;
-  padding-top: constant(safe-area-inset-top);
-  padding-top: env(safe-area-inset-top);
-  background: rgba(0, 0, 0, 0.54);
-  display: flex;
-  align-items: flex-end;
-}
-
-.industry-popup {
-  width: 100%;
-  padding: 18rpx 30rpx calc(46rpx + constant(safe-area-inset-bottom));
-  padding: 18rpx 30rpx calc(46rpx + env(safe-area-inset-bottom));
-  border-radius: 0;
-  background: #ffffff;
-}
-
-.popup-handle {
-  width: 52rpx;
-  height: 8rpx;
-  margin: 0 auto 30rpx;
-  border-radius: 999rpx;
-  background: #d8d8d8;
-}
-
-.popup-title {
-  color: #1f2933;
-  font-size: 30rpx;
-  font-weight: 700;
-  text-align: center;
-}
-
-/* 微信小程序对 grid/gap 支持不稳定，四列用 flex + 固定宽与 nth 去右边距 */
-.industry-grid {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  margin-top: 36rpx;
-}
-
-.industry-item {
-  width: 157rpx;
-  height: 68rpx;
-  margin-right: 20rpx;
-  margin-bottom: 24rpx;
-  box-sizing: border-box;
-  border: 1rpx solid #e3e5ea;
-  border-radius: 14rpx;
-  color: #a4abb5;
-  font-size: 26rpx;
-  line-height: 68rpx;
-  text-align: center;
-  background: #ffffff;
-}
-
-.industry-item:nth-child(4n) {
-  margin-right: 0;
-}
-
-.industry-item.active {
-  border-color: #ff8e24;
-  color: #ff8e24;
-  background: #fff6ed;
-  font-weight: 700;
-}
-
-.confirm-btn {
-  width: 510rpx;
-  height: 108rpx;
-  margin: 48rpx auto 0;
-  border-radius: 999rpx;
-  background: linear-gradient(180deg, #ffbd72 0%, #ff963a 100%);
-  color: #ffffff;
-  font-size: 32rpx;
-  line-height: 108rpx;
-}
-
-.confirm-btn::after {
-  border: 0;
-}
 </style>
