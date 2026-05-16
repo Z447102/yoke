@@ -72,7 +72,8 @@
                   </view>
                 </view>
                 <view class="record-amount" :class="item.type === 'consume' ? 'amount-consume' : 'amount-add'">
-                  {{ item.amount > 0 ? '+' : '' }}{{ Number(item.amount || 0).toFixed(2) }}
+                  <!-- {{ item.amount > 0 ? '+' : '' }}{{ Number(item.amount || 0).toFixed(2) }} -->
+                  {{ item.changePoints > 0 ? '+' : '-' }}{{ item.changePoints }}
                 </view>
               </view>
               <view class="record-divider" v-if="item !== group.items[group.items.length - 1]"></view>
@@ -121,14 +122,15 @@ const giftPoints = computed(() => pointNumber(userStore.profile?.giftAvailablePo
 const groupedList = computed(() => {
   const groups = {}
   list.value.forEach(item => {
-    const timeStr = item.createTime || ''
-    const date = timeStr ? new Date(timeStr.replace(/-/g, '/')) : new Date()
+    const date = parseTime(item.createTime) || new Date()
+    const year = date.getFullYear()
     const month = date.getMonth() + 1
-    const yearMonth = `${date.getFullYear()}-${month}`
+    const yearMonth = `${year}-${month}`
     
     if (!groups[yearMonth]) {
       groups[yearMonth] = {
         month: month,
+        year: year,
         yearMonth: yearMonth,
         items: []
       }
@@ -136,9 +138,10 @@ const groupedList = computed(() => {
     groups[yearMonth].items.push(item)
   })
   
-  // Convert to array and sort by month descending
+  // Convert to array and sort by year-month descending
   const result = Object.values(groups).sort((a, b) => {
-    return new Date(b.yearMonth.replace(/-/g, '/')).getTime() - new Date(a.yearMonth.replace(/-/g, '/')).getTime()
+    if (b.year !== a.year) return b.year - a.year
+    return b.month - a.month
   })
   
   // Add an empty month if needed (like the image showing 4月 暂无明细)
@@ -220,11 +223,24 @@ function pointNumber(value) {
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0
 }
 
+function parseTime(timeStr) {
+  if (!timeStr) return null
+  // 兼容 "2026-05-16T17:09:18" / "2026-05-16 17:09:18" / "2026-05-16T17:09:18.000Z" 等格式
+  // 直接按字符串拆分，避免 iOS / 小程序对 ISO 格式解析不一致以及 UTC 时区偏移问题
+  const str = String(timeStr)
+  const match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/)
+  if (match) {
+    const [, y, mo, d, h, mi, s] = match
+    return new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s || 0))
+  }
+  const fallback = new Date(str.replace(/-/g, '/'))
+  return isNaN(fallback.getTime()) ? null : fallback
+}
+
 function formatTime(timeStr) {
   if (!timeStr) return ''
-  // Format as "YY-MM-DD HH:mm"
-  const date = new Date(timeStr.replace(/-/g, '/'))
-  if (isNaN(date.getTime())) return timeStr
+  const date = parseTime(timeStr)
+  if (!date) return timeStr
   
   const yy = String(date.getFullYear()).slice(2)
   const mm = String(date.getMonth() + 1).padStart(2, '0')
