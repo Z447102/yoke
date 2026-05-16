@@ -1,6 +1,6 @@
 <template>
   <view class="vip-page">
-    <image class="page-bg" :src="vipBg" mode="aspectFill" />
+    <image class="page-bg" src="../static/vip-bg.png" mode="aspectFill" />
     
     <!-- Custom Navigation Bar -->
     <MineVipNavBar
@@ -17,12 +17,12 @@
       <view class="table-header" :class="{ 'is-scrolled': isScrolled }">
         <view class="col-title font-medium">权益</view>
         <view class="col-vip-year">
-          <image class="vip-icon" :src="vipYearIcon" mode="aspectFit" />
-          <image class="vip-text" :src="vipTextIcon" mode="aspectFit" />
+          <image class="vip-icon" src="../static/vip/vip-year.png" mode="aspectFit" />
+          <image class="vip-text" src="../static/vip/vip-text.png" mode="aspectFit" />
         </view>
         <view class="col-vip-month">
-           <image class="vip-icon" :src="vipMonthIcon" mode="aspectFit" />
-           <image class="vip-text" :src="vipTextIcon" mode="aspectFit" />
+           <image class="vip-icon" src="../static/vip/vip-month.png" mode="aspectFit" />
+           <image class="vip-text" src="../static/vip/vip-text.png" mode="aspectFit" />
         </view>
         <view class="col-normal font-medium">普通用户</view>
       </view>
@@ -51,7 +51,7 @@
         
         <!-- Scroll indicator -->
         <view class="scroll-indicator" :class="{ 'is-up': isAtBottom }">
-          <image class="indicator-icon-img" :src="vipArrowIcon" mode="aspectFit" />
+          <image class="indicator-icon-img" src="../static/vip/vip-arrow.png" mode="aspectFit" />
         </view>
       </view>
 
@@ -61,6 +61,7 @@
           :show="true" 
           :show-drag="false"
           :show-close="false"
+          :vip-products="vipProducts"
           variant="continuous" 
           class="embedded-modal" 
           @close="goBack" 
@@ -72,37 +73,26 @@
 
 <script setup>
 import { ref, onMounted, getCurrentInstance } from 'vue'
-import { StaticPath } from '@/config'
+import {
+  fallbackVipBenefits,
+  fallbackVipProducts,
+  listVipBenefits,
+  listVipProducts
+} from '@/api/vip'
 import VipSubscribeModal from '@/pages/create/components/VipSubscribeModal.vue'
 import MineVipNavBar from '@/pages/components/MineVipNavBar.vue'
 import NavBar2 from '@/pages/components/NavBar2.vue'
 
-const vipBg = `${StaticPath}mine/vip-bg.png`
-const vipYearIcon = `${StaticPath}mine/vip/vip-year.png`
-const vipMonthIcon = `${StaticPath}mine/vip/vip-month.png`
-const vipTextIcon = `${StaticPath}mine/vip/vip-text.png`
-const vipArrowIcon = `${StaticPath}mine/vip/vip-arrow.png`
-
 const isScrolled = ref(false)
 const isAtBottom = ref(false)
+const benefits = ref(fallbackVipBenefits)
+const vipProducts = ref(fallbackVipProducts)
 const instance = getCurrentInstance()
 let containerHeight = 0
 
-const benefits = [
-  { title: '视频清晰度', year: '1080P', month: '1080P', normal: '720P' },
-  { title: '视频水印', year: '无', month: '无', normal: '有' },
-  { title: '视频生成速度', year: '优先', month: '优先', normal: '普通' },
-  { title: '视频模板库', year: '爆款视频', month: '爆款视频', normal: '普通视频' },
-  { title: '视频模型', year: '高级模型', month: '高级模型', normal: '普通模型' },
-  { title: '引流数据', year: '可查看', month: '可查看', normal: '—' },
-  { title: '开通即送', year: '2000点', month: '—', normal: '—' },
-  { title: '每月赠送', year: '200点/月', month: '—', normal: '—' },
-  { title: '点数折扣', year: '8折', month: '9折', normal: '—' },
-  { title: '数字人', year: '无限♾️', month: '3个', normal: '1个' },
-  { title: '官方数字人', year: '全部可用', month: '全部可用', normal: '部分可用' },
-]
-
 onMounted(() => {
+  loadVipBenefits()
+  // loadVipProducts()
   setTimeout(() => {
     const query = uni.createSelectorQuery().in(instance.proxy)
     query.select('.top-scroll').boundingClientRect(data => {
@@ -112,6 +102,58 @@ onMounted(() => {
     }).exec()
   }, 100)
 })
+
+async function loadVipBenefits() {
+  try {
+    const rows = normalizeBenefitRows(await listVipBenefits())
+    if (rows.length) benefits.value = rows
+  } catch (_) {
+    benefits.value = fallbackVipBenefits
+  }
+}
+
+async function loadVipProducts() {
+  try {
+    const products = await listVipProducts()
+    if (Array.isArray(products) && products.length) {
+      vipProducts.value = products
+    }
+  } catch (_) {
+    vipProducts.value = fallbackVipProducts
+  }
+}
+
+function normalizeBenefitRows(rawRows) {
+  if (!Array.isArray(rawRows)) return []
+  return rawRows
+    .map((row) => {
+      if (Array.isArray(row) && row.length >= 4) {
+        if (String(row[0] ?? '').trim() === '权益') return null
+        return {
+          title: normalizeCell(row[0]),
+          year: normalizeCell(row[1]),
+          month: normalizeCell(row[2]),
+          normal: normalizeCell(row[3])
+        }
+      }
+      if (row && typeof row === 'object') {
+        return {
+          title: normalizeCell(row.title),
+          year: normalizeCell(row.year),
+          month: normalizeCell(row.month),
+          normal: normalizeCell(row.normal)
+        }
+      }
+      return null
+    })
+    .filter(Boolean)
+    .filter((row) => row.title)
+}
+
+function normalizeCell(value) {
+  const text = String(value ?? '').trim()
+  return text || '-'
+}
 
 function goBack() {
   uni.navigateBack({
@@ -127,7 +169,7 @@ function goBack() {
 }
 
 function onScroll(e) {
-  if (e.detail.scrollTop > 15) {
+  if (e.detail.scrollTop > 5) {
     isScrolled.value = true
   } else {
     isScrolled.value = false
@@ -136,7 +178,7 @@ function onScroll(e) {
   if (containerHeight > 0) {
     // e.detail.scrollHeight is total scrollable height
     // e.detail.scrollTop is current scroll position
-    if (e.detail.scrollHeight - e.detail.scrollTop - containerHeight <= 20) {
+    if (e.detail.scrollHeight - e.detail.scrollTop - containerHeight <= 5) {
       isAtBottom.value = true
     } else {
       isAtBottom.value = false

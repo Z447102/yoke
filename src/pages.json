@@ -50,6 +50,14 @@
           }
         },
         {
+          "path": "home/mine/recharge/index",
+          "style": {
+            "navigationBarTitleText": "点数充值",
+            "navigationStyle": "custom",
+            "backgroundColor": "#ffa94d"
+          }
+        },
+        {
           "path": "login/index",
           "style": {
             "navigationBarTitleText": "登录",

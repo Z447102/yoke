@@ -511,7 +511,12 @@ function onVipTap() {
 }
 
 function onRechargeTap() {
-  toastSoon('点数充值')
+  uni.navigateTo({
+    url: '/pages/home/mine/recharge/index',
+    fail: () => {
+      uni.showToast({ title: '页面打开失败', icon: 'none' })
+    }
+  })
 }
 
 function onManageWorks() {

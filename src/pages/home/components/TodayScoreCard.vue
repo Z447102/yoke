@@ -456,7 +456,7 @@ async function selectIndustry(val) {
   display: block;
   margin-bottom: 4rpx;
   color: rgba(61, 45, 31, 0.7);
-  font-size: 18rpx;
+  font-size: 20rpx;
   text-align: center;
 }
 

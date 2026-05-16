@@ -86,10 +86,11 @@ function navigateTo(url) {
   right: 0;
   bottom: 0;
   z-index: 20;
-  height: calc(108rpx + constant(safe-area-inset-bottom));
-  height: calc(108rpx + env(safe-area-inset-bottom));
-  padding: 0 76rpx constant(safe-area-inset-bottom);
-  padding: 0 76rpx env(safe-area-inset-bottom);
+  height: 160rpx;
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: 112rpx;
+  padding-right: 112rpx;
   background-color: rgba(244, 244, 244, 1);
   display: flex;
   align-items: center;
@@ -111,10 +112,10 @@ function navigateTo(url) {
 }
 
 .tab-main {
-  width: 96rpx;
-  height: 96rpx;
-  margin-top: -42rpx;
-  border: 8rpx solid #fff0d5;
+  width: 134rpx;
+  height: 134rpx;
+  margin-top: -28rpx;
+  border: 8rpx solid white;
   border-radius: 50%;
   overflow: hidden;
   display: flex;
@@ -124,8 +125,8 @@ function navigateTo(url) {
 }
 
 .tab-main-img {
-  width: 100%;
-  height: 100%;
+  width: 105%;
+  height: 105%;
   border-radius: 50%;
 }
 </style>
